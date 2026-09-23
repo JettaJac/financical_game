@@ -1,0 +1,30 @@
+<resources>
+    <string name="app_name">financial_game</string>
+    <string name="health">Здоровье</string>
+    <string name="food">Еда</string>
+    <string name="happiness">Счастье</string>
+    <string name="energy">Энергия</string>
+    <string name="shop">Магазин</string>
+    <string name="tasks">Список дел</string>
+    <string name="soon">Скоро</string>
+    <string name="pet">Кот</string>
+    <string name="income">доход: %1$d</string>
+    <string name="expense">расход: %1$d</string>
+    <string name="money">%1$d$</string>
+    <string name="menu">МЕНЮ</string>
+    <string name="open_menu">Открыть меню</string>
+    <string name="continue_action">Продолжить</string>
+    <string name="exit_action">Выйти</string>
+    <string name="store">МАГАЗИН</string>
+    <string name="close_store">Закрыть магазин</string>
+    <string name="collar">ошейник</string>
+    <string name="collar_price">100</string>
+    <string name="buy">Купить</string>
+    <string name="progress_value">%1$d / %2$d</string>
+    <string name="period_value">%1$d день %2$d неделя</string>
+    <string name="timer">Таймер</string>
+    <string name="school_lunch">Школьный обед</string>
+    <string name="soda">Газировка</string>
+    <string name="ice_cream">Мороженое</string>
+    <string name="section_placeholder">Здесь скоро появится содержимое</string>
+</resources>
