@@ -21,11 +21,18 @@
     <string name="collar">ошейник</string>
     <string name="collar_price">100</string>
     <string name="buy">Купить</string>
+    <string name="buy_price">Купить · %1$d ₽</string>
     <string name="progress_value">%1$d / %2$d</string>
     <string name="period_value">%1$d день %2$d неделя</string>
     <string name="timer">Таймер</string>
     <string name="school_lunch">Школьный обед</string>
     <string name="soda">Газировка</string>
     <string name="ice_cream">Мороженое</string>
+    <string name="toy_mouse">Игрушечная мышь</string>
+    <string name="yarn_ball">Клубок</string>
+    <string name="music">Музыка</string>
+    <string name="nap">Дневной сон</string>
+    <string name="cocoa">Какао</string>
+    <string name="pillow">Подушка</string>
     <string name="section_placeholder">Здесь скоро появится содержимое</string>
 </resources>

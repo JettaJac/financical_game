@@ -1,6 +1,7 @@
 package com.example.financial_game.ui
 
 import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -50,12 +51,36 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.financial_game.R
+import com.example.financial_game.domain.CareItem
 
 private val HomePurple = Color(0xFF8743D3)
 private val HomePurpleDark = Color(0xFF4B2163)
-private val HomePurpleLight = Color(0xFFE9C7FF)
 private val HomeSurface = Color(0xFFFCF7FF)
 private val HomeTrack = Color(0xFFE6C1FA)
+
+private data class CareItemUi(
+    val item: CareItem,
+    val illustration: String,
+    @param:StringRes val title: Int,
+)
+
+private val FoodItems = listOf(
+    CareItemUi(CareItem.SchoolLunch, "🍱", R.string.school_lunch),
+    CareItemUi(CareItem.Soda, "🥤", R.string.soda),
+    CareItemUi(CareItem.IceCream, "🍦", R.string.ice_cream),
+)
+
+private val HappinessItems = listOf(
+    CareItemUi(CareItem.ToyMouse, "🐭", R.string.toy_mouse),
+    CareItemUi(CareItem.YarnBall, "🧶", R.string.yarn_ball),
+    CareItemUi(CareItem.Music, "🎵", R.string.music),
+)
+
+private val EnergyItems = listOf(
+    CareItemUi(CareItem.Nap, "😴", R.string.nap),
+    CareItemUi(CareItem.Cocoa, "☕", R.string.cocoa),
+    CareItemUi(CareItem.Pillow, "🛏️", R.string.pillow),
+)
 
 @Composable
 fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
@@ -121,7 +146,7 @@ private fun HomePage(state: PetState, onAction: (PetAction) -> Unit) {
         HomeBottomPanel(
             state = state,
             onSectionClick = { onAction(PetAction.SelectSection(it)) },
-            onBuyClick = { onAction(PetAction.BuyCollar) },
+            onBuyClick = { onAction(PetAction.BuyCareItem(it)) },
             modifier = Modifier.align(Alignment.BottomCenter),
         )
     }
@@ -308,17 +333,27 @@ private fun ActionTile(
 private fun HomeBottomPanel(
     state: PetState,
     onSectionClick: (HomeSection) -> Unit,
-    onBuyClick: () -> Unit,
+    onBuyClick: (CareItem) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier.fillMaxWidth()) {
         HomeTabs(state, onSectionClick)
         Column(Modifier.fillMaxWidth().background(HomeSurface)) {
             when (state.selectedSection) {
-                HomeSection.Food -> ProductRow(onBuyClick)
-                else -> SectionPlaceholder(state.selectedSection)
+                HomeSection.Food -> ProductRow(FoodItems, state.resources.money, onBuyClick)
+                HomeSection.Happiness -> ProductRow(
+                    HappinessItems,
+                    state.resources.money,
+                    onBuyClick,
+                )
+                HomeSection.Energy -> ProductRow(EnergyItems, state.resources.money, onBuyClick)
+                HomeSection.Shop, HomeSection.Tasks -> SectionPlaceholder(state.selectedSection)
             }
-            PageDots(isVisible = state.selectedSection == HomeSection.Food)
+            PageDots(
+                isVisible = state.selectedSection == HomeSection.Food ||
+                    state.selectedSection == HomeSection.Happiness ||
+                    state.selectedSection == HomeSection.Energy,
+            )
         }
     }
 }
@@ -454,48 +489,32 @@ private fun SectionPlaceholder(section: HomeSection) {
 }
 
 @Composable
-private fun ProductRow(onBuyClick: () -> Unit) {
+private fun ProductRow(
+    items: List<CareItemUi>,
+    money: Int,
+    onBuyClick: (CareItem) -> Unit,
+) {
     Row(
         modifier = Modifier.fillMaxWidth().height(158.dp).padding(horizontal = 17.dp, vertical = 9.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        ProductCard(
-            illustration = "🍱",
-            title = stringResource(R.string.school_lunch),
-            modifier = Modifier.weight(1f),
-        ) {
-            Button(
-                onClick = onBuyClick,
-                colors = ButtonDefaults.buttonColors(containerColor = HomePurple),
-                contentPadding = ButtonDefaults.ContentPadding,
-                modifier = Modifier.fillMaxWidth().height(29.dp),
-            ) {
-                Text(stringResource(R.string.buy), fontSize = 12.sp)
-            }
-        }
-        ProductCard(
-            illustration = "🥤",
-            title = stringResource(R.string.soda),
-            modifier = Modifier.weight(1f),
-        ) {
-            QuantityControl(value = 1)
-        }
-        ProductCard(
-            illustration = "🍦",
-            title = stringResource(R.string.ice_cream),
-            modifier = Modifier.weight(1f),
-        ) {
-            QuantityControl(value = 4)
+        items.forEach { product ->
+            ProductCard(
+                product = product,
+                canBuy = money >= product.item.price,
+                onBuyClick = { onBuyClick(product.item) },
+                modifier = Modifier.weight(1f),
+            )
         }
     }
 }
 
 @Composable
 private fun ProductCard(
-    illustration: String,
-    title: String,
+    product: CareItemUi,
+    canBuy: Boolean,
+    onBuyClick: () -> Unit,
     modifier: Modifier = Modifier,
-    action: @Composable () -> Unit,
 ) {
     Column(
         modifier = modifier
@@ -506,10 +525,10 @@ private fun ProductCard(
             .padding(horizontal = 8.dp, vertical = 5.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(text = illustration, fontSize = 39.sp, lineHeight = 47.sp)
+        Text(text = product.illustration, fontSize = 39.sp, lineHeight = 47.sp)
         Spacer(Modifier.weight(1f))
         Text(
-            text = title,
+            text = stringResource(product.title),
             color = HomePurpleDark,
             fontSize = 12.sp,
             lineHeight = 14.sp,
@@ -517,24 +536,23 @@ private fun ProductCard(
             maxLines = 1,
         )
         Spacer(Modifier.height(5.dp))
-        action()
-    }
-}
-
-@Composable
-private fun QuantityControl(value: Int) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(29.dp)
-            .clip(RoundedCornerShape(7.dp))
-            .background(HomePurpleLight),
-        horizontalArrangement = Arrangement.SpaceEvenly,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text("−", color = HomePurpleDark, fontSize = 17.sp)
-        Text(value.toString(), color = HomePurpleDark, fontSize = 12.sp)
-        Text("+", color = HomePurpleDark, fontSize = 17.sp)
+        Button(
+            onClick = onBuyClick,
+            enabled = canBuy,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = HomePurple,
+                disabledContainerColor = HomePurple.copy(alpha = 0.22f),
+                disabledContentColor = HomePurpleDark.copy(alpha = 0.38f),
+            ),
+            contentPadding = ButtonDefaults.ContentPadding,
+            modifier = Modifier.fillMaxWidth().height(29.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.buy_price, product.item.price),
+                fontSize = 10.sp,
+                maxLines = 1,
+            )
+        }
     }
 }
 

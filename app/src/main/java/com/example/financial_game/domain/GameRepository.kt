@@ -11,6 +11,9 @@ interface GameRepository {
     suspend fun completeTimerCycle()
 
     suspend fun buyCollar()
+
+    suspend fun buyCareItem(item: CareItem)
+
     suspend fun reset()
 }
 

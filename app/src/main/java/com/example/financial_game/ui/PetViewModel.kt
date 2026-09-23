@@ -3,6 +3,7 @@ package com.example.financial_game.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.financial_game.data.GameSnapshot
+import com.example.financial_game.domain.CareItem
 import com.example.financial_game.domain.GameRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -40,6 +41,7 @@ sealed interface PetAction {
     data object OpenShop : PetAction
     data object CloseOverlay : PetAction
     data object BuyCollar : PetAction
+    data class BuyCareItem(val item: CareItem) : PetAction
     data object ForceNextCycle : PetAction
     data object Restart : PetAction
 
@@ -106,6 +108,7 @@ class PetViewModel @Inject constructor(private val repository: GameRepository) :
             PetAction.CloseOverlay -> _state.update { it.copy(overlay = null) }
             PetAction.Exit -> _state.update { it.copy(exitRequested = true) }
             PetAction.BuyCollar -> viewModelScope.launch { repository.buyCollar() }
+            is PetAction.BuyCareItem -> viewModelScope.launch { repository.buyCareItem(action.item) }
             PetAction.ForceNextCycle -> _state.update { it.copy(secondsRemaining = 0) }
             PetAction.Restart -> restart()
         }

@@ -31,8 +31,13 @@ This file is the only source of truth for product behavior and visible UI.
 - Five tabs: food, happiness, energy, shop, and tasks.
 - Every tab is clickable. The selected tab has the light background shown in the reference.
 - The tab row overlaps the faded lower edge of the room background.
-- Food shows the current cards for school lunch, soda, and ice cream.
-- Happiness, energy, shop, and tasks show a section-specific placeholder for future content.
+- Food shows school lunch, soda, and ice cream cards.
+- Happiness shows placeholder cards for a toy mouse, yarn ball, and music.
+- Energy shows placeholder cards for a nap, cocoa, and pillow.
+- Each food, happiness, and energy card has one buy button; quantity controls are not used.
+- A buy button is enabled only when money covers that item's price. Disabled buttons are visibly faded.
+- A successful care-item purchase subtracts its price and increases its matching resource, capped at 100.
+- Shop and tasks show section-specific placeholders for future content.
 - Health, happiness, and energy progress indicators display the corresponding DataStore values.
 - Selecting a tab is UI state only and does not change or persist game resources.
 

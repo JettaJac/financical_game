@@ -31,7 +31,8 @@ Do not invent extra features. Do not keep leftover UI from older SPEC versions.
 - Buy is disabled/no-op if money < price. Successful buy subtracts price from money.
 - Home layout follows `res/references/main_screen.png`: header, room background, pet, five tabs, product cards.
 - The five home tabs are clickable and select the lower drawer section.
-- Food shows the supplied product cards. Happiness, energy, shop, and tasks show placeholders.
+- Food, happiness, and energy show three purchasable cards with one Buy button each.
+- Care-item Buy is disabled when money is insufficient; shop and tasks show placeholders.
 - The savings quick action above the pet opens the shop overlay.
 - collectAsStateWithLifecycle(). No business logic in Composables.
 - ViewModel state only via _state.update { it.copy(...) }.

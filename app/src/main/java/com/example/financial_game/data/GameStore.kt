@@ -7,6 +7,8 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.example.financial_game.domain.GameDefaults
 import com.example.financial_game.domain.GameRepository
+import com.example.financial_game.domain.CareItem
+import com.example.financial_game.domain.CareResource
 import com.example.financial_game.domain.moneyAfterCycle
 import com.example.financial_game.domain.moneyAfterPurchase
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -107,8 +109,23 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             val currentMoney = checkNotNull(preferences[money])
             if (currentMoney >= COLLAR_PRICE) {
                 preferences[money] = moneyAfterPurchase(currentMoney, COLLAR_PRICE)
-                val h = checkNotNull(preferences[health])
-                preferences[health] = h + 40
+            }
+        }
+    }
+
+    override suspend fun buyCareItem(item: CareItem) {
+        context.gameDataStore.edit { preferences ->
+            val currentMoney = checkNotNull(preferences[money])
+            if (currentMoney < item.price) return@edit
+
+            preferences[money] = moneyAfterPurchase(currentMoney, item.price)
+            when (item.resource) {
+                CareResource.Health -> preferences[health] =
+                    (checkNotNull(preferences[health]) + item.resourceIncrease).coerceAtMost(100)
+                CareResource.Happiness -> preferences[happiness] =
+                    (checkNotNull(preferences[happiness]) + item.resourceIncrease).coerceAtMost(100)
+                CareResource.Energy -> preferences[energy] =
+                    (checkNotNull(preferences[energy]) + item.resourceIncrease).coerceAtMost(100)
             }
         }
     }
