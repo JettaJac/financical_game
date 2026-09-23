@@ -41,6 +41,8 @@ sealed interface PetAction {
     data object CloseOverlay : PetAction
     data object BuyCollar : PetAction
     data object ForceNextCycle : PetAction
+    data object Restart : PetAction
+
     data object Exit : PetAction
 }
 
@@ -81,6 +83,21 @@ class PetViewModel @Inject constructor(private val repository: GameRepository) :
             }
     }
 
+    private fun restart() {
+        viewModelScope.launch {
+            repository.reset()
+
+            _state.update {
+                it.copy(
+                    secondsRemaining = TIMER_SECONDS,
+                    selectedSection = HomeSection.Food,
+                    overlay = null,
+                    exitRequested = false,
+                )
+            }
+        }
+    }
+
     fun onAction(action: PetAction) {
         when (action) {
             is PetAction.SelectSection -> _state.update { it.copy(selectedSection = action.section) }
@@ -90,6 +107,7 @@ class PetViewModel @Inject constructor(private val repository: GameRepository) :
             PetAction.Exit -> _state.update { it.copy(exitRequested = true) }
             PetAction.BuyCollar -> viewModelScope.launch { repository.buyCollar() }
             PetAction.ForceNextCycle -> _state.update { it.copy(secondsRemaining = 0) }
+            PetAction.Restart -> restart()
         }
     }
 }

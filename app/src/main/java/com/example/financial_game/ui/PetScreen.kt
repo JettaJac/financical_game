@@ -93,7 +93,7 @@ private fun HomePage(state: PetState, onAction: (PetAction) -> Unit) {
             .background(HomeSurface)
             .safeDrawingPadding(),
     ) {
-        HomeBackdrop()
+        HomeBackground()
 
         HomeHeader(
             state = state,
@@ -102,8 +102,9 @@ private fun HomePage(state: PetState, onAction: (PetAction) -> Unit) {
         )
 
         QuickActions(
-            secondsRemaining = state.secondsRemaining,
+            currentPeriod = state.resources.currentPeriod,
             onShopClick = { onAction(PetAction.OpenShop) },
+            onSkipCycle = { onAction(PetAction.ForceNextCycle )},
             modifier = Modifier.align(Alignment.TopCenter).padding(top = 138.dp),
         )
 
@@ -127,7 +128,7 @@ private fun HomePage(state: PetState, onAction: (PetAction) -> Unit) {
 }
 
 @Composable
-private fun HomeBackdrop() {
+private fun HomeBackground() {
     Box(Modifier.fillMaxWidth().height(659.dp)) {
         Image(
             painter = painterResource(R.drawable.home_background),
@@ -178,8 +179,8 @@ private fun HomeHeader(
             Text(
                 text = stringResource(
                     R.string.period_value,
-                    state.resources.currentPeriod,
-                    state.resources.level,
+                    (state.resources.currentPeriod % 7),
+                    state.resources.currentPeriod / 7,
                 ),
                 color = HomePurple,
                 fontSize = 16.sp,
@@ -253,22 +254,23 @@ private fun HeaderValue(@DrawableRes icon: Int, value: String) {
 
 @Composable
 private fun QuickActions(
-    secondsRemaining: Int,
+    currentPeriod: Int,
     onShopClick: () -> Unit,
+    onSkipCycle: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
         modifier = modifier.fillMaxWidth().padding(horizontal = 17.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        ActionTile {
+        ActionTile(onClick = onSkipCycle) {
             Image(
                 painter = painterResource(R.drawable.ic_timer_cycle),
                 contentDescription = stringResource(R.string.timer),
                 modifier = Modifier.size(39.dp),
             )
             Text(
-                text = minutesRemaining(secondsRemaining).toString(),
+                text = currentPeriod.toString(),
                 color = Color.White,
                 fontSize = 17.sp,
                 modifier = Modifier.align(Alignment.Center),
@@ -573,6 +575,12 @@ private fun MenuOverlay(onAction: (PetAction) -> Unit) {
                 ) {
                     Text(stringResource(R.string.continue_action))
                 }
+                Button(
+                    onClick = { onAction(PetAction.Restart) },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.restart_action))
+                }
                 TextButton(
                     onClick = { onAction(PetAction.Exit) },
                     modifier = Modifier.fillMaxWidth(),
@@ -634,8 +642,6 @@ private fun EmptyPage() {
     }
 }
 
-private fun minutesRemaining(secondsRemaining: Int): Int =
-    (secondsRemaining.coerceAtLeast(0) + 59) / 60
 
 private const val PAGE_COUNT = 3
 private const val HOME_PAGE = 1

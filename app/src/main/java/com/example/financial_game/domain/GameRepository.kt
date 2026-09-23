@@ -11,6 +11,7 @@ interface GameRepository {
     suspend fun completeTimerCycle()
 
     suspend fun buyCollar()
+    suspend fun reset()
 }
 
 internal fun moneyAfterCycle(money: Int, income: Int, expense: Int): Int =

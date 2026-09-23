@@ -58,14 +58,27 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             if (preferences[health] == null) preferences[health] = GameDefaults.HEALTH
             if (preferences[happiness] == null) preferences[happiness] = GameDefaults.HAPPINESS
             if (preferences[energy] == null) preferences[energy] = GameDefaults.ENERGY
-            if (preferences[goalTitle] == null) preferences[goalTitle] = GameDefaults.GOAL_TITLE
+            if (preferences[goalTitle] == null) preferences[goalTitle] = GameDefaults.GOAL
             if (preferences[income] == null) preferences[income] = GameDefaults.INCOME
             if (preferences[expense] == null) preferences[expense] = GameDefaults.EXPENSE
             if (preferences[goalTarget] == null) preferences[goalTarget] = GameDefaults.GOAL_TARGET
             if (preferences[level] == null) preferences[level] = GameDefaults.LEVEL
-            if (preferences[currentPeriod] == null) {
-                preferences[currentPeriod] = GameDefaults.CURRENT_PERIOD
-            }
+            if (preferences[currentPeriod] == null) preferences[currentPeriod] = GameDefaults.CURRENT_PERIOD
+        }
+    }
+
+    override suspend fun reset() {
+        context.gameDataStore.edit { preferences ->
+            preferences[money] = GameDefaults.MONEY
+            preferences[health] = GameDefaults.HEALTH
+            preferences[happiness] = GameDefaults.HAPPINESS
+            preferences[energy] = GameDefaults.ENERGY
+            preferences[goalTitle] = GameDefaults.GOAL
+            preferences[goalTarget] = GameDefaults.GOAL_TARGET
+            preferences[income] = GameDefaults.INCOME
+            preferences[expense] = GameDefaults.EXPENSE
+            preferences[level] = GameDefaults.LEVEL
+            preferences[currentPeriod] = GameDefaults.CURRENT_PERIOD
         }
     }
 
@@ -78,13 +91,25 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
 
             val cp = checkNotNull(preferences[currentPeriod])
             preferences[currentPeriod] = cp + 1
+
+            val e = checkNotNull(preferences[energy])
+            val h = checkNotNull(preferences[happiness])
+            val hea = checkNotNull(preferences[health])
+
+            preferences[energy] = (e - 20).coerceAtLeast(0)
+            preferences[happiness] = (h - 20).coerceAtLeast(0)
+            preferences[health] = (hea - 20).coerceAtLeast(0)
         }
     }
 
     override suspend fun buyCollar() {
         context.gameDataStore.edit { preferences ->
             val currentMoney = checkNotNull(preferences[money])
-            preferences[money] = moneyAfterPurchase(currentMoney, COLLAR_PRICE)
+            if (currentMoney >= COLLAR_PRICE) {
+                preferences[money] = moneyAfterPurchase(currentMoney, COLLAR_PRICE)
+                val h = checkNotNull(preferences[health])
+                preferences[health] = h + 40
+            }
         }
     }
 

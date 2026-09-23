@@ -10,11 +10,12 @@ data class GameSnapshot(
     val income: Int = GameDefaults.INCOME,
     val expense: Int = GameDefaults.EXPENSE,
 
-    val goalTitle: String = "",
-    val goalTarget: Int = 0,
+    val goalTitle: String = "GOAL",
+    val goalTarget: Int = 1,
     val level: Int = 1,
 
     val currentPeriod: Int = 0,
 
 //    val inventory: List<String> TODO: store inventory only in the roomDB
+//    val income: List<String>    TODO: different incomes should be took from roomDB ?
 )
