@@ -4,15 +4,48 @@ import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import com.example.financial_game.R
+import androidx.compose.ui.text.ExperimentalTextApi
 
+@OptIn(ExperimentalTextApi::class)
 val NunitoFontFamily = FontFamily(
-    Font(R.font.nunito_variable, FontWeight.Normal),
-    Font(R.font.nunito_variable, FontWeight.Medium),
-    Font(R.font.nunito_variable, FontWeight.SemiBold),
-    Font(R.font.nunito_variable, FontWeight.Bold),
-    Font(R.font.nunito_variable, FontWeight.ExtraBold),
+    Font(
+        R.font.nunito_variable,
+        FontWeight.Normal,
+        variationSettings = FontVariation.Settings(
+            FontVariation.weight(FontWeight.Normal.weight),
+        )
+    ),
+    Font(
+        R.font.nunito_variable,
+        FontWeight.Medium,
+        variationSettings = FontVariation.Settings(
+            FontVariation.weight(FontWeight.Medium.weight),
+        )
+    ),
+    Font(
+        R.font.nunito_variable,
+        FontWeight.SemiBold,
+        variationSettings = FontVariation.Settings(
+            FontVariation.weight(FontWeight.SemiBold.weight),
+        )
+    ),
+    Font(
+        R.font.nunito_variable,
+        FontWeight.Bold,
+        variationSettings = FontVariation.Settings(
+            FontVariation.weight(FontWeight.Bold.weight),
+        )
+    ),
+    Font(
+        R.font.nunito_variable,
+        FontWeight.ExtraBold,
+        variationSettings = FontVariation.Settings(
+            FontVariation.weight(FontWeight.ExtraBold.weight),
+        )
+    ),
 )
 
 private fun TextStyle.withNunito(): TextStyle = copy(fontFamily = NunitoFontFamily)

@@ -58,6 +58,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.financial_game.R
 import com.example.financial_game.domain.CareItem
+import com.example.financial_game.ui.theme.NunitoFontFamily
 
 private val HomePurple = Color(0xFF8743D3)
 private val HomePurpleDark = Color(0xFF4B2163)
@@ -267,13 +268,16 @@ private fun HomeHeader(
                 color = HomePurple,
                 fontSize = 16.sp,
                 lineHeight = 18.sp,
+                fontWeight = FontWeight.ExtraBold,
+                fontFamily = NunitoFontFamily,
             )
             Text(
                 text = state.resources.goalTitle,
                 color = HomePurpleDark,
-                fontSize = 27.sp,
+                fontSize = 24.sp,
                 lineHeight = 30.sp,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.ExtraBold,
+                fontFamily = NunitoFontFamily,
             )
         }
 
