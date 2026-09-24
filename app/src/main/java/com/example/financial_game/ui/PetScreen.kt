@@ -37,7 +37,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ProgressIndicatorDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -61,8 +60,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.financial_game.R
 import com.example.financial_game.domain.CareItem
+import com.example.financial_game.domain.CareResource
 import com.example.financial_game.ui.theme.NunitoFontFamily
-import kotlin.concurrent.timer
 
 private val HomePurple = Color(0xFF8743D3)
 private val HomePurpleDark = Color(0xFF4B2163)
@@ -110,27 +109,24 @@ private fun homeLayoutMetrics(width: Dp, height: Dp): HomeLayoutMetrics {
 
 private data class CareItemUi(
     val item: CareItem,
-    val illustration: String,
+    @DrawableRes val illustration: Int,
     @param:StringRes val title: Int,
 )
 
 private val FoodItems = listOf(
-    CareItemUi(CareItem.SchoolLunch, "🍱", R.string.school_lunch),
-    CareItemUi(CareItem.Soda, "🥤", R.string.soda),
-    CareItemUi(CareItem.IceCream, "🍦", R.string.ice_cream),
+    CareItemUi(CareItem.SchoolLunch, R.drawable.food_item1, R.string.school_lunch),
+    CareItemUi(CareItem.Soda, R.drawable.food_item2, R.string.soda),
+    CareItemUi(CareItem.MashedPotatoes, R.drawable.food_item3, R.string.mashed_potatoes),
+    CareItemUi(CareItem.IceCream, R.drawable.food_item4, R.string.ice_cream),
+    CareItemUi(CareItem.HamburgerWithCola, R.drawable.food_item5, R.string.hamburger_cola),
+    CareItemUi(CareItem.Pasta, R.drawable.food_item6, R.string.pasta),
+    CareItemUi(CareItem.SetRolls, R.drawable.food_item7, R.string.set_rolls),
+    CareItemUi(CareItem.Pizza, R.drawable.food_item8, R.string.pizza),
 )
 
-private val HappinessItems = listOf(
-    CareItemUi(CareItem.ToyMouse, "🐭", R.string.toy_mouse),
-    CareItemUi(CareItem.YarnBall, "🧶", R.string.yarn_ball),
-    CareItemUi(CareItem.Music, "🎵", R.string.music),
-)
+private val HappinessItems = emptyList<CareItemUi>()
 
-private val EnergyItems = listOf(
-    CareItemUi(CareItem.Nap, "😴", R.string.nap),
-    CareItemUi(CareItem.Cocoa, "☕", R.string.cocoa),
-    CareItemUi(CareItem.Pillow, "🛏️", R.string.pillow),
-)
+private val EnergyItems = emptyList<CareItemUi>()
 
 @Composable
 fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
@@ -627,18 +623,69 @@ private fun ProductRow(
     itemGap: Dp,
     modifier: Modifier = Modifier,
 ) {
-    Row(
+    if (items.isEmpty()) return
+
+    val pages = items.chunked(PRODUCTS_PER_PAGE)
+    val pagerState = rememberPagerState(pageCount = { pages.size })
+
+    Column(
         modifier = modifier
             .fillMaxSize()
             .padding(horizontal = horizontalPadding, vertical = itemGap),
-        horizontalArrangement = Arrangement.spacedBy(itemGap),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        items.forEach { product ->
-            ProductCard(
-                product = product,
-                canBuy = money >= product.item.price,
-                onBuyClick = { onBuyClick(product.item) },
-                modifier = Modifier.weight(1f),
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxWidth().weight(1f),
+            pageSpacing = itemGap,
+            userScrollEnabled = pages.size > 1,
+        ) { page ->
+            val pageItems = pages[page]
+
+            Row(
+                modifier = Modifier.fillMaxSize(),
+                horizontalArrangement = Arrangement.spacedBy(itemGap),
+            ) {
+                pageItems.forEach { product ->
+                    ProductCard(
+                        product = product,
+                        canBuy = money >= product.item.price,
+                        onBuyClick = { onBuyClick(product.item) },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+
+                repeat(PRODUCTS_PER_PAGE - pageItems.size) {
+                    Spacer(Modifier.weight(1f))
+                }
+            }
+        }
+
+        Spacer(Modifier.height(4.dp))
+        ProductPageIndicator(
+            pageCount = pages.size,
+            selectedPage = pagerState.currentPage,
+        )
+    }
+}
+
+private const val PRODUCTS_PER_PAGE = 3
+
+@Composable
+private fun ProductPageIndicator(
+    pageCount: Int,
+    selectedPage: Int,
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        repeat(pageCount) { page ->
+            Box(
+                Modifier
+                    .size(6.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (page == selectedPage) HomePurple
+                        else HomePurple.copy(alpha = 0.25f),
+                    ),
             )
         }
     }
@@ -660,8 +707,12 @@ private fun ProductCard(
             .padding(horizontal = 8.dp, vertical = 5.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(text = product.illustration, fontSize = 39.sp, lineHeight = 47.sp)
-        Spacer(Modifier.weight(1f))
+        Image(
+            painter = painterResource(product.illustration),
+            contentDescription = stringResource(product.title),
+            modifier = Modifier.fillMaxWidth().weight(1f),
+            contentScale = ContentScale.Fit,
+        )
         Text(
             text = stringResource(product.title),
             modifier = Modifier.fillMaxWidth(),
@@ -675,7 +726,7 @@ private fun ProductCard(
             textAlign = TextAlign.Center,
             maxLines = 1,
         )
-        Spacer(Modifier.height(5.dp))
+        CareStats(product.item)
         Button(
             onClick = onBuyClick,
             enabled = canBuy,
@@ -699,6 +750,48 @@ private fun ProductCard(
             )
         }
     }
+}
+
+@Composable
+private fun CareStats(item: CareItem) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        CareResource.entries.forEach { resource ->
+            val increaseLevel = item.careEffect
+                .firstOrNull { it.resource == resource }
+                ?.increaseLevel
+                ?: 0
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Image(
+                    painter = painterResource(resource.iconResource()),
+                    contentDescription = null,
+                    modifier = Modifier.size(12.dp),
+                    colorFilter = ColorFilter.tint(HomePurple),
+                )
+                Text(
+                    text = increaseLevel.toString(),
+                    color = HomePurple,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                )
+            }
+        }
+    }
+}
+
+@DrawableRes
+private fun CareResource.iconResource(): Int = when (this) {
+    CareResource.Health -> R.drawable.ic_food
+    CareResource.Happiness -> R.drawable.ic_happy
+    CareResource.Energy -> R.drawable.ic_energy
 }
 
 @Composable

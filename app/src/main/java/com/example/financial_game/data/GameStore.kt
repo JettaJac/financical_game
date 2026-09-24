@@ -119,14 +119,18 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             if (currentMoney < item.price) return@edit
 
             preferences[money] = moneyAfterPurchase(currentMoney, item.price)
-            when (item.resource) {
-                CareResource.Health -> preferences[health] =
-                    (checkNotNull(preferences[health]) + item.resourceIncrease).coerceAtMost(100)
-                CareResource.Happiness -> preferences[happiness] =
-                    (checkNotNull(preferences[happiness]) + item.resourceIncrease).coerceAtMost(100)
-                CareResource.Energy -> preferences[energy] =
-                    (checkNotNull(preferences[energy]) + item.resourceIncrease).coerceAtMost(100)
+
+            for (effect in item.careEffect) {
+                when (effect.resource) {
+                    CareResource.Health -> preferences[health] =
+                        (checkNotNull(preferences[health]) + effect.increaseLevel).coerceAtMost(100)
+                    CareResource.Happiness -> preferences[happiness] =
+                        (checkNotNull(preferences[happiness]) + effect.increaseLevel).coerceAtMost(100)
+                    CareResource.Energy -> preferences[energy] =
+                        (checkNotNull(preferences[energy]) + effect.increaseLevel).coerceAtMost(100)
+                }
             }
+
         }
     }
 

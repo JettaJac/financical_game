@@ -28,6 +28,11 @@
     <string name="school_lunch">Школьный обед</string>
     <string name="soda">Газировка</string>
     <string name="ice_cream">Мороженое</string>
+    <string name="mashed_potatoes">Пюре с котлеткой</string>
+    <string name="hamburger_cola">Гамбургер с колой</string>
+    <string name="pizza">Пицца</string>
+    <string name="pasta">Паста карбонара</string>
+    <string name="set_rolls">Сет Роллов</string>
     <string name="toy_mouse">Игрушечная мышь</string>
     <string name="yarn_ball">Клубок</string>
     <string name="music">Музыка</string>
