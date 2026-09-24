@@ -30,6 +30,7 @@ Do not invent extra features. Do not keep leftover UI from older SPEC versions.
 - Shop: close with X. One item «ошейник» price 100, black-square image, «Купить».
 - Buy is disabled/no-op if money < price. Successful buy subtracts price from money.
 - Home layout follows `res/references/main_screen.png`: header, room background, pet, five tabs, product cards.
+- Size screen regions from the available Compose constraints; do not position the phone layout for one fixed viewport.
 - The five home tabs are clickable and select the lower drawer section.
 - Food, happiness, and energy show three purchasable cards with one Buy button each.
 - Care-item Buy is disabled when money is insufficient; shop and tasks show placeholders.

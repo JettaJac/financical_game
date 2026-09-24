@@ -67,8 +67,6 @@ class PetViewModel @Inject constructor(private val repository: GameRepository) :
                     ) }
                 }
             }
-
-
         }
     }
 
@@ -100,6 +98,12 @@ class PetViewModel @Inject constructor(private val repository: GameRepository) :
         }
     }
 
+    private fun nextCycle() {
+        viewModelScope.launch {
+            repository.completeTimerCycle()
+        }
+    }
+
     fun onAction(action: PetAction) {
         when (action) {
             is PetAction.SelectSection -> _state.update { it.copy(selectedSection = action.section) }
@@ -109,7 +113,7 @@ class PetViewModel @Inject constructor(private val repository: GameRepository) :
             PetAction.Exit -> _state.update { it.copy(exitRequested = true) }
             PetAction.BuyCollar -> viewModelScope.launch { repository.buyCollar() }
             is PetAction.BuyCareItem -> viewModelScope.launch { repository.buyCareItem(action.item) }
-            PetAction.ForceNextCycle -> _state.update { it.copy(secondsRemaining = 0) }
+            PetAction.ForceNextCycle -> nextCycle()
             PetAction.Restart -> restart()
         }
     }

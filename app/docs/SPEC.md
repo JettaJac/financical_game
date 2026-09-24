@@ -20,11 +20,14 @@ This file is the only source of truth for product behavior and visible UI.
 
 - Visually follow `src/main/res/references/main_screen.png` and the bundled SVG/WebP assets.
 - Header: current day and week, goal title, menu, current money, goal progress, goal target.
+- Money and goal-target values stay on one line and shrink to fit their responsive header slots.
 - Room background and pet occupy the center of the screen.
 - The room background fades into the light surface at its top and bottom edges.
 - The timer quick action is on the left. It displays whole minutes remaining.
 - The savings quick action on the right opens the shop overlay.
 - Use Nunito for all app text.
+- The phone layout responds to the actual Compose constraints rather than assuming one fixed screen size.
+- On compact portrait phones, header, background, pet, tab row, and lower drawer scale as coordinated regions.
 
 ## Lower drawer
 
@@ -35,6 +38,7 @@ This file is the only source of truth for product behavior and visible UI.
 - Happiness shows placeholder cards for a toy mouse, yarn ball, and music.
 - Energy shows placeholder cards for a nap, cocoa, and pillow.
 - Each food, happiness, and energy card has one buy button; quantity controls are not used.
+- Product cards share the available width and height. Buy labels must remain inside their buttons on compact phones and with enlarged system text.
 - A buy button is enabled only when money covers that item's price. Disabled buttons are visibly faded.
 - A successful care-item purchase subtracts its price and increases its matching resource, capped at 100.
 - Shop and tasks show section-specific placeholders for future content.
