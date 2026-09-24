@@ -47,6 +47,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -848,10 +849,11 @@ private fun MenuOverlay(onAction: (PetAction) -> Unit) {
                 Button(
                     onClick = { onAction(PetAction.CloseOverlay) },
                     modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(27)
                 ) {
                     Text(stringResource(R.string.continue_action))
                 }
-                Button(
+                TextButton(
                     onClick = { onAction(PetAction.Restart) },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
