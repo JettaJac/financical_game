@@ -9,6 +9,6 @@ object GameDefaults {
     const val EXPENSE = 10
     const val LEVEL = 1
     const val CURRENT_PERIOD = 1
-    const val GOAL = "GOAL"
-    const val GOAL_TARGET = 1
+    const val GOAL = "Подушка"
+    const val GOAL_TARGET = 120
 }

@@ -40,4 +40,14 @@
     <string name="cocoa">Какао</string>
     <string name="pillow">Подушка</string>
     <string name="section_placeholder">Здесь скоро появится содержимое</string>
+    <string name="onboarding_greeting">Привет!\nЯ Финник</string>
+    <string name="onboarding_explanation">Я помогу тебе разобраться,\nкуда деньги уходят\nи как накопить на мечту.\nНачнём?</string>
+    <string name="onboarding_start">Погнали!</string>
+    <string name="goal_level">Уровень %1$d</string>
+    <string name="goal_remaining">Осталось %1$d монет до цели</string>
+    <string name="goal_reached">Цель достигнута!</string>
+    <string name="goal_energy_bonus">+10</string>
+    <string name="goal_pillow_description">Питомец устаёт. Если купить ему уютную подушку, он будет отдыхать лучше и реже грустить. Добавляется +10 к энергии на постоянной основе.</string>
+    <string name="change_goal">Поменять цель</string>
+    <string name="change_goal_hint">Поменять цель можно, если...</string>
 </resources>

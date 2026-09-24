@@ -22,7 +22,7 @@ internal fun formatCountdown(totalSeconds: Int): String {
     return "%02d:%02d".format(minutes, seconds)
 }
 
-enum class HomeOverlay { Menu, Shop }
+enum class HomeOverlay { Menu, Shop, Goal }
 
 enum class HomeSection { Food, Happiness, Energy, Shop, Tasks }
 
@@ -39,11 +39,13 @@ sealed interface PetAction {
     data class SelectSection(val section: HomeSection) : PetAction
     data object OpenMenu : PetAction
     data object OpenShop : PetAction
+    data object OpenGoal : PetAction
     data object CloseOverlay : PetAction
     data object BuyCollar : PetAction
     data class BuyCareItem(val item: CareItem) : PetAction
     data object ForceNextCycle : PetAction
     data object Restart : PetAction
+    data object CompleteOnboarding : PetAction
 
     data object Exit : PetAction
 }
@@ -73,6 +75,7 @@ class PetViewModel @Inject constructor(private val repository: GameRepository) :
     private suspend fun runTimer() {
             while (true) {
                 delay(1_000)
+                if (!_state.value.resources.onboardingCompleted) continue
                 if (_state.value.secondsRemaining > 1) {
                     _state.update { it.copy(secondsRemaining = it.secondsRemaining - 1) }
                 } else {
@@ -109,12 +112,16 @@ class PetViewModel @Inject constructor(private val repository: GameRepository) :
             is PetAction.SelectSection -> _state.update { it.copy(selectedSection = action.section) }
             PetAction.OpenMenu -> _state.update { it.copy(overlay = HomeOverlay.Menu) }
             PetAction.OpenShop -> _state.update { it.copy(overlay = HomeOverlay.Shop) }
+            PetAction.OpenGoal -> _state.update { it.copy(overlay = HomeOverlay.Goal) }
             PetAction.CloseOverlay -> _state.update { it.copy(overlay = null) }
             PetAction.Exit -> _state.update { it.copy(exitRequested = true) }
             PetAction.BuyCollar -> viewModelScope.launch { repository.buyCollar() }
             is PetAction.BuyCareItem -> viewModelScope.launch { repository.buyCareItem(action.item) }
             PetAction.ForceNextCycle -> nextCycle()
             PetAction.Restart -> restart()
+            PetAction.CompleteOnboarding -> viewModelScope.launch {
+                repository.completeOnboarding()
+            }
         }
     }
 }

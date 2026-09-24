@@ -135,6 +135,13 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
         return
     }
 
+    if (!state.resources.onboardingCompleted) {
+        OnboardingScreen(
+            onComplete = { onAction(PetAction.CompleteOnboarding) },
+        )
+        return
+    }
+
     val pagerState = rememberPagerState(initialPage = HOME_PAGE, pageCount = { PAGE_COUNT })
 
     Box(Modifier.fillMaxSize().background(HomeSurface)) {
@@ -146,6 +153,13 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
         HomeOverlay.Shop -> ShopOverlay(
             canBuy = state.resources.money >= COLLAR_PRICE,
             onAction = onAction,
+        )
+        HomeOverlay.Goal -> GoalOverlay(
+            money = state.resources.money,
+            target = state.resources.goalTarget,
+            title = state.resources.goalTitle,
+            level = state.resources.level,
+            onDismiss = { onAction(PetAction.CloseOverlay) },
         )
         null -> Unit
     }
@@ -166,6 +180,7 @@ private fun HomePage(state: PetState, onAction: (PetAction) -> Unit) {
         HomeHeader(
             state = state,
             onMenuClick = { onAction(PetAction.OpenMenu) },
+            onGoalClick = { onAction(PetAction.OpenGoal) },
             metrics = metrics,
             modifier = Modifier.align(Alignment.TopCenter),
         )
@@ -242,6 +257,7 @@ private fun HomeBackground(metrics: HomeLayoutMetrics) {
 private fun HomeHeader(
     state: PetState,
     onMenuClick: () -> Unit,
+    onGoalClick: () -> Unit,
     metrics: HomeLayoutMetrics,
     modifier: Modifier = Modifier,
 ) {
@@ -257,7 +273,10 @@ private fun HomeHeader(
         Column(
             modifier = Modifier
                 .align(Alignment.TopCenter)
-                .padding(top = metrics.headerHeight * (27f / 126f)),
+                .padding(top = metrics.headerHeight * (27f / 126f))
+                .clip(RoundedCornerShape(8.dp))
+                .clickable(onClick = onGoalClick)
+                .padding(horizontal = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
@@ -312,7 +331,8 @@ private fun HomeHeader(
                     .weight(1f)
                     .padding(horizontal = 9.dp)
                     .height(8.dp)
-                    .clip(CircleShape),
+                    .clip(CircleShape)
+                    .clickable(onClick = onGoalClick),
             )
             HeaderValue(
                 icon = R.drawable.ic_money_bag,

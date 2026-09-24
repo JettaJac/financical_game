@@ -1,6 +1,7 @@
 package com.example.financial_game.data
 
 import android.content.Context
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -33,6 +34,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
     private val expense = intPreferencesKey("expense")
     private val level = intPreferencesKey("level")
     private val currentPeriod = intPreferencesKey("current_period")
+    private val onboardingCompleted = booleanPreferencesKey("onboarding_completed")
 
 
 
@@ -50,6 +52,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 goalTarget = checkNotNull(preferences[goalTarget]),
                 level = checkNotNull(preferences[level]),
                 currentPeriod = checkNotNull(preferences[currentPeriod]),
+                onboardingCompleted = checkNotNull(preferences[onboardingCompleted]),
             )
         })
     }
@@ -66,6 +69,14 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             if (preferences[goalTarget] == null) preferences[goalTarget] = GameDefaults.GOAL_TARGET
             if (preferences[level] == null) preferences[level] = GameDefaults.LEVEL
             if (preferences[currentPeriod] == null) preferences[currentPeriod] = GameDefaults.CURRENT_PERIOD
+            if (preferences[onboardingCompleted] == null) preferences[onboardingCompleted] = false
+
+            if (preferences[goalTitle] == LEGACY_GOAL_TITLE &&
+                preferences[goalTarget] == LEGACY_GOAL_TARGET
+            ) {
+                preferences[goalTitle] = GameDefaults.GOAL
+                preferences[goalTarget] = GameDefaults.GOAL_TARGET
+            }
         }
     }
 
@@ -81,6 +92,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             preferences[expense] = GameDefaults.EXPENSE
             preferences[level] = GameDefaults.LEVEL
             preferences[currentPeriod] = GameDefaults.CURRENT_PERIOD
+            preferences[onboardingCompleted] = false
         }
     }
 
@@ -134,7 +146,15 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
         }
     }
 
+    override suspend fun completeOnboarding() {
+        context.gameDataStore.edit { preferences ->
+            preferences[onboardingCompleted] = true
+        }
+    }
+
     private companion object {
         const val COLLAR_PRICE = 100
+        const val LEGACY_GOAL_TITLE = "GOAL"
+        const val LEGACY_GOAL_TARGET = 1
     }
 }
