@@ -1,11 +1,16 @@
 package com.example.financial_game.ui
 
 import androidx.compose.foundation.Image
+import androidx.compose.animation.core.animate
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -27,23 +33,31 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.financial_game.R
 import com.example.financial_game.ui.theme.NunitoFontFamily
+import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 private val GoalPurple = Color(0xFF8743D3)
 private val GoalPurpleDark = Color(0xFF4B2163)
@@ -63,25 +77,87 @@ internal fun GoalOverlay(
     val progress = (money.toFloat() / safeTarget).coerceIn(0f, 1f)
     val remaining = (safeTarget - money).coerceAtLeast(0)
     val surfaceInteraction = remember { MutableInteractionSource() }
+    val density = LocalDensity.current
+    val scope = rememberCoroutineScope()
 
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
             usePlatformDefaultWidth = false,
             decorFitsSystemWindows = false,
+            dismissOnClickOutside = false,
         ),
     ) {
-        Box(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.48f))
-                .clickable(onClick = onDismiss),
+                .background(Color.Black.copy(alpha = 0.48f)),
         ) {
-            Surface(
+            val sheetHeight = maxHeight * 0.76f
+            val restingOffsetPx = with(density) { (maxHeight - sheetHeight).toPx() }
+            val maximumOffsetPx = with(density) { maxHeight.toPx() }
+            val sheetHeightPx = maximumOffsetPx - restingOffsetPx
+            val dismissThresholdPx = restingOffsetPx + sheetHeightPx * 0.18f
+            val velocityThreshold = with(density) { 300.dp.toPx() }
+            var sheetOffsetPx by remember(restingOffsetPx) {
+                mutableFloatStateOf(restingOffsetPx)
+            }
+            val dragState = rememberDraggableState { delta ->
+                sheetOffsetPx = (sheetOffsetPx + delta).coerceIn(0f, maximumOffsetPx)
+            }
+            val settleSheet: (Float) -> Unit = { velocity ->
+                val shouldDismiss =
+                    sheetOffsetPx >= dismissThresholdPx ||
+                        (velocity > velocityThreshold && sheetOffsetPx > restingOffsetPx)
+                val target = when {
+                    shouldDismiss -> maximumOffsetPx
+                    velocity < -velocityThreshold -> 0f
+                    velocity > velocityThreshold -> restingOffsetPx
+                    sheetOffsetPx < restingOffsetPx / 2f -> 0f
+                    else -> restingOffsetPx
+                }
+                scope.launch {
+                    animate(
+                        initialValue = sheetOffsetPx,
+                        targetValue = target,
+                        initialVelocity = velocity,
+                    ) { value, _ ->
+                        sheetOffsetPx = value
+                    }
+                    if (shouldDismiss) onDismiss()
+                }
+            }
+            val bottomFillHeight = with(density) {
+                (restingOffsetPx - sheetOffsetPx).coerceAtLeast(0f).toDp()
+            }
+
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .height(maxHeight - sheetHeight)
+                    .clickable(onClick = onDismiss),
+            )
+
+            Box(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .fillMaxHeight(0.76f)
+                    .height(bottomFillHeight)
+                    .background(GoalSurface)
+                    .clickable(
+                        interactionSource = surfaceInteraction,
+                        indication = null,
+                        onClick = {},
+                    ),
+            )
+
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .offset { IntOffset(0, sheetOffsetPx.roundToInt()) }
+                    .fillMaxWidth()
+                    .height(sheetHeight)
                     .clickable(
                         interactionSource = surfaceInteraction,
                         indication = null,
@@ -98,13 +174,24 @@ internal fun GoalOverlay(
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Box(
-                        Modifier
-                            .width(42.dp)
-                            .height(5.dp)
-                            .clip(CircleShape)
-                            .background(GoalTrack),
-                    )
-                    Spacer(Modifier.height(12.dp))
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(28.dp)
+                            .draggable(
+                                state = dragState,
+                                orientation = Orientation.Vertical,
+                                onDragStopped = { velocity -> settleSheet(velocity) },
+                            ),
+                        contentAlignment = Alignment.TopCenter,
+                    ) {
+                        Box(
+                            Modifier
+                                .width(42.dp)
+                                .height(5.dp)
+                                .clip(CircleShape)
+                                .background(GoalTrack),
+                        )
+                    }
                     Text(
                         text = stringResource(R.string.goal_level, level),
                         color = GoalPurple,
