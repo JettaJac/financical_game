@@ -33,9 +33,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ProgressIndicatorDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -46,6 +48,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -59,6 +62,7 @@ import androidx.compose.ui.window.Dialog
 import com.example.financial_game.R
 import com.example.financial_game.domain.CareItem
 import com.example.financial_game.ui.theme.NunitoFontFamily
+import kotlin.concurrent.timer
 
 private val HomePurple = Color(0xFF8743D3)
 private val HomePurpleDark = Color(0xFF4B2163)
@@ -171,6 +175,7 @@ private fun HomePage(state: PetState, onAction: (PetAction) -> Unit) {
         )
 
         QuickActions(
+            secondsRemaining = state.secondsRemaining,
             currentPeriod = state.resources.currentPeriod,
             onShopClick = { onAction(PetAction.OpenShop) },
             onSkipCycle = { onAction(PetAction.ForceNextCycle )},
@@ -356,12 +361,16 @@ private fun HeaderValue(
 
 @Composable
 private fun QuickActions(
+    secondsRemaining: Int,
     currentPeriod: Int,
     onShopClick: () -> Unit,
     onSkipCycle: () -> Unit,
     tileSize: Dp,
     modifier: Modifier = Modifier,
 ) {
+    val timerProgress =
+        secondsRemaining.coerceIn(0, TIMER_SECONDS).toFloat() / TIMER_SECONDS
+
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -369,15 +378,19 @@ private fun QuickActions(
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         ActionTile(size = tileSize, onClick = onSkipCycle) {
-            Image(
-                painter = painterResource(R.drawable.ic_timer_cycle),
-                contentDescription = stringResource(R.string.timer),
-                modifier = Modifier.size(39.dp),
+            CircularProgressIndicator(
+                progress = { timerProgress },
+                modifier = Modifier.size(38.dp),
+                color = Color.White,
+                trackColor = Color(0xFFBB82EF),
+                strokeWidth = 2.dp,
+                gapSize = 0.dp,
+                strokeCap = StrokeCap.Round,
             )
             Text(
                 text = currentPeriod.toString(),
                 color = Color.White,
-                fontSize = 17.sp,
+                fontSize = 15.sp,
                 modifier = Modifier.align(Alignment.Center),
             )
         }
@@ -556,6 +569,8 @@ private fun HomeTab(
                 color = if (selected) HomePurple else Color.White,
                 trackColor = if (selected) HomeTrack else Color(0xFFBB82EF),
                 modifier = Modifier.width(38.dp).height(4.dp).clip(CircleShape),
+                gapSize = 0.dp,
+                drawStopIndicator = {},
             )
         } else {
             Spacer(Modifier.height(4.dp))
@@ -669,8 +684,9 @@ private fun ProductCard(
                 disabledContainerColor = HomePurple.copy(alpha = 0.22f),
                 disabledContentColor = HomePurpleDark.copy(alpha = 0.38f),
             ),
-            contentPadding = PaddingValues(horizontal = 6.dp),
-            modifier = Modifier.fillMaxWidth().heightIn(min = 36.dp, max = 42.dp),
+            contentPadding = PaddingValues(horizontal = 2.dp),
+            modifier = Modifier.fillMaxWidth().heightIn(min = 32.dp, max = 42.dp),
+            shape = RoundedCornerShape(27)
         ) {
             Text(
                 text = stringResource(R.string.buy_price, product.item.price),
