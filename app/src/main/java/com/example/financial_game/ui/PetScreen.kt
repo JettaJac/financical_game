@@ -142,8 +142,6 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
         return
     }
 
-    val pagerState = rememberPagerState(initialPage = HOME_PAGE, pageCount = { PAGE_COUNT })
-
     Box(Modifier.fillMaxSize().background(HomeSurface)) {
                 HomePage(state, onAction)
     }
@@ -327,6 +325,8 @@ private fun HomeHeader(
                 progress = { progress },
                 color = HomePurple,
                 trackColor = HomeTrack,
+                gapSize = 0.dp,
+                drawStopIndicator = {},
                 modifier = Modifier
                     .weight(1f)
                     .padding(horizontal = 9.dp)
