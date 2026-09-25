@@ -1,6 +1,7 @@
 package com.example.financial_game.domain
 
 object GameDefaults {
+    const val NAME = "Финник"
     const val MONEY = 70
     const val HEALTH = 70
     const val HAPPINESS = 70

@@ -61,9 +61,10 @@ import androidx.compose.ui.window.Dialog
 import com.example.financial_game.R
 import com.example.financial_game.domain.CardItem
 import com.example.financial_game.domain.FoodItem
-import com.example.financial_game.domain.CareResource
+import com.example.financial_game.domain.Resource
 import com.example.financial_game.domain.EnergyItem
 import com.example.financial_game.domain.HappinessItem
+import com.example.financial_game.domain.Goals
 import com.example.financial_game.domain.cooldownSecondsRemaining
 import com.example.financial_game.ui.theme.NunitoFontFamily
 
@@ -129,25 +130,25 @@ private val FoodItems = listOf(
 )
 
 private val HappinessItems = listOf(
-    CardItemUI(HappinessItem.BudgetMaster, R.drawable.food_item1, R.string.master_budget),
+    CardItemUI(HappinessItem.BudgetMaster, R.drawable.budget_master, R.string.master_budget),
     CardItemUI(HappinessItem.CatchMoney, R.drawable.food_item1, R.string.catch_money),
     CardItemUI(HappinessItem.ChangeMoney, R.drawable.food_item1, R.string.change_money),
-    CardItemUI(HappinessItem.PlayWithBall, R.drawable.food_item1, R.string.ball_game),
-    CardItemUI(HappinessItem.BoardGame, R.drawable.food_item1, R.string.board_game),
+    CardItemUI(HappinessItem.PlayWithBall, R.drawable.ball_game, R.string.ball_game),
+    CardItemUI(HappinessItem.BoardGame, R.drawable.board_game, R.string.board_game),
     CardItemUI(HappinessItem.MeetingWithFriends, R.drawable.food_item1, R.string.meeting_with_friends),
-    CardItemUI(HappinessItem.Trip, R.drawable.food_item1, R.string.trip),
-    CardItemUI(HappinessItem.Zoo, R.drawable.food_item1, R.string.zoo),
+    CardItemUI(HappinessItem.Trip, R.drawable.trip, R.string.trip),
+    CardItemUI(HappinessItem.Zoo, R.drawable.zoo, R.string.zoo),
 )
 
 private val EnergyItems = listOf(
     CardItemUI(EnergyItem.TakeASeat, R.drawable.food_item1, R.string.seat),
-    CardItemUI(EnergyItem.TakeANap, R.drawable.food_item1, R.string.take_a_nap),
-    CardItemUI(EnergyItem.ListenMusic, R.drawable.food_item1, R.string.listen_music),
-    CardItemUI(EnergyItem.TakeAMassage, R.drawable.food_item1, R.string.take_a_massage),
-    CardItemUI(EnergyItem.HotBath, R.drawable.food_item1, R.string.bath),
-    CardItemUI(EnergyItem.SPA, R.drawable.food_item1, R.string.spa),
-    CardItemUI(EnergyItem.BodyMassage, R.drawable.food_item1, R.string.body_massage),
-    CardItemUI(EnergyItem.Yoga, R.drawable.food_item1, R.string.yoga),
+    CardItemUI(EnergyItem.TakeANap, R.drawable.take_a_nap, R.string.take_a_nap),
+    CardItemUI(EnergyItem.ListenMusic, R.drawable.listen_music, R.string.listen_music),
+    CardItemUI(EnergyItem.TakeAMassage, R.drawable.massage_coach, R.string.take_a_massage),
+    CardItemUI(EnergyItem.HotBath, R.drawable.bath, R.string.bath),
+    CardItemUI(EnergyItem.SPA, R.drawable.spa, R.string.spa),
+    CardItemUI(EnergyItem.BodyMassage, R.drawable.body_massage, R.string.body_massage),
+    CardItemUI(EnergyItem.Yoga, R.drawable.yoga, R.string.yoga),
 )
 
 
@@ -160,7 +161,8 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
 
     if (!state.resources.onboardingCompleted) {
         OnboardingScreen(
-            onComplete = { onAction(PetAction.CompleteOnboarding) },
+            initialState = state.resources,
+            onComplete = { onAction(PetAction.CompleteOnboarding(it)) },
         )
         return
     }
@@ -178,8 +180,7 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
         HomeOverlay.Goal -> GoalOverlay(
             money = state.resources.money,
             target = state.resources.goalTarget,
-            title = state.resources.goalTitle,
-            level = state.resources.level,
+            goal = Goals.fromStorageId(state.resources.goalId),
             onDismiss = { onAction(PetAction.CloseOverlay) },
         )
         null -> Unit
@@ -294,6 +295,7 @@ private fun HomeHeader(
         Column(
             modifier = Modifier
                 .align(Alignment.TopCenter)
+                .fillMaxWidth(0.74f)
                 .padding(top = metrics.headerHeight * (27f / 126f))
                 .clip(RoundedCornerShape(8.dp))
                 .clickable(onClick = onGoalClick)
@@ -314,11 +316,19 @@ private fun HomeHeader(
             )
             Text(
                 text = state.resources.goalTitle,
+                modifier = Modifier.fillMaxWidth(),
                 color = HomePurpleDark,
-                fontSize = 24.sp,
+                autoSize = TextAutoSize.StepBased(
+                    minFontSize = 11.sp,
+                    maxFontSize = 24.sp,
+                    stepSize = 0.5.sp,
+                ),
                 lineHeight = 30.sp,
                 fontWeight = FontWeight.ExtraBold,
                 fontFamily = NunitoFontFamily,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                softWrap = false,
             )
         }
 
@@ -340,7 +350,7 @@ private fun HomeHeader(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             HeaderValue(
-                icon = R.drawable.ic_coin,
+                icon = R.drawable.coin_money,
                 value = state.resources.money.toString(),
                 width = metrics.headerValueWidth,
             )
@@ -358,7 +368,7 @@ private fun HomeHeader(
                     .clickable(onClick = onGoalClick),
             )
             HeaderValue(
-                icon = R.drawable.ic_money_bag,
+                icon = R.drawable.coin_money,
                 value = goalTarget.toString(),
                 width = metrics.headerValueWidth,
             )
@@ -436,7 +446,7 @@ private fun QuickActions(
 
         ActionTile(size = tileSize, onClick = onShopClick) {
             Image(
-                painter = painterResource(R.drawable.ic_savings),
+                painter = painterResource(R.drawable.carbon_piggy_bank),
                 contentDescription = stringResource(R.string.shop),
                 modifier = Modifier.align(Alignment.Center).size(33.dp),
             )
@@ -488,6 +498,7 @@ private fun HomeBottomPanel(
                 HomeSection.Food -> CardRow(
                     items = FoodItems,
                     money = state.resources.money,
+                    level = state.resources.level,
                     cooldownExpires = state.resources.cooldownExpires,
                     nowMillis = state.nowMillis,
                     onBuyClick = onBuyClick,
@@ -497,6 +508,7 @@ private fun HomeBottomPanel(
                 HomeSection.Happiness -> CardRow(
                     items = HappinessItems,
                     money = state.resources.money,
+                    level = state.resources.level,
                     cooldownExpires = state.resources.cooldownExpires,
                     nowMillis = state.nowMillis,
                     onBuyClick = onBuyClick,
@@ -506,6 +518,7 @@ private fun HomeBottomPanel(
                 HomeSection.Energy -> CardRow(
                     items = EnergyItems,
                     money = state.resources.money,
+                    level = state.resources.level,
                     cooldownExpires = state.resources.cooldownExpires,
                     nowMillis = state.nowMillis,
                     onBuyClick = onBuyClick,
@@ -667,6 +680,7 @@ private fun SectionPlaceholder(
 private fun CardRow(
     items: List<CardItemUI>,
     money: Int,
+    level: Int,
     cooldownExpires: Map<String, Long>,
     nowMillis: Long,
     onBuyClick: (CardItem) -> Unit,
@@ -704,7 +718,7 @@ private fun CardRow(
                     )
                     ProductCard(
                         product = product,
-                        canBuy = money >= product.item.price && cooldownRemainingSeconds == 0,
+                        canBuy = money >= product.item.price && cooldownRemainingSeconds == 0 && level >= product.item.level,
                         cooldownRemainingSeconds = cooldownRemainingSeconds,
                         onBuyClick = { onBuyClick(product.item) },
                         modifier = Modifier.weight(1f),
@@ -823,7 +837,9 @@ private fun CareStats(item: CardItem) {
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        CareResource.entries.forEach { resource ->
+        Resource.entries
+            .filterNot { it == Resource.Money }
+            .forEach { resource ->
             val increaseLevel = item.careEffects
                 .firstOrNull { it.resource == resource }
                 ?.increase
@@ -852,10 +868,11 @@ private fun CareStats(item: CardItem) {
 }
 
 @DrawableRes
-private fun CareResource.iconResource(): Int = when (this) {
-    CareResource.Health -> R.drawable.ic_food
-    CareResource.Happiness -> R.drawable.ic_happy
-    CareResource.Energy -> R.drawable.ic_energy
+private fun Resource.iconResource(): Int = when (this) {
+    Resource.Health -> R.drawable.ic_food
+    Resource.Happiness -> R.drawable.ic_happy
+    Resource.Energy -> R.drawable.ic_energy
+    Resource.Money -> R.drawable.ic_coin
 }
 
 @Composable

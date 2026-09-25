@@ -14,7 +14,7 @@ interface GameRepository {
 
     suspend fun buyCareItem(item: CardItem)
 
-    suspend fun completeOnboarding()
+    suspend fun completeOnboarding(setup: PetSetup)
 
     suspend fun reset()
 }

@@ -1,5 +1,6 @@
 package com.example.financial_game.ui
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.animation.core.animate
 import androidx.compose.foundation.background
@@ -55,6 +56,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.financial_game.R
+import com.example.financial_game.domain.Goals
+import com.example.financial_game.domain.Resource
 import com.example.financial_game.ui.theme.NunitoFontFamily
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -69,10 +72,11 @@ private val GoalSurface = Color(0xFFFCF7FF)
 internal fun GoalOverlay(
     money: Int,
     target: Int,
-    title: String,
-    level: Int,
+    goal: Goals,
     onDismiss: () -> Unit,
 ) {
+    val title = stringResource(goal.titleRes)
+    val primaryEffect = goal.goalEffects.firstOrNull()
     val safeTarget = target.coerceAtLeast(1)
     val progress = (money.toFloat() / safeTarget).coerceIn(0f, 1f)
     val remaining = (safeTarget - money).coerceAtLeast(0)
@@ -193,7 +197,7 @@ internal fun GoalOverlay(
                         )
                     }
                     Text(
-                        text = stringResource(R.string.goal_level, level),
+                        text = stringResource(R.string.goal_level, goal.level),
                         color = GoalPurple,
                         fontFamily = NunitoFontFamily,
                         fontSize = 16.sp,
@@ -208,7 +212,7 @@ internal fun GoalOverlay(
                             .clip(RoundedCornerShape(8.dp)),
                     ) {
                         Image(
-                            painter = painterResource(R.drawable.goal_pillow),
+                            painter = painterResource(goal.illustrationRes),
                             contentDescription = title,
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.FillWidth,
@@ -249,37 +253,41 @@ internal fun GoalOverlay(
                     )
                     Spacer(Modifier.height(10.dp))
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Surface(
-                            color = GoalTrack.copy(alpha = 0.72f),
-                            shape = RoundedCornerShape(6.dp),
+                    if (primaryEffect != null) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            Surface(
+                                color = GoalTrack.copy(alpha = 0.72f),
+                                shape = RoundedCornerShape(6.dp),
                             ) {
-                                Text(
-                                    text = stringResource(R.string.goal_energy_bonus),
-                                    color = GoalPurple,
-                                    fontFamily = NunitoFontFamily,
-                                    fontWeight = FontWeight.Bold,
-                                )
-                                Image(
-                                    painter = painterResource(R.drawable.ic_energy),
-                                    contentDescription = stringResource(R.string.energy),
-                                    modifier = Modifier.size(18.dp),
-                                    colorFilter = ColorFilter.tint(GoalPurple),
-                                )
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                ) {
+                                    Text(
+                                        text = "+${primaryEffect.increase}",
+                                        color = GoalPurple,
+                                        fontFamily = NunitoFontFamily,
+                                        fontWeight = FontWeight.Bold,
+                                    )
+                                    Image(
+                                        painter = painterResource(primaryEffect.resource.goalIconResource()),
+                                        contentDescription = stringResource(
+                                            primaryEffect.resource.labelResource(),
+                                        ),
+                                        modifier = Modifier.size(18.dp),
+                                        colorFilter = ColorFilter.tint(GoalPurple),
+                                    )
+                                }
                             }
                         }
                     }
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        text = stringResource(R.string.goal_pillow_description),
+                        text = stringResource(goal.descriptionRes),
                         modifier = Modifier.fillMaxWidth(),
                         color = GoalPurpleDark,
                         fontFamily = NunitoFontFamily,
@@ -316,4 +324,19 @@ internal fun GoalOverlay(
             }
         }
     }
+}
+
+@DrawableRes
+private fun Resource.goalIconResource(): Int = when (this) {
+    Resource.Health -> R.drawable.ic_food
+    Resource.Happiness -> R.drawable.ic_happy
+    Resource.Energy -> R.drawable.ic_energy
+    Resource.Money -> R.drawable.ic_coin
+}
+
+private fun Resource.labelResource(): Int = when (this) {
+    Resource.Health -> R.string.health
+    Resource.Happiness -> R.string.happiness
+    Resource.Energy -> R.string.energy
+    Resource.Money -> R.string.coins
 }

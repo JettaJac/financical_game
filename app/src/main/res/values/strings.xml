@@ -73,13 +73,46 @@
     <string name="onboarding_greeting">Привет!\nЯ Финник</string>
     <string name="onboarding_explanation">Я помогу тебе разобраться,\nкуда деньги уходят\nи как накопить на мечту.\nНачнём?</string>
     <string name="onboarding_start">Погнали!</string>
+    <string name="onboarding_name_question">Как ты хочешь\nменя назвать?</string>
+    <string name="onboarding_next">Далее</string>
+    <string name="onboarding_select">Выбрать</string>
+    <string name="onboarding_choose_hair_colour">Выбери цвет</string>
+    <string name="onboarding_choose_eye_colour">Выбери цвет глаз</string>
+    <string name="onboarding_choose_hair_style">Выбери шерсть питомцу</string>
+    <string name="onboarding_choose_goal">Давай выберем цель</string>
+    <string name="hair_colour_beige">Бежевая шерсть</string>
+    <string name="hair_colour_violet">Сиреневая шерсть</string>
+    <string name="hair_colour_orange">Персиковая шерсть</string>
+    <string name="eye_colour_violet">Фиолетовые глаза</string>
+    <string name="eye_colour_green">Зелёные глаза</string>
+    <string name="eye_colour_blue">Голубые глаза</string>
+    <string name="hair_style_default">Гладкая шерсть</string>
+    <string name="hair_style_hairy">Пушистая шерсть</string>
+    <string name="hair_style_curly">Кудрявая шерсть</string>
 
-    <!-- Goal -->
+    <!-- Goals -->
     <string name="goal_level">Уровень %1$d</string>
     <string name="goal_remaining">Осталось %1$d монет до цели</string>
     <string name="goal_reached">Цель достигнута!</string>
-    <string name="goal_energy_bonus">+10</string>
-    <string name="goal_pillow_description">Питомец устаёт. Если купить ему уютную подушку, он будет отдыхать лучше и реже грустить. Добавляется +10 к энергии на постоянной основе.</string>
     <string name="change_goal">Поменять цель</string>
     <string name="change_goal_hint">Поменять цель можно, если...</string>
+
+    <string name="goal_pillow_title">Купить питомцу подушку</string>
+    <string name="goal_pillow_description">Питомец устаёт. Если купить ему уютную подушку, он будет отдыхать лучше и реже грустить. Добавляется +10 к энергии на постоянной основе.</string>
+    <string name="goal_ball_title">Копить на мяч для игры</string>
+    <string name="goal_ball_description">Твоя цель — мячик для друга. Копи понемногу, и скоро питомец будет весело прыгать! +10 радости</string>
+    <string name="goal_treat_title">Купить любимую вкусняшку</string>
+    <string name="goal_treat_description">Твой питомец любит вкусняшки. Порадуй его!! +10 еда Потом цель ставиться при достижение каждого нового уровня</string>
+    <string name="goal_money_box_title">Копилка-сейф</string>
+    <string name="goal_money_box_description">Копилка не делает питомца счастливее сразу, но каждый цикл приносит монетки. Это твой первый помощник в накоплениях.</string>
+    <string name="goal_toys_bundle_title">Набор игрушек</string>
+    <string name="goal_toys_bundle_description">Получишь +15 счастья за игру, и 1 новый скин на выбор</string>
+    <string name="goal_pet_house_title">Домик для питомца</string>
+    <string name="goal_pet_house_description">Новая комната для твоего питомца даст +15 энергии за отдых</string>
+    <string name="goal_bicycle_title">Велосипед</string>
+    <string name="goal_bicycle_description">Велосипед — это не только весело. Питомец станет сильнее и будет меньше уставать. Питомец «гуляет», +10 счастья за прогулку, открывает ивент «Поездка»</string>
+    <string name="goal_party_title">Праздник для друзей</string>
+    <string name="goal_party_description">+30 счастья, ачивка «Душа компании», открывает ивенты с друзьями</string>
+    <string name="coins">Монеты</string>
+
 </resources>

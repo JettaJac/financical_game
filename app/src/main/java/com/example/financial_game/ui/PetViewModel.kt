@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.financial_game.data.GameSnapshot
 import com.example.financial_game.domain.CardItem
 import com.example.financial_game.domain.GameRepository
+import com.example.financial_game.domain.PetSetup
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.delay
@@ -46,7 +47,7 @@ sealed interface PetAction {
     data class BuyCareItem(val item: CardItem) : PetAction
     data object ForceNextCycle : PetAction
     data object Restart : PetAction
-    data object CompleteOnboarding : PetAction
+    data class CompleteOnboarding(val setup: PetSetup) : PetAction
 
     data object Exit : PetAction
 }
@@ -121,8 +122,8 @@ class PetViewModel @Inject constructor(private val repository: GameRepository) :
             is PetAction.BuyCareItem -> viewModelScope.launch { repository.buyCareItem(action.item) }
             PetAction.ForceNextCycle -> nextCycle()
             PetAction.Restart -> restart()
-            PetAction.CompleteOnboarding -> viewModelScope.launch {
-                repository.completeOnboarding()
+            is PetAction.CompleteOnboarding -> viewModelScope.launch {
+                repository.completeOnboarding(action.setup)
             }
         }
     }
