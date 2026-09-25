@@ -4,12 +4,14 @@ import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.example.financial_game.domain.GameDefaults
 import com.example.financial_game.domain.GameRepository
-import com.example.financial_game.domain.CareItem
+import com.example.financial_game.domain.CardItem
 import com.example.financial_game.domain.CareResource
+import com.example.financial_game.domain.cooldownExpireAt
 import com.example.financial_game.domain.moneyAfterCycle
 import com.example.financial_game.domain.moneyAfterPurchase
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -21,6 +23,11 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 
 private val Context.gameDataStore by preferencesDataStore("game")
+
+private const val COOLDOWN_EXPIRE_PREFIX = "cooldown_expire_"
+
+private fun cooldownExpireKey(item: CardItem) =
+    longPreferencesKey("$COOLDOWN_EXPIRE_PREFIX${item.storageId}")
 
 @Singleton
 class GameStore @Inject constructor(@ApplicationContext private val context: Context) : GameRepository {
@@ -36,11 +43,18 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
     private val currentPeriod = intPreferencesKey("current_period")
     private val onboardingCompleted = booleanPreferencesKey("onboarding_completed")
 
-
-
-
     override val snapshot: Flow<GameSnapshot> = flow {
         emitAll(context.gameDataStore.data.map { preferences ->
+            val cooldownExpires = preferences.asMap()
+                .mapNotNull { (key, value) ->
+                    if (key.name.startsWith(COOLDOWN_EXPIRE_PREFIX) && value is Long) {
+                        key.name.removePrefix(COOLDOWN_EXPIRE_PREFIX) to value
+                    } else {
+                        null
+                    }
+                }
+                .toMap()
+
             GameSnapshot(
                 money = checkNotNull(preferences[money]),
                 health = (checkNotNull(preferences[health])).coerceIn(0, 100),
@@ -53,6 +67,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 level = checkNotNull(preferences[level]),
                 currentPeriod = checkNotNull(preferences[currentPeriod]),
                 onboardingCompleted = checkNotNull(preferences[onboardingCompleted]),
+                cooldownExpires = cooldownExpires,
             )
         })
     }
@@ -82,6 +97,10 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
 
     override suspend fun reset() {
         context.gameDataStore.edit { preferences ->
+            preferences.asMap().keys
+                .filter { it.name.startsWith(COOLDOWN_EXPIRE_PREFIX) }
+                .forEach { preferences.remove(longPreferencesKey(it.name)) }
+
             preferences[money] = GameDefaults.MONEY
             preferences[health] = GameDefaults.HEALTH
             preferences[happiness] = GameDefaults.HAPPINESS
@@ -125,24 +144,30 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
         }
     }
 
-    override suspend fun buyCareItem(item: CareItem) {
+    override suspend fun buyCareItem(item: CardItem) {
         context.gameDataStore.edit { preferences ->
+            val nowMillis = System.currentTimeMillis()
+            val cooldownKey = cooldownExpireKey(item)
+            val cooldownExpire = preferences[cooldownKey] ?: 0L
+            if (cooldownExpire > nowMillis) return@edit
+
             val currentMoney = checkNotNull(preferences[money])
             if (currentMoney < item.price) return@edit
 
             preferences[money] = moneyAfterPurchase(currentMoney, item.price)
 
-            for (effect in item.careEffect) {
+            for (effect in item.careEffects) {
                 when (effect.resource) {
                     CareResource.Health -> preferences[health] =
-                        (checkNotNull(preferences[health]) + effect.increaseLevel).coerceAtMost(100)
+                        (checkNotNull(preferences[health]) + effect.increase).coerceIn(0, 100)
                     CareResource.Happiness -> preferences[happiness] =
-                        (checkNotNull(preferences[happiness]) + effect.increaseLevel).coerceAtMost(100)
+                        (checkNotNull(preferences[happiness]) + effect.increase).coerceIn(0, 100)
                     CareResource.Energy -> preferences[energy] =
-                        (checkNotNull(preferences[energy]) + effect.increaseLevel).coerceAtMost(100)
+                        (checkNotNull(preferences[energy]) + effect.increase).coerceIn(0, 100)
                 }
             }
 
+            preferences[cooldownKey] = cooldownExpireAt(nowMillis, item.coolDownSeconds)
         }
     }
 

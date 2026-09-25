@@ -16,6 +16,7 @@ data class GameSnapshot(
 
     val currentPeriod: Int = 0,
     val onboardingCompleted: Boolean = false,
+    val cooldownExpires: Map<String, Long> = emptyMap(),
 
 //    val inventory: List<String> TODO: store inventory only in the roomDB
 //    val income: List<String>    TODO: different incomes should be took from roomDB ?

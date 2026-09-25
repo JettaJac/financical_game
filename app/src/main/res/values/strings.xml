@@ -1,30 +1,45 @@
 <resources>
+    <!-- App -->
     <string name="app_name">financial_game</string>
+
+    <!-- Common -->
+    <string name="pet">Кот</string>
+    <string name="soon">Скоро</string>
+
+    <!-- Home: header and status -->
+    <string name="open_menu">Открыть меню</string>
+    <string name="income">доход: %1$d</string>
+    <string name="expense">расход: %1$d</string>
+    <string name="money">%1$d$</string>
+    <string name="progress_value">%1$d / %2$d</string>
+    <string name="period_value">%1$d день %2$d неделя</string>
+    <string name="timer">Таймер</string>
+
+    <!-- Home: sections -->
     <string name="health">Здоровье</string>
     <string name="food">Еда</string>
     <string name="happiness">Счастье</string>
     <string name="energy">Энергия</string>
     <string name="shop">Магазин</string>
     <string name="tasks">Список дел</string>
-    <string name="soon">Скоро</string>
-    <string name="pet">Кот</string>
-    <string name="income">доход: %1$d</string>
-    <string name="expense">расход: %1$d</string>
-    <string name="money">%1$d$</string>
+    <string name="section_placeholder">Здесь скоро появится содержимое</string>
+
+    <!-- Menu -->
     <string name="menu">МЕНЮ</string>
-    <string name="open_menu">Открыть меню</string>
     <string name="continue_action">Продолжить</string>
     <string name="restart_action">Рестарт</string>
     <string name="exit_action">Выйти</string>
+
+    <!-- Store -->
     <string name="store">МАГАЗИН</string>
     <string name="close_store">Закрыть магазин</string>
     <string name="collar">ошейник</string>
     <string name="collar_price">100</string>
     <string name="buy">Купить</string>
     <string name="buy_price">Купить · %1$d ₽</string>
-    <string name="progress_value">%1$d / %2$d</string>
-    <string name="period_value">%1$d день %2$d неделя</string>
-    <string name="timer">Таймер</string>
+    <string name="cooldown_remaining">Через %1$s</string>
+
+    <!-- Food items -->
     <string name="school_lunch">Школьный обед</string>
     <string name="soda">Газировка</string>
     <string name="ice_cream">Мороженое</string>
@@ -33,16 +48,33 @@
     <string name="pizza">Пицца</string>
     <string name="pasta">Паста карбонара</string>
     <string name="set_rolls">Сет Роллов</string>
-    <string name="toy_mouse">Игрушечная мышь</string>
-    <string name="yarn_ball">Клубок</string>
-    <string name="music">Музыка</string>
-    <string name="nap">Дневной сон</string>
-    <string name="cocoa">Какао</string>
-    <string name="pillow">Подушка</string>
-    <string name="section_placeholder">Здесь скоро появится содержимое</string>
+
+    <!-- Happiness items -->
+    <string name="master_budget">МастерБюджета</string>
+    <string name="catch_money">Поймай деньги</string>
+    <string name="change_money">Игра разменяй купюре</string>
+    <string name="ball_game">Поиграть в мячик</string>
+    <string name="board_game">Настольная игра</string>
+    <string name="meeting_with_friends">Встреча с друзьями</string>
+    <string name="trip">Поездка за город</string>
+    <string name="zoo">Сходить в зоопарк</string>
+
+    <!-- Energy items -->
+    <string name="seat">Посидеть</string>
+    <string name="take_a_nap">Поспать</string>
+    <string name="listen_music">Послушать музыку</string>
+    <string name="take_a_massage">Посидеть в массажном кресле</string>
+    <string name="bath">Тёплая ванна</string>
+    <string name="spa">Спа-день</string>
+    <string name="body_massage">Массаж всего тела</string>
+    <string name="yoga">Йога с питомцем</string>
+
+    <!-- Onboarding -->
     <string name="onboarding_greeting">Привет!\nЯ Финник</string>
     <string name="onboarding_explanation">Я помогу тебе разобраться,\nкуда деньги уходят\nи как накопить на мечту.\nНачнём?</string>
     <string name="onboarding_start">Погнали!</string>
+
+    <!-- Goal -->
     <string name="goal_level">Уровень %1$d</string>
     <string name="goal_remaining">Осталось %1$d монет до цели</string>
     <string name="goal_reached">Цель достигнута!</string>

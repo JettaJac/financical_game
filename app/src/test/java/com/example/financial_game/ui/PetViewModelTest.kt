@@ -2,6 +2,8 @@ package com.example.financial_game.ui
 
 import com.example.financial_game.domain.moneyAfterCycle
 import com.example.financial_game.domain.moneyAfterPurchase
+import com.example.financial_game.domain.cooldownExpireAt
+import com.example.financial_game.domain.cooldownSecondsRemaining
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -26,5 +28,18 @@ class PetViewModelTest {
     fun purchase_only_charges_when_money_is_enough() {
         assertEquals(0, moneyAfterPurchase(money = 100, price = 100))
         assertEquals(99, moneyAfterPurchase(money = 99, price = 100))
+    }
+
+    @Test
+    fun cooldown_expire_is_calculated_from_duration() {
+        assertEquals(121_000L, cooldownExpireAt(nowMillis = 1_000L, cooldownSeconds = 120))
+    }
+
+    @Test
+    fun cooldown_rounds_up_until_expire_time_is_reached() {
+        assertEquals(2, cooldownSecondsRemaining(expireAtMillis = 2_001L, nowMillis = 1_000L))
+        assertEquals(1, cooldownSecondsRemaining(expireAtMillis = 2_000L, nowMillis = 1_001L))
+        assertEquals(0, cooldownSecondsRemaining(expireAtMillis = 2_000L, nowMillis = 2_000L))
+        assertEquals(0, cooldownSecondsRemaining(expireAtMillis = 2_000L, nowMillis = 3_000L))
     }
 }

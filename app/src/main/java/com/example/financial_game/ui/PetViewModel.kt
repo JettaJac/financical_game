@@ -3,7 +3,7 @@ package com.example.financial_game.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.financial_game.data.GameSnapshot
-import com.example.financial_game.domain.CareItem
+import com.example.financial_game.domain.CardItem
 import com.example.financial_game.domain.GameRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -33,6 +33,7 @@ data class PetState(
     val overlay: HomeOverlay? = null,
     val exitRequested: Boolean = false,
     val isInitialized: Boolean = false,
+    val nowMillis: Long = System.currentTimeMillis(),
 )
 
 sealed interface PetAction {
@@ -42,7 +43,7 @@ sealed interface PetAction {
     data object OpenGoal : PetAction
     data object CloseOverlay : PetAction
     data object BuyCollar : PetAction
-    data class BuyCareItem(val item: CareItem) : PetAction
+    data class BuyCareItem(val item: CardItem) : PetAction
     data object ForceNextCycle : PetAction
     data object Restart : PetAction
     data object CompleteOnboarding : PetAction
@@ -75,6 +76,7 @@ class PetViewModel @Inject constructor(private val repository: GameRepository) :
     private suspend fun runTimer() {
             while (true) {
                 delay(1_000)
+                _state.update { it.copy(nowMillis = System.currentTimeMillis()) }
                 if (!_state.value.resources.onboardingCompleted) continue
                 if (_state.value.secondsRemaining > 1) {
                     _state.update { it.copy(secondsRemaining = it.secondsRemaining - 1) }

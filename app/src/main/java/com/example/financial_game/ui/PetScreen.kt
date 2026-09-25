@@ -47,7 +47,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -60,8 +59,12 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.financial_game.R
-import com.example.financial_game.domain.CareItem
+import com.example.financial_game.domain.CardItem
+import com.example.financial_game.domain.FoodItem
 import com.example.financial_game.domain.CareResource
+import com.example.financial_game.domain.EnergyItem
+import com.example.financial_game.domain.HappinessItem
+import com.example.financial_game.domain.cooldownSecondsRemaining
 import com.example.financial_game.ui.theme.NunitoFontFamily
 
 private val HomePurple = Color(0xFF8743D3)
@@ -108,26 +111,45 @@ private fun homeLayoutMetrics(width: Dp, height: Dp): HomeLayoutMetrics {
     )
 }
 
-private data class CareItemUi(
-    val item: CareItem,
+private data class CardItemUI(
+    val item: CardItem,
     @DrawableRes val illustration: Int,
     @param:StringRes val title: Int,
 )
 
 private val FoodItems = listOf(
-    CareItemUi(CareItem.SchoolLunch, R.drawable.food_item1, R.string.school_lunch),
-    CareItemUi(CareItem.Soda, R.drawable.food_item2, R.string.soda),
-    CareItemUi(CareItem.MashedPotatoes, R.drawable.food_item3, R.string.mashed_potatoes),
-    CareItemUi(CareItem.IceCream, R.drawable.food_item4, R.string.ice_cream),
-    CareItemUi(CareItem.HamburgerWithCola, R.drawable.food_item5, R.string.hamburger_cola),
-    CareItemUi(CareItem.Pasta, R.drawable.food_item6, R.string.pasta),
-    CareItemUi(CareItem.SetRolls, R.drawable.food_item7, R.string.set_rolls),
-    CareItemUi(CareItem.Pizza, R.drawable.food_item8, R.string.pizza),
+    CardItemUI(FoodItem.SchoolLunch, R.drawable.food_item1, R.string.school_lunch),
+    CardItemUI(FoodItem.Soda, R.drawable.food_item2, R.string.soda),
+    CardItemUI(FoodItem.MashedPotatoes, R.drawable.food_item3, R.string.mashed_potatoes),
+    CardItemUI(FoodItem.IceCream, R.drawable.food_item4, R.string.ice_cream),
+    CardItemUI(FoodItem.HamburgerWithCola, R.drawable.food_item5, R.string.hamburger_cola),
+    CardItemUI(FoodItem.Pasta, R.drawable.food_item6, R.string.pasta),
+    CardItemUI(FoodItem.SetRolls, R.drawable.food_item7, R.string.set_rolls),
+    CardItemUI(FoodItem.Pizza, R.drawable.food_item8, R.string.pizza),
 )
 
-private val HappinessItems = emptyList<CareItemUi>()
+private val HappinessItems = listOf(
+    CardItemUI(HappinessItem.BudgetMaster, R.drawable.food_item1, R.string.master_budget),
+    CardItemUI(HappinessItem.CatchMoney, R.drawable.food_item1, R.string.catch_money),
+    CardItemUI(HappinessItem.ChangeMoney, R.drawable.food_item1, R.string.change_money),
+    CardItemUI(HappinessItem.PlayWithBall, R.drawable.food_item1, R.string.ball_game),
+    CardItemUI(HappinessItem.BoardGame, R.drawable.food_item1, R.string.board_game),
+    CardItemUI(HappinessItem.MeetingWithFriends, R.drawable.food_item1, R.string.meeting_with_friends),
+    CardItemUI(HappinessItem.Trip, R.drawable.food_item1, R.string.trip),
+    CardItemUI(HappinessItem.Zoo, R.drawable.food_item1, R.string.zoo),
+)
 
-private val EnergyItems = emptyList<CareItemUi>()
+private val EnergyItems = listOf(
+    CardItemUI(EnergyItem.TakeASeat, R.drawable.food_item1, R.string.seat),
+    CardItemUI(EnergyItem.TakeANap, R.drawable.food_item1, R.string.take_a_nap),
+    CardItemUI(EnergyItem.ListenMusic, R.drawable.food_item1, R.string.listen_music),
+    CardItemUI(EnergyItem.TakeAMassage, R.drawable.food_item1, R.string.take_a_massage),
+    CardItemUI(EnergyItem.HotBath, R.drawable.food_item1, R.string.bath),
+    CardItemUI(EnergyItem.SPA, R.drawable.food_item1, R.string.spa),
+    CardItemUI(EnergyItem.BodyMassage, R.drawable.food_item1, R.string.body_massage),
+    CardItemUI(EnergyItem.Yoga, R.drawable.food_item1, R.string.yoga),
+)
+
 
 @Composable
 fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
@@ -444,7 +466,7 @@ private fun ActionTile(
 private fun HomeBottomPanel(
     state: PetState,
     onSectionClick: (HomeSection) -> Unit,
-    onBuyClick: (CareItem) -> Unit,
+    onBuyClick: (CardItem) -> Unit,
     metrics: HomeLayoutMetrics,
     modifier: Modifier = Modifier,
 ) {
@@ -463,23 +485,29 @@ private fun HomeBottomPanel(
                 .background(HomeSurface),
         ) {
             when (state.selectedSection) {
-                HomeSection.Food -> ProductRow(
+                HomeSection.Food -> CardRow(
                     items = FoodItems,
                     money = state.resources.money,
+                    cooldownExpires = state.resources.cooldownExpires,
+                    nowMillis = state.nowMillis,
                     onBuyClick = onBuyClick,
                     horizontalPadding = metrics.horizontalPadding,
                     itemGap = metrics.itemGap,
                 )
-                HomeSection.Happiness -> ProductRow(
+                HomeSection.Happiness -> CardRow(
                     items = HappinessItems,
                     money = state.resources.money,
+                    cooldownExpires = state.resources.cooldownExpires,
+                    nowMillis = state.nowMillis,
                     onBuyClick = onBuyClick,
                     horizontalPadding = metrics.horizontalPadding,
                     itemGap = metrics.itemGap,
                 )
-                HomeSection.Energy -> ProductRow(
+                HomeSection.Energy -> CardRow(
                     items = EnergyItems,
                     money = state.resources.money,
+                    cooldownExpires = state.resources.cooldownExpires,
+                    nowMillis = state.nowMillis,
                     onBuyClick = onBuyClick,
                     horizontalPadding = metrics.horizontalPadding,
                     itemGap = metrics.itemGap,
@@ -636,10 +664,12 @@ private fun SectionPlaceholder(
 }
 
 @Composable
-private fun ProductRow(
-    items: List<CareItemUi>,
+private fun CardRow(
+    items: List<CardItemUI>,
     money: Int,
-    onBuyClick: (CareItem) -> Unit,
+    cooldownExpires: Map<String, Long>,
+    nowMillis: Long,
+    onBuyClick: (CardItem) -> Unit,
     horizontalPadding: Dp,
     itemGap: Dp,
     modifier: Modifier = Modifier,
@@ -668,9 +698,14 @@ private fun ProductRow(
                 horizontalArrangement = Arrangement.spacedBy(itemGap),
             ) {
                 pageItems.forEach { product ->
+                    val cooldownRemainingSeconds = cooldownSecondsRemaining(
+                        expireAtMillis = cooldownExpires[product.item.storageId] ?: 0L,
+                        nowMillis = nowMillis,
+                    )
                     ProductCard(
                         product = product,
-                        canBuy = money >= product.item.price,
+                        canBuy = money >= product.item.price && cooldownRemainingSeconds == 0,
+                        cooldownRemainingSeconds = cooldownRemainingSeconds,
                         onBuyClick = { onBuyClick(product.item) },
                         modifier = Modifier.weight(1f),
                     )
@@ -714,8 +749,9 @@ private fun ProductPageIndicator(
 
 @Composable
 private fun ProductCard(
-    product: CareItemUi,
+    product: CardItemUI,
     canBuy: Boolean,
+    cooldownRemainingSeconds: Int,
     onBuyClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -754,14 +790,21 @@ private fun ProductCard(
             colors = ButtonDefaults.buttonColors(
                 containerColor = HomePurple,
                 disabledContainerColor = HomePurple.copy(alpha = 0.22f),
-                disabledContentColor = HomePurpleDark.copy(alpha = 0.38f),
+                disabledContentColor = HomePurpleDark.copy(alpha = 0.62f),
             ),
             contentPadding = PaddingValues(horizontal = 2.dp),
             modifier = Modifier.fillMaxWidth().heightIn(min = 32.dp, max = 42.dp),
             shape = RoundedCornerShape(27)
         ) {
             Text(
-                text = stringResource(R.string.buy_price, product.item.price),
+                text = if (cooldownRemainingSeconds > 0) {
+                    stringResource(
+                        R.string.cooldown_remaining,
+                        formatCountdown(cooldownRemainingSeconds),
+                    )
+                } else {
+                    stringResource(R.string.buy_price, product.item.price)
+                },
                 autoSize = TextAutoSize.StepBased(
                     minFontSize = 7.sp,
                     maxFontSize = 10.sp,
@@ -774,16 +817,16 @@ private fun ProductCard(
 }
 
 @Composable
-private fun CareStats(item: CareItem) {
+private fun CareStats(item: CardItem) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         CareResource.entries.forEach { resource ->
-            val increaseLevel = item.careEffect
+            val increaseLevel = item.careEffects
                 .firstOrNull { it.resource == resource }
-                ?.increaseLevel
+                ?.increase
                 ?: 0
 
             Row(

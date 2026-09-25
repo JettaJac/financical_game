@@ -12,7 +12,7 @@ interface GameRepository {
 
     suspend fun buyCollar()
 
-    suspend fun buyCareItem(item: CareItem)
+    suspend fun buyCareItem(item: CardItem)
 
     suspend fun completeOnboarding()
 
