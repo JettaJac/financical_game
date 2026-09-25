@@ -579,8 +579,12 @@ private fun OnboardingStage(
                     ),
                 ),
         )
-        val finnWidth = (maxWidth * 0.78f).coerceAtMost(350.dp)
-        val finnTopPadding = (maxHeight * 0.15f).coerceIn(88.dp, 120.dp)
+        val finnWidth = minOf(
+            maxWidth * 0.78f,
+            maxHeight * 0.43f * (6f / 7f),
+            350.dp,
+        )
+        val finnTopPadding = (maxHeight * 0.24f).coerceIn(140.dp, 190.dp)
         FinnickAnimation(
             assetPath = animationAssetPath,
             modifier = Modifier

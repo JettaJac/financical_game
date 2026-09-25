@@ -11,6 +11,7 @@ import com.example.financial_game.domain.GameDefaults
 import com.example.financial_game.domain.GameRepository
 import com.example.financial_game.domain.CardItem
 import com.example.financial_game.domain.EyeColour
+import com.example.financial_game.domain.Effect
 import com.example.financial_game.domain.Goals
 import com.example.financial_game.domain.HairColour
 import com.example.financial_game.domain.HairStyle
@@ -195,6 +196,29 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             }
 
             preferences[cooldownKey] = cooldownExpireAt(nowMillis, item.coolDownSeconds)
+        }
+    }
+
+    override suspend fun applyEffects(effects: List<Effect>) {
+        context.gameDataStore.edit { preferences ->
+            val moneyChange = effects
+                .filter { it.resource == Resource.Money }
+                .sumOf(Effect::increase)
+            val currentMoney = checkNotNull(preferences[money])
+            if (currentMoney + moneyChange < 0) return@edit
+
+            effects.groupBy(Effect::resource).forEach { (resource, resourceEffects) ->
+                val change = resourceEffects.sumOf(Effect::increase)
+                when (resource) {
+                    Resource.Health -> preferences[health] =
+                        (checkNotNull(preferences[health]) + change).coerceIn(0, 100)
+                    Resource.Happiness -> preferences[happiness] =
+                        (checkNotNull(preferences[happiness]) + change).coerceIn(0, 100)
+                    Resource.Energy -> preferences[energy] =
+                        (checkNotNull(preferences[energy]) + change).coerceIn(0, 100)
+                    Resource.Money -> preferences[money] = currentMoney + change
+                }
+            }
         }
     }
 

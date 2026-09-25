@@ -39,6 +39,12 @@
     <string name="buy_price">Купить · %1$d ₽</string>
     <string name="cooldown_remaining">Через %1$s</string>
 
+    <!-- Events -->
+    <string name="event_sports_section_description">Друг предложил пойти\nна спортивную секцию</string>
+    <string name="event_accept">Согласиться</string>
+    <string name="event_decline">Отказаться</string>
+    <string name="event_close">Пропустить событие</string>
+
     <!-- Food items -->
     <string name="school_lunch">Школьный обед</string>
     <string name="soda">Газировка</string>

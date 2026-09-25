@@ -14,6 +14,8 @@ interface GameRepository {
 
     suspend fun buyCareItem(item: CardItem)
 
+    suspend fun applyEffects(effects: List<Effect>)
+
     suspend fun completeOnboarding(setup: PetSetup)
 
     suspend fun reset()

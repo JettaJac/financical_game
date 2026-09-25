@@ -4,6 +4,9 @@ import com.example.financial_game.domain.moneyAfterCycle
 import com.example.financial_game.domain.moneyAfterPurchase
 import com.example.financial_game.domain.cooldownExpireAt
 import com.example.financial_game.domain.cooldownSecondsRemaining
+import com.example.financial_game.domain.Effect
+import com.example.financial_game.domain.Resource
+import com.example.financial_game.domain.canApplyEffects
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -41,5 +44,13 @@ class PetViewModelTest {
         assertEquals(1, cooldownSecondsRemaining(expireAtMillis = 2_000L, nowMillis = 1_001L))
         assertEquals(0, cooldownSecondsRemaining(expireAtMillis = 2_000L, nowMillis = 2_000L))
         assertEquals(0, cooldownSecondsRemaining(expireAtMillis = 2_000L, nowMillis = 3_000L))
+    }
+
+    @Test
+    fun event_with_money_cost_cannot_be_accepted_without_enough_money() {
+        val effects = listOf(Effect(Resource.Money, -30), Effect(Resource.Energy, 10))
+
+        assertEquals(false, canApplyEffects(money = 29, effects = effects))
+        assertEquals(true, canApplyEffects(money = 30, effects = effects))
     }
 }

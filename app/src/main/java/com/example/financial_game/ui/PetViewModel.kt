@@ -4,8 +4,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.financial_game.data.GameSnapshot
 import com.example.financial_game.domain.CardItem
+import com.example.financial_game.domain.GameEvent
 import com.example.financial_game.domain.GameRepository
 import com.example.financial_game.domain.PetSetup
+import com.example.financial_game.domain.canApplyEffects
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.delay
@@ -32,6 +34,7 @@ data class PetState(
     val secondsRemaining: Int = TIMER_SECONDS,
     val selectedSection: HomeSection = HomeSection.Food,
     val overlay: HomeOverlay? = null,
+    val activeEvent: GameEvent? = null,
     val exitRequested: Boolean = false,
     val isInitialized: Boolean = false,
     val nowMillis: Long = System.currentTimeMillis(),
@@ -43,6 +46,10 @@ sealed interface PetAction {
     data object OpenShop : PetAction
     data object OpenGoal : PetAction
     data object CloseOverlay : PetAction
+    data class ShowEvent(val event: GameEvent) : PetAction
+    data object AcceptEvent : PetAction
+    data object DeclineEvent : PetAction
+    data object SkipEvent : PetAction
     data object BuyCollar : PetAction
     data class BuyCareItem(val item: CardItem) : PetAction
     data object ForceNextCycle : PetAction
@@ -98,6 +105,7 @@ class PetViewModel @Inject constructor(private val repository: GameRepository) :
                     secondsRemaining = TIMER_SECONDS,
                     selectedSection = HomeSection.Food,
                     overlay = null,
+                    activeEvent = null,
                     exitRequested = false,
                 )
             }
@@ -117,6 +125,14 @@ class PetViewModel @Inject constructor(private val repository: GameRepository) :
             PetAction.OpenShop -> _state.update { it.copy(overlay = HomeOverlay.Shop) }
             PetAction.OpenGoal -> _state.update { it.copy(overlay = HomeOverlay.Goal) }
             PetAction.CloseOverlay -> _state.update { it.copy(overlay = null) }
+            is PetAction.ShowEvent -> _state.update {
+                it.copy(overlay = null, activeEvent = action.event)
+            }
+            PetAction.AcceptEvent -> resolveEvent(accept = true)
+            PetAction.DeclineEvent -> resolveEvent(accept = false)
+            PetAction.SkipEvent -> _state.update {
+                if (it.activeEvent?.showCloseButton == true) it.copy(activeEvent = null) else it
+            }
             PetAction.Exit -> _state.update { it.copy(exitRequested = true) }
             PetAction.BuyCollar -> viewModelScope.launch { repository.buyCollar() }
             is PetAction.BuyCareItem -> viewModelScope.launch { repository.buyCareItem(action.item) }
@@ -126,5 +142,15 @@ class PetViewModel @Inject constructor(private val repository: GameRepository) :
                 repository.completeOnboarding(action.setup)
             }
         }
+    }
+
+    private fun resolveEvent(accept: Boolean) {
+        val currentState = _state.value
+        val event = currentState.activeEvent ?: return
+        val effects = if (accept) event.acceptEffects else event.declineEffects
+        if (!canApplyEffects(currentState.resources.money, effects)) return
+
+        _state.update { it.copy(activeEvent = null) }
+        viewModelScope.launch { repository.applyEffects(effects) }
     }
 }

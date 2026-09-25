@@ -66,6 +66,7 @@ import com.example.financial_game.domain.EnergyItem
 import com.example.financial_game.domain.HappinessItem
 import com.example.financial_game.domain.Goals
 import com.example.financial_game.domain.cooldownSecondsRemaining
+import com.example.financial_game.domain.canApplyEffects
 import com.example.financial_game.ui.theme.NunitoFontFamily
 
 private val HomePurple = Color(0xFF8743D3)
@@ -184,6 +185,16 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
             onDismiss = { onAction(PetAction.CloseOverlay) },
         )
         null -> Unit
+    }
+
+    state.activeEvent?.let { event ->
+        EventOverlay(
+            event = event,
+            canAccept = canApplyEffects(state.resources.money, event.acceptEffects),
+            onAccept = { onAction(PetAction.AcceptEvent) },
+            onDecline = { onAction(PetAction.DeclineEvent) },
+            onSkip = { onAction(PetAction.SkipEvent) },
+        )
     }
 }
 
