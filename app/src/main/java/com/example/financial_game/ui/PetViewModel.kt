@@ -2,11 +2,15 @@ package com.example.financial_game.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.financial_game.R
 import com.example.financial_game.data.GameSnapshot
 import com.example.financial_game.domain.CardItem
+import com.example.financial_game.domain.Effect
 import com.example.financial_game.domain.GameEvent
 import com.example.financial_game.domain.GameRepository
+import com.example.financial_game.domain.Goals
 import com.example.financial_game.domain.PetSetup
+import com.example.financial_game.domain.Resource
 import com.example.financial_game.domain.canApplyEffects
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -23,6 +27,26 @@ internal fun formatCountdown(totalSeconds: Int): String {
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60
     return "%02d:%02d".format(minutes, seconds)
+}
+
+internal fun hasJustReachedGoal(previous: GameSnapshot?, current: GameSnapshot): Boolean {
+    if (!current.onboardingCompleted || current.goalTarget <= 0) return false
+    if (current.money < current.goalTarget) return false
+    if (previous == null || !previous.onboardingCompleted || previous.goalId != current.goalId) {
+        return true
+    }
+    return previous.money < previous.goalTarget
+}
+
+internal fun goalPurchaseEvent(resources: GameSnapshot): GameEvent {
+    val goal = Goals.fromStorageId(resources.goalId)
+    return GameEvent(
+        descriptionRes = goal.titleRes,
+        illustrationRes = goal.illustrationRes,
+        acceptEffects = goal.goalEffects + Effect(Resource.Money, -resources.goalTarget),
+        showCloseButton = true,
+        acceptButtonTextRes = R.string.buy,
+    )
 }
 
 enum class HomeOverlay { Menu, Shop, Goal }
@@ -72,10 +96,20 @@ class PetViewModel @Inject constructor(private val repository: GameRepository) :
 
             launch {
                 repository.snapshot.collect { resources ->
-                    _state.update { it.copy(
-                        resources = resources,
-                        isInitialized = true,
-                    ) }
+                    val previous = _state.value.resources.takeIf { _state.value.isInitialized }
+                    val reachedGoalEvent = if (hasJustReachedGoal(previous, resources)) {
+                        goalPurchaseEvent(resources)
+                    } else {
+                        null
+                    }
+                    _state.update {
+                        it.copy(
+                            resources = resources,
+                            isInitialized = true,
+                            overlay = if (reachedGoalEvent != null) null else it.overlay,
+                            activeEvent = reachedGoalEvent ?: it.activeEvent,
+                        )
+                    }
                 }
             }
         }

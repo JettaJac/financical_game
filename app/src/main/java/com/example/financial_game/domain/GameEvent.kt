@@ -10,6 +10,8 @@ data class GameEvent(
     val acceptEffects: List<Effect>,
     val declineEffects: List<Effect> = emptyList(),
     val showCloseButton: Boolean = false,
+    @param:StringRes val acceptButtonTextRes: Int = R.string.event_accept,
+    @param:StringRes val declineButtonTextRes: Int = R.string.event_decline,
 )
 
 object GameEvents {

@@ -1,11 +1,14 @@
 package com.example.financial_game.ui
 
+import com.example.financial_game.R
+import com.example.financial_game.data.GameSnapshot
 import com.example.financial_game.domain.moneyAfterCycle
 import com.example.financial_game.domain.moneyAfterPurchase
 import com.example.financial_game.domain.cooldownExpireAt
 import com.example.financial_game.domain.cooldownSecondsRemaining
 import com.example.financial_game.domain.Effect
 import com.example.financial_game.domain.Resource
+import com.example.financial_game.domain.Goals
 import com.example.financial_game.domain.canApplyEffects
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -52,5 +55,37 @@ class PetViewModelTest {
 
         assertEquals(false, canApplyEffects(money = 29, effects = effects))
         assertEquals(true, canApplyEffects(money = 30, effects = effects))
+    }
+
+    @Test
+    fun reaching_goal_creates_purchase_event_with_current_goal_data() {
+        val resources = GameSnapshot(
+            goalId = Goals.Ball.name,
+            goalTarget = 100,
+            money = 100,
+            onboardingCompleted = true,
+        )
+
+        val event = goalPurchaseEvent(resources)
+
+        assertEquals(Goals.Ball.titleRes, event.descriptionRes)
+        assertEquals(Goals.Ball.illustrationRes, event.illustrationRes)
+        assertEquals(Goals.Ball.goalEffects + Effect(Resource.Money, -100), event.acceptEffects)
+        assertEquals(R.string.buy, event.acceptButtonTextRes)
+        assertEquals(true, event.showCloseButton)
+    }
+
+    @Test
+    fun goal_event_is_emitted_only_when_threshold_is_crossed() {
+        val before = GameSnapshot(
+            goalId = Goals.Pillow.name,
+            goalTarget = 100,
+            money = 99,
+            onboardingCompleted = true,
+        )
+        val reached = before.copy(money = 100)
+
+        assertEquals(true, hasJustReachedGoal(before, reached))
+        assertEquals(false, hasJustReachedGoal(reached, reached.copy(money = 120)))
     }
 }

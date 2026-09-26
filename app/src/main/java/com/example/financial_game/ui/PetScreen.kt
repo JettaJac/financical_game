@@ -193,8 +193,8 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
     state.activeEvent?.let { event ->
         EventOverlay(
             event = event,
-            acceptButtonText = stringResource(R.string.event_accept),
-            declineButtonText = stringResource(R.string.event_decline),
+            acceptButtonText = stringResource(event.acceptButtonTextRes),
+            declineButtonText = stringResource(event.declineButtonTextRes),
             canClose = event.showCloseButton,
             onAccept = { onAction(PetAction.AcceptEvent) },
             onDecline = { onAction(PetAction.DeclineEvent) },
