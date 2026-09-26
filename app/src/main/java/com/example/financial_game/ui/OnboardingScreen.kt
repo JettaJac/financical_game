@@ -604,10 +604,13 @@ private fun OnboardingStage(
             .background(Color.White)
             .safeDrawingPadding(),
     ) {
+        val backgroundLift = (maxHeight * 0.07f).coerceIn(52.dp, 72.dp)
         Image(
             painter = painterResource(R.drawable.home_background),
             contentDescription = null,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .offset(y = -backgroundLift),
             contentScale = ContentScale.Crop,
         )
         Box(
@@ -615,10 +618,15 @@ private fun OnboardingStage(
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
-                        0f to Color.Transparent,
-                        0.55f to Color.Transparent,
-                        0.76f to Color.White.copy(alpha = 0.9f),
-                        1f to Color.White,
+                        colorStops = arrayOf(
+                            0f to Color.Transparent,
+                            0.48f to Color.Transparent,
+                            0.62f to Color.White.copy(alpha = 0.12f),
+                            0.74f to Color.White.copy(alpha = 0.45f),
+                            0.86f to Color.White.copy(alpha = 0.88f),
+                            0.92f to Color.White,
+                            1f to Color.White,
+                        ),
                     ),
                 ),
         )
