@@ -83,12 +83,12 @@ import com.example.financial_game.domain.Resource
 import com.example.financial_game.ui.theme.NunitoFontFamily
 
 private const val INTRO_STEP = 0
-private const val STORY_STEP = 1
-private const val NAME_STEP = 2
-private const val HAIR_COLOUR_STEP = 3
-private const val EYE_COLOUR_STEP = 4
-private const val HAIR_STYLE_STEP = 5
-private const val GOAL_STEP = 6
+private const val NAME_STEP = 1
+private const val STORY_STEP = 2
+private const val GOAL_STEP = 3
+private const val HAIR_COLOUR_STEP = 4
+private const val EYE_COLOUR_STEP = 5
+private const val HAIR_STYLE_STEP = 6
 private const val MAX_NAME_LENGTH = 20
 private const val HELLO_ANIMATION = "webm/hello_animated.webp"
 private const val TALKING_ANIMATION = "webm/talking_animated.webp"
@@ -111,18 +111,29 @@ internal fun OnboardingScreen(
     val availableGoals = remember(initialState.level) {
         Goals.entries.filter { it.level <= initialState.level }.ifEmpty { listOf(Goals.Pillow) }
     }
+    var goal by rememberSaveable { mutableStateOf(availableGoals.first()) }
 
     when (step) {
-        INTRO_STEP, STORY_STEP -> IntroOnboardingStep(
-            showStory = step == STORY_STEP,
-            onGreetingClick = { step = STORY_STEP },
-            onContinue = { step = NAME_STEP },
+        INTRO_STEP -> IntroOnboardingStep(
+            onGreetingClick = { step = NAME_STEP },
             modifier = modifier,
         )
         NAME_STEP -> NameOnboardingStep(
             name = name,
             onNameChange = { name = it.take(MAX_NAME_LENGTH) },
-            onContinue = { step = HAIR_COLOUR_STEP },
+            onContinue = { step = STORY_STEP },
+            modifier = modifier,
+        )
+        STORY_STEP -> HelpOnboardingStep(
+            onContinue = { step = GOAL_STEP },
+            modifier = modifier,
+        )
+        GOAL_STEP -> GoalOnboardingStep(
+            goals = availableGoals,
+            onGoalSelected = {
+                goal = it
+                step = HAIR_COLOUR_STEP
+            },
             modifier = modifier,
         )
         HAIR_COLOUR_STEP -> HairColourOnboardingStep(
@@ -140,12 +151,7 @@ internal fun OnboardingScreen(
         HAIR_STYLE_STEP -> HairStyleOnboardingStep(
             selected = hairStyle,
             onSelected = { hairStyle = it },
-            onContinue = { step = GOAL_STEP },
-            modifier = modifier,
-        )
-        GOAL_STEP -> GoalOnboardingStep(
-            goals = availableGoals,
-            onGoalSelected = { goal ->
+            onContinue = {
                 onComplete(
                     PetSetup(
                         name = name.trim(),
@@ -163,24 +169,42 @@ internal fun OnboardingScreen(
 
 @Composable
 private fun IntroOnboardingStep(
-    showStory: Boolean,
     onGreetingClick: () -> Unit,
-    onContinue: () -> Unit,
     modifier: Modifier,
 ) {
     OnboardingStage(
-        animationAssetPath = if (showStory) TALKING_ANIMATION else HELLO_ANIMATION,
+        animationAssetPath = HELLO_ANIMATION,
         modifier = modifier.selectable(
-            selected = showStory,
-            enabled = !showStory,
+            selected = false,
+            enabled = true,
             role = Role.Button,
             onClick = onGreetingClick,
         ),
     ) {
         PetSpeechBubble(
             text = stringResource(
-                if (showStory) R.string.onboarding_explanation
-                else R.string.onboarding_greeting,
+                R.string.onboarding_greeting,
+            ),
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 64.dp, end = 16.dp)
+                .widthIn(max = 250.dp),
+        )
+    }
+}
+
+@Composable
+private fun HelpOnboardingStep(
+    onContinue: () -> Unit,
+    modifier: Modifier,
+) {
+    OnboardingStage(
+        animationAssetPath = TALKING_ANIMATION,
+        modifier = modifier,
+    ) {
+        PetSpeechBubble(
+            text = stringResource(
+                R.string.onboarding_explanation
             ),
             modifier = Modifier
                 .align(Alignment.TopEnd)
@@ -188,13 +212,11 @@ private fun IntroOnboardingStep(
                 .widthIn(max = 250.dp),
         )
 
-        if (showStory) {
-            OnboardingButton(
-                text = stringResource(R.string.onboarding_start),
-                onClick = onContinue,
-                modifier = Modifier.align(Alignment.BottomCenter),
-            )
-        }
+        OnboardingButton(
+            text = stringResource(R.string.onboarding_start),
+            onClick = onContinue,
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
     }
 }
 
