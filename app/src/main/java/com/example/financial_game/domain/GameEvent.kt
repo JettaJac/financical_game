@@ -12,6 +12,12 @@ data class GameEvent(
     val showCloseButton: Boolean = false,
     @param:StringRes val acceptButtonTextRes: Int = R.string.event_accept,
     @param:StringRes val declineButtonTextRes: Int = R.string.event_decline,
+    val goalPurchase: GoalPurchase? = null,
+)
+
+data class GoalPurchase(
+    val goal: Goals,
+    val price: Int,
 )
 
 object GameEvents {

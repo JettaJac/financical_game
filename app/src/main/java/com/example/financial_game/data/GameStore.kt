@@ -18,6 +18,7 @@ import com.example.financial_game.domain.HairStyle
 import com.example.financial_game.domain.PetSetup
 import com.example.financial_game.domain.Resource
 import com.example.financial_game.domain.cooldownExpireAt
+import com.example.financial_game.domain.levelAfterGoalPurchase
 import com.example.financial_game.domain.moneyAfterCycle
 import com.example.financial_game.domain.moneyAfterPurchase
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -196,6 +197,42 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             }
 
             preferences[cooldownKey] = cooldownExpireAt(nowMillis, item.coolDownSeconds)
+        }
+    }
+
+    override suspend fun buyGoal(goal: Goals, price: Int): Boolean {
+        val safePrice = price.coerceAtLeast(0)
+        var purchased = false
+        context.gameDataStore.edit { preferences ->
+            val currentMoney = checkNotNull(preferences[money])
+            if (currentMoney < safePrice) return@edit
+
+            preferences[money] = currentMoney - safePrice
+            for (effect in goal.goalEffects) {
+                when (effect.resource) {
+                    Resource.Health -> preferences[health] =
+                        (checkNotNull(preferences[health]) + effect.increase).coerceIn(0, 100)
+                    Resource.Happiness -> preferences[happiness] =
+                        (checkNotNull(preferences[happiness]) + effect.increase).coerceIn(0, 100)
+                    Resource.Energy -> preferences[energy] =
+                        (checkNotNull(preferences[energy]) + effect.increase).coerceIn(0, 100)
+                    Resource.Money -> preferences[money] =
+                        checkNotNull(preferences[money]) + effect.increase
+                }
+            }
+
+            val currentLevel = checkNotNull(preferences[level])
+            preferences[level] = levelAfterGoalPurchase(currentLevel, goal.level)
+            purchased = true
+        }
+        return purchased
+    }
+
+    override suspend fun selectGoal(goal: Goals) {
+        context.gameDataStore.edit { preferences ->
+            preferences[goalId] = goal.name
+            preferences[goalTitle] = context.getString(goal.titleRes)
+            preferences[goalTarget] = goal.target
         }
     }
 

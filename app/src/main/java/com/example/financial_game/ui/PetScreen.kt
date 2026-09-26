@@ -181,12 +181,28 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
             canBuy = state.resources.money >= COLLAR_PRICE,
             onAction = onAction,
         )
-        HomeOverlay.Goal -> GoalOverlay(
-            money = state.resources.money,
-            target = state.resources.goalTarget,
-            goal = Goals.fromStorageId(state.resources.goalId),
-            onDismiss = { onAction(PetAction.CloseOverlay) },
-        )
+        HomeOverlay.Goal -> {
+            val goal = Goals.fromStorageId(state.resources.goalId)
+            GoalOverlay(
+                money = state.resources.money,
+                target = state.resources.goalTarget,
+                goal = goal,
+                onBuy = {
+                    onAction(PetAction.BuyGoal(goal, state.resources.goalTarget))
+                },
+                onDismiss = { onAction(PetAction.CloseOverlay) },
+            )
+        }
+        HomeOverlay.GoalSelection -> {
+            val purchasedGoal = Goals.fromStorageId(state.resources.goalId)
+            val availableGoals = Goals.entries
+                .filter { it.level <= state.resources.level && it != purchasedGoal }
+                .ifEmpty { Goals.entries.filter { it.level <= state.resources.level } }
+            GoalSelectionScreen(
+                goals = availableGoals,
+                onGoalSelected = { onAction(PetAction.SelectGoal(it)) },
+            )
+        }
         null -> Unit
     }
 

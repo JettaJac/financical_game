@@ -4,6 +4,7 @@ import com.example.financial_game.R
 import com.example.financial_game.data.GameSnapshot
 import com.example.financial_game.domain.moneyAfterCycle
 import com.example.financial_game.domain.moneyAfterPurchase
+import com.example.financial_game.domain.levelAfterGoalPurchase
 import com.example.financial_game.domain.cooldownExpireAt
 import com.example.financial_game.domain.cooldownSecondsRemaining
 import com.example.financial_game.domain.Effect
@@ -73,6 +74,8 @@ class PetViewModelTest {
         assertEquals(Goals.Ball.goalEffects + Effect(Resource.Money, -100), event.acceptEffects)
         assertEquals(R.string.buy, event.acceptButtonTextRes)
         assertEquals(true, event.showCloseButton)
+        assertEquals(Goals.Ball, event.goalPurchase?.goal)
+        assertEquals(100, event.goalPurchase?.price)
     }
 
     @Test
@@ -87,5 +90,11 @@ class PetViewModelTest {
 
         assertEquals(true, hasJustReachedGoal(before, reached))
         assertEquals(false, hasJustReachedGoal(reached, reached.copy(money = 120)))
+    }
+
+    @Test
+    fun buying_goal_of_current_level_increases_character_level() {
+        assertEquals(2, levelAfterGoalPurchase(currentLevel = 1, goalLevel = 1))
+        assertEquals(3, levelAfterGoalPurchase(currentLevel = 3, goalLevel = 2))
     }
 }

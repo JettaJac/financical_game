@@ -14,6 +14,10 @@ interface GameRepository {
 
     suspend fun buyCareItem(item: CardItem)
 
+    suspend fun buyGoal(goal: Goals, price: Int): Boolean
+
+    suspend fun selectGoal(goal: Goals)
+
     suspend fun applyEffects(effects: List<Effect>)
 
     suspend fun completeOnboarding(setup: PetSetup)
@@ -26,3 +30,6 @@ internal fun moneyAfterCycle(money: Int, income: Int, expense: Int): Int =
 
 internal fun moneyAfterPurchase(money: Int, price: Int): Int =
     if (money >= price) money - price else money
+
+internal fun levelAfterGoalPurchase(currentLevel: Int, goalLevel: Int): Int =
+    if (goalLevel == currentLevel) currentLevel + 1 else currentLevel

@@ -72,6 +72,7 @@ internal fun GoalOverlay(
     money: Int,
     target: Int,
     goal: Goals,
+    onBuy: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val title = stringResource(goal.titleRes)
@@ -295,7 +296,7 @@ internal fun GoalOverlay(
                     )
                     Spacer(Modifier.height(14.dp))
                     Button(
-                        onClick = {},
+                        onClick = onBuy,
                         enabled = money >= target,
                         modifier = Modifier.fillMaxWidth().height(50.dp),
                         colors = ButtonDefaults.buttonColors(

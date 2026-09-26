@@ -128,7 +128,7 @@ internal fun OnboardingScreen(
             onContinue = { step = GOAL_STEP },
             modifier = modifier,
         )
-        GOAL_STEP -> GoalOnboardingStep(
+        GOAL_STEP -> GoalSelectionScreen(
             goals = availableGoals,
             onGoalSelected = {
                 goal = it
@@ -417,10 +417,10 @@ private fun ChoiceOnboardingStep(
 }
 
 @Composable
-private fun GoalOnboardingStep(
+internal fun GoalSelectionScreen(
     goals: List<Goals>,
     onGoalSelected: (Goals) -> Unit,
-    modifier: Modifier,
+    modifier: Modifier = Modifier,
 ) {
     val pagerState = rememberPagerState(pageCount = { goals.size })
 

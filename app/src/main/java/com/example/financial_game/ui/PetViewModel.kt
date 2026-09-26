@@ -8,6 +8,7 @@ import com.example.financial_game.domain.CardItem
 import com.example.financial_game.domain.Effect
 import com.example.financial_game.domain.GameEvent
 import com.example.financial_game.domain.GameRepository
+import com.example.financial_game.domain.GoalPurchase
 import com.example.financial_game.domain.Goals
 import com.example.financial_game.domain.PetSetup
 import com.example.financial_game.domain.Resource
@@ -46,10 +47,11 @@ internal fun goalPurchaseEvent(resources: GameSnapshot): GameEvent {
         acceptEffects = goal.goalEffects + Effect(Resource.Money, -resources.goalTarget),
         showCloseButton = true,
         acceptButtonTextRes = R.string.buy,
+        goalPurchase = GoalPurchase(goal = goal, price = resources.goalTarget),
     )
 }
 
-enum class HomeOverlay { Menu, Shop, Goal }
+enum class HomeOverlay { Menu, Shop, Goal, GoalSelection }
 
 enum class HomeSection { Food, Happiness, Energy, Shop, Tasks }
 
@@ -76,6 +78,8 @@ sealed interface PetAction {
     data object SkipEvent : PetAction
     data object BuyCollar : PetAction
     data class BuyCareItem(val item: CardItem) : PetAction
+    data class BuyGoal(val goal: Goals, val price: Int) : PetAction
+    data class SelectGoal(val goal: Goals) : PetAction
     data object ForceNextCycle : PetAction
     data object Restart : PetAction
     data class CompleteOnboarding(val setup: PetSetup) : PetAction
@@ -87,6 +91,7 @@ sealed interface PetAction {
 class PetViewModel @Inject constructor(private val repository: GameRepository) : ViewModel() {
     private val _state = MutableStateFlow(PetState())
     val state = _state.asStateFlow()
+    private var goalPurchaseInProgress = false
 
     init {
         viewModelScope.launch {
@@ -170,6 +175,11 @@ class PetViewModel @Inject constructor(private val repository: GameRepository) :
             PetAction.Exit -> _state.update { it.copy(exitRequested = true) }
             PetAction.BuyCollar -> viewModelScope.launch { repository.buyCollar() }
             is PetAction.BuyCareItem -> viewModelScope.launch { repository.buyCareItem(action.item) }
+            is PetAction.BuyGoal -> purchaseGoal(GoalPurchase(action.goal, action.price))
+            is PetAction.SelectGoal -> viewModelScope.launch {
+                repository.selectGoal(action.goal)
+                _state.update { it.copy(overlay = null) }
+            }
             PetAction.ForceNextCycle -> nextCycle()
             PetAction.Restart -> restart()
             is PetAction.CompleteOnboarding -> viewModelScope.launch {
@@ -181,10 +191,33 @@ class PetViewModel @Inject constructor(private val repository: GameRepository) :
     private fun resolveEvent(accept: Boolean) {
         val currentState = _state.value
         val event = currentState.activeEvent ?: return
+        if (accept && event.goalPurchase != null) {
+            purchaseGoal(event.goalPurchase)
+            return
+        }
         val effects = if (accept) event.acceptEffects else event.declineEffects
         if (!canApplyEffects(currentState.resources.money, effects)) return
 
         _state.update { it.copy(activeEvent = null) }
         viewModelScope.launch { repository.applyEffects(effects) }
+    }
+
+    private fun purchaseGoal(purchase: GoalPurchase) {
+        if (goalPurchaseInProgress) return
+        goalPurchaseInProgress = true
+        viewModelScope.launch {
+            try {
+                if (repository.buyGoal(purchase.goal, purchase.price)) {
+                    _state.update {
+                        it.copy(
+                            activeEvent = null,
+                            overlay = HomeOverlay.GoalSelection,
+                        )
+                    }
+                }
+            } finally {
+                goalPurchaseInProgress = false
+            }
+        }
     }
 }
