@@ -479,31 +479,19 @@ private fun GoalChoiceCard(goal: Goals) {
             modifier = Modifier.align(Alignment.TopCenter).padding(top = 8.dp).size(84.dp),
             contentScale = ContentScale.Fit,
         )
+        GoalValueBadge(
+            text = goal.target.toString(),
+            iconRes = R.drawable.ic_coin,
+            contentDescription = stringResource(R.string.coins),
+            modifier = Modifier.align(Alignment.TopStart).padding(8.dp),
+        )
         if (effect != null) {
-            Surface(
+            GoalValueBadge(
+                text = "+${effect.increase}",
+                iconRes = effect.resource.iconRes(),
+                contentDescription = stringResource(effect.resource.labelRes()),
                 modifier = Modifier.align(Alignment.TopEnd).padding(8.dp),
-                color = Color(0xFFECC8FF),
-                shape = RoundedCornerShape(6.dp),
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = "+${effect.increase}",
-                        color = OnboardingPurple,
-                        fontFamily = NunitoFontFamily,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    Image(
-                        painter = painterResource(effect.resource.iconRes()),
-                        contentDescription = stringResource(effect.resource.labelRes()),
-                        modifier = Modifier.size(16.dp),
-                        colorFilter = ColorFilter.tint(OnboardingPurple),
-                    )
-                }
-            }
+            )
         }
         Text(
             text = stringResource(goal.titleRes),
@@ -519,6 +507,39 @@ private fun GoalChoiceCard(goal: Goals) {
             fontWeight = FontWeight.Bold,
             maxLines = 2,
         )
+    }
+}
+
+@Composable
+private fun GoalValueBadge(
+    text: String,
+    @DrawableRes iconRes: Int,
+    contentDescription: String,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier,
+        color = Color(0xFFECC8FF),
+        shape = RoundedCornerShape(6.dp),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = text,
+                color = OnboardingPurple,
+                fontFamily = NunitoFontFamily,
+                fontWeight = FontWeight.Bold,
+            )
+            Image(
+                painter = painterResource(iconRes),
+                contentDescription = contentDescription,
+                modifier = Modifier.size(16.dp),
+                colorFilter = ColorFilter.tint(OnboardingPurple),
+            )
+        }
     }
 }
 
