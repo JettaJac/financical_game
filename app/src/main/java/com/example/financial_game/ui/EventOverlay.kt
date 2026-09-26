@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
@@ -26,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -51,10 +53,12 @@ private val EventSecondaryButton = Color(0xFFE3B2FA)
 @Composable
 internal fun EventOverlay(
     event: GameEvent,
-    canAccept: Boolean,
-    onAccept: () -> Unit,
-    onDecline: () -> Unit,
-    onSkip: () -> Unit,
+    acceptButtonText: String? = null,
+    declineButtonText: String? = null,
+    canClose: Boolean = false,
+    onAccept: (() -> Unit)? = null,
+    onDecline: (() -> Unit)? = null,
+    onClose: (() -> Unit)? = null,
 ) {
     val closeDescription = stringResource(R.string.event_close)
 
@@ -86,15 +90,17 @@ internal fun EventOverlay(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 14.dp),
+                            .padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 16.dp),
                     ) {
                         Image(
                             painter = painterResource(event.illustrationRes),
                             contentDescription = null,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(158.dp),
-                            contentScale = ContentScale.Fit,
+                                .height(166.dp)
+                                .offset(y = (-16).dp),
+                            alignment = Alignment.TopCenter,
+                            contentScale = ContentScale.Crop,
                         )
 
                         Text(
@@ -109,33 +115,38 @@ internal fun EventOverlay(
 
                         Spacer(Modifier.height(7.dp))
                         EventEffects(event.acceptEffects)
-                        Spacer(Modifier.height(14.dp))
 
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        ) {
-                            EventButton(
-                                text = stringResource(R.string.event_accept),
-                                onClick = onAccept,
-                                enabled = canAccept,
-                                containerColor = EventPurple,
-                                contentColor = Color.White,
-                                modifier = Modifier.weight(1f),
-                            )
-                            EventButton(
-                                text = stringResource(R.string.event_decline),
-                                onClick = onDecline,
-                                containerColor = EventSecondaryButton,
-                                contentColor = EventPurpleDark,
-                                modifier = Modifier.weight(1f),
-                            )
+                        if (acceptButtonText != null || declineButtonText != null) {
+                            Spacer(Modifier.height(14.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            ) {
+                                acceptButtonText?.let { text ->
+                                    EventButton(
+                                        text = text,
+                                        onClick = { onAccept?.invoke() },
+                                        containerColor = EventPurple,
+                                        contentColor = Color.White,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                }
+                                declineButtonText?.let { text ->
+                                    EventButton(
+                                        text = text,
+                                        onClick = { onDecline?.invoke() },
+                                        containerColor = EventSecondaryButton,
+                                        contentColor = EventPurpleDark,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                }
+                            }
                         }
                     }
 
-                    if (event.showCloseButton) {
+                    if (canClose) {
                         IconButton(
-                            onClick = onSkip,
+                            onClick = { onClose?.invoke() },
                             modifier = Modifier
                                 .align(Alignment.TopEnd)
                                 .padding(4.dp)
@@ -165,7 +176,7 @@ private fun EventEffects(effects: List<Effect>) {
     val statusEffects = visibleEffects.filterNot { it.resource == Resource.Money }
     val moneyEffects = visibleEffects.filter { it.resource == Resource.Money }
 
-    Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(15.dp)) {
         if (statusEffects.isNotEmpty()) {
             Row(horizontalArrangement = Arrangement.spacedBy(13.dp)) {
                 statusEffects.forEach { effect -> EventEffect(effect) }
@@ -182,21 +193,42 @@ private fun EventEffects(effects: List<Effect>) {
 @Composable
 private fun EventEffect(effect: Effect) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Image(
-            painter = painterResource(effect.resource.eventIcon()),
-            contentDescription = null,
-            modifier = Modifier.size(20.dp),
-        )
-        Spacer(Modifier.width(3.dp))
-        Text(
-            text = effect.increase.toString(),
-            color = EventPurple,
-            fontFamily = NunitoFontFamily,
-            fontWeight = FontWeight.Bold,
-            fontSize = 15.sp,
-            lineHeight = 18.sp,
-        )
+        if (effect.resource == Resource.Money) {
+            EventEffectValue(effect)
+            Spacer(Modifier.width(3.dp))
+            EventEffectIcon(effect.resource)
+        } else {
+            EventEffectIcon(effect.resource)
+            Spacer(Modifier.width(3.dp))
+            EventEffectValue(effect)
+        }
     }
+}
+
+@Composable
+private fun EventEffectIcon(resource: Resource) {
+    Image(
+        painter = painterResource(resource.eventIcon()),
+        contentDescription = null,
+        modifier = Modifier.size(20.dp),
+        colorFilter = if (resource == Resource.Money) {
+            null
+        } else {
+            ColorFilter.tint(EventPurple)
+        },
+    )
+}
+
+@Composable
+private fun EventEffectValue(effect: Effect) {
+    Text(
+        text = effect.increase.toString(),
+        color = EventPurple,
+        fontFamily = NunitoFontFamily,
+        fontWeight = FontWeight.Bold,
+        fontSize = 15.sp,
+        lineHeight = 18.sp,
+    )
 }
 
 @Composable
@@ -206,17 +238,13 @@ private fun EventButton(
     containerColor: Color,
     contentColor: Color,
     modifier: Modifier = Modifier,
-    enabled: Boolean = true,
 ) {
     Button(
         onClick = onClick,
-        enabled = enabled,
         modifier = modifier.height(46.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = containerColor,
             contentColor = contentColor,
-            disabledContainerColor = containerColor.copy(alpha = 0.35f),
-            disabledContentColor = contentColor.copy(alpha = 0.7f),
         ),
         shape = RoundedCornerShape(9.dp),
     ) {

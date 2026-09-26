@@ -63,10 +63,11 @@ import com.example.financial_game.domain.CardItem
 import com.example.financial_game.domain.FoodItem
 import com.example.financial_game.domain.Resource
 import com.example.financial_game.domain.EnergyItem
+import com.example.financial_game.domain.GameEvent
+import com.example.financial_game.domain.GameEvents
 import com.example.financial_game.domain.HappinessItem
 import com.example.financial_game.domain.Goals
 import com.example.financial_game.domain.cooldownSecondsRemaining
-import com.example.financial_game.domain.canApplyEffects
 import com.example.financial_game.ui.theme.NunitoFontFamily
 
 private val HomePurple = Color(0xFF8743D3)
@@ -172,6 +173,8 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
                 HomePage(state, onAction)
     }
 
+//    EventOverlay(GameEvents.SportsSection, acceptButtonText = "Принять")
+
     when (state.overlay) {
         HomeOverlay.Menu -> MenuOverlay(onAction)
         HomeOverlay.Shop -> ShopOverlay(
@@ -190,10 +193,12 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
     state.activeEvent?.let { event ->
         EventOverlay(
             event = event,
-            canAccept = canApplyEffects(state.resources.money, event.acceptEffects),
+            acceptButtonText = stringResource(R.string.event_accept),
+            declineButtonText = stringResource(R.string.event_decline),
+            canClose = event.showCloseButton,
             onAccept = { onAction(PetAction.AcceptEvent) },
             onDecline = { onAction(PetAction.DeclineEvent) },
-            onSkip = { onAction(PetAction.SkipEvent) },
+            onClose = { onAction(PetAction.SkipEvent) },
         )
     }
 }

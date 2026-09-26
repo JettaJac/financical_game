@@ -49,7 +49,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.sp
@@ -297,29 +296,22 @@ internal fun GoalOverlay(
                     Spacer(Modifier.height(14.dp))
                     Button(
                         onClick = {},
-                        enabled = false,
+                        enabled = money >= target,
                         modifier = Modifier.fillMaxWidth().height(50.dp),
                         colors = ButtonDefaults.buttonColors(
+                            containerColor = GoalPurple,
+                            contentColor = Color.White,
                             disabledContainerColor = Color(0xFFD9C8DC),
                             disabledContentColor = Color.White,
                         ),
                         shape = RoundedCornerShape(10.dp),
                     ) {
                         Text(
-                            text = stringResource(R.string.change_goal),
+                            text = stringResource(R.string.buy),
                             fontFamily = NunitoFontFamily,
                             fontWeight = FontWeight.Bold,
                         )
                     }
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = stringResource(R.string.change_goal_hint),
-                        modifier = Modifier.fillMaxWidth(),
-                        color = GoalPurple,
-                        fontFamily = NunitoFontFamily,
-                        fontSize = 13.sp,
-                        textAlign = TextAlign.Start,
-                    )
                 }
             }
         }
