@@ -7,12 +7,15 @@ import com.example.financial_game.data.GameSnapshot
 import com.example.financial_game.domain.CardItem
 import com.example.financial_game.domain.Effect
 import com.example.financial_game.domain.GameEvent
+import com.example.financial_game.domain.GameDefaults
 import com.example.financial_game.domain.GameRepository
 import com.example.financial_game.domain.GoalPurchase
 import com.example.financial_game.domain.Goals
+import com.example.financial_game.domain.PetAppearance
 import com.example.financial_game.domain.PetSetup
 import com.example.financial_game.domain.Resource
 import com.example.financial_game.domain.canApplyEffects
+import com.example.financial_game.domain.cycleSecondsRemaining
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.delay
@@ -21,7 +24,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-internal const val TIMER_SECONDS = 20 * 60
+internal const val TIMER_SECONDS = GameDefaults.CYCLE_DURATION_SECONDS
 internal const val COLLAR_PRICE = 100
 
 internal fun formatCountdown(totalSeconds: Int): String {
@@ -51,7 +54,7 @@ internal fun goalPurchaseEvent(resources: GameSnapshot): GameEvent {
     )
 }
 
-enum class HomeOverlay { Menu, Shop, Goal, GoalSelection }
+enum class HomeOverlay { Menu, Shop, Goal, GoalSelection, PersonalAccount }
 
 enum class HomeSection { Food, Happiness, Energy, Shop, Tasks }
 
@@ -71,6 +74,7 @@ sealed interface PetAction {
     data object OpenMenu : PetAction
     data object OpenShop : PetAction
     data object OpenGoal : PetAction
+    data object OpenPersonalAccount : PetAction
     data object CloseOverlay : PetAction
     data class ShowEvent(val event: GameEvent) : PetAction
     data object AcceptEvent : PetAction
@@ -83,6 +87,7 @@ sealed interface PetAction {
     data object ForceNextCycle : PetAction
     data object Restart : PetAction
     data class CompleteOnboarding(val setup: PetSetup) : PetAction
+    data class ApplyPetAppearance(val appearance: PetAppearance) : PetAction
 
     data object Exit : PetAction
 }
@@ -108,9 +113,15 @@ class PetViewModel @Inject constructor(private val repository: GameRepository) :
                         null
                     }
                     _state.update {
+                        val nowMillis = System.currentTimeMillis()
                         it.copy(
                             resources = resources,
+                            secondsRemaining = cycleSecondsRemaining(
+                                resources.cycleEndsAtMillis,
+                                nowMillis,
+                            ),
                             isInitialized = true,
+                            nowMillis = nowMillis,
                             overlay = if (reachedGoalEvent != null) null else it.overlay,
                             activeEvent = reachedGoalEvent ?: it.activeEvent,
                         )
@@ -121,18 +132,25 @@ class PetViewModel @Inject constructor(private val repository: GameRepository) :
     }
 
     private suspend fun runTimer() {
-            while (true) {
-                delay(1_000)
-                _state.update { it.copy(nowMillis = System.currentTimeMillis()) }
-                if (!_state.value.resources.onboardingCompleted) continue
-                if (_state.value.secondsRemaining > 1) {
-                    _state.update { it.copy(secondsRemaining = it.secondsRemaining - 1) }
-                } else {
-                    _state.update { it.copy(secondsRemaining = 0) }
-                    repository.completeTimerCycle()
-                    _state.update { it.copy(secondsRemaining = TIMER_SECONDS) }
-                }
+        while (true) {
+            delay(1_000)
+            val nowMillis = System.currentTimeMillis()
+            val currentState = _state.value
+            if (!currentState.resources.onboardingCompleted) continue
+
+            val secondsRemaining = cycleSecondsRemaining(
+                currentState.resources.cycleEndsAtMillis,
+                nowMillis,
+            )
+            _state.update {
+                it.copy(
+                    nowMillis = nowMillis,
+                    secondsRemaining = secondsRemaining,
+                )
             }
+
+            if (secondsRemaining == 0) repository.advanceExpiredCycles(nowMillis)
+        }
     }
 
     private fun restart() {
@@ -163,6 +181,9 @@ class PetViewModel @Inject constructor(private val repository: GameRepository) :
             PetAction.OpenMenu -> _state.update { it.copy(overlay = HomeOverlay.Menu) }
             PetAction.OpenShop -> _state.update { it.copy(overlay = HomeOverlay.Shop) }
             PetAction.OpenGoal -> _state.update { it.copy(overlay = HomeOverlay.Goal) }
+            PetAction.OpenPersonalAccount -> _state.update {
+                it.copy(overlay = HomeOverlay.PersonalAccount)
+            }
             PetAction.CloseOverlay -> _state.update { it.copy(overlay = null) }
             is PetAction.ShowEvent -> _state.update {
                 it.copy(overlay = null, activeEvent = action.event)
@@ -184,6 +205,10 @@ class PetViewModel @Inject constructor(private val repository: GameRepository) :
             PetAction.Restart -> restart()
             is PetAction.CompleteOnboarding -> viewModelScope.launch {
                 repository.completeOnboarding(action.setup)
+            }
+            is PetAction.ApplyPetAppearance -> viewModelScope.launch {
+                repository.updatePetAppearance(action.appearance)
+                _state.update { it.copy(overlay = null) }
             }
         }
     }

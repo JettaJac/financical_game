@@ -6,11 +6,19 @@ import com.example.financial_game.domain.moneyAfterCycle
 import com.example.financial_game.domain.moneyAfterPurchase
 import com.example.financial_game.domain.levelAfterGoalPurchase
 import com.example.financial_game.domain.cooldownExpireAt
+import com.example.financial_game.domain.cooldownCyclesRemaining
 import com.example.financial_game.domain.cooldownSecondsRemaining
+import com.example.financial_game.domain.cooldownUnlockPeriod
+import com.example.financial_game.domain.cooldownRemaining
+import com.example.financial_game.domain.Cooldown
+import com.example.financial_game.domain.CooldownRemaining
 import com.example.financial_game.domain.Effect
 import com.example.financial_game.domain.Resource
 import com.example.financial_game.domain.Goals
 import com.example.financial_game.domain.canApplyEffects
+import com.example.financial_game.domain.cycleSecondsRemaining
+import com.example.financial_game.domain.hasCycleExpired
+import com.example.financial_game.domain.nextCycleEnd
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -32,14 +40,38 @@ class PetViewModelTest {
     }
 
     @Test
+    fun persisted_cycle_restores_remaining_time() {
+        assertEquals(
+            61,
+            cycleSecondsRemaining(cycleEndsAtMillis = 62_000L, nowMillis = 1_000L),
+        )
+        assertEquals(
+            0,
+            cycleSecondsRemaining(cycleEndsAtMillis = 1_000L, nowMillis = 1_000L),
+        )
+    }
+
+    @Test
+    fun expired_deadline_completes_only_one_cycle_and_starts_a_fresh_one() {
+        val oldDeadline = 10_000L
+        val muchLater = oldDeadline + 10_000_000L
+
+        assertEquals(true, hasCycleExpired(oldDeadline, muchLater))
+        assertEquals(
+            muchLater + 1_200_000L,
+            nextCycleEnd(muchLater),
+        )
+    }
+
+    @Test
     fun purchase_only_charges_when_money_is_enough() {
         assertEquals(0, moneyAfterPurchase(money = 100, price = 100))
         assertEquals(99, moneyAfterPurchase(money = 99, price = 100))
     }
 
     @Test
-    fun cooldown_expire_is_calculated_from_duration() {
-        assertEquals(121_000L, cooldownExpireAt(nowMillis = 1_000L, cooldownSeconds = 120))
+    fun time_cooldown_expire_is_calculated_from_minutes() {
+        assertEquals(121_000L, cooldownExpireAt(nowMillis = 1_000L, cooldownMinutes = 2))
     }
 
     @Test
@@ -48,6 +80,40 @@ class PetViewModelTest {
         assertEquals(1, cooldownSecondsRemaining(expireAtMillis = 2_000L, nowMillis = 1_001L))
         assertEquals(0, cooldownSecondsRemaining(expireAtMillis = 2_000L, nowMillis = 2_000L))
         assertEquals(0, cooldownSecondsRemaining(expireAtMillis = 2_000L, nowMillis = 3_000L))
+    }
+
+    @Test
+    fun cycle_cooldown_unlocks_after_configured_number_of_days() {
+        val unlockPeriod = cooldownUnlockPeriod(currentPeriod = 4, cooldownDays = 3)
+
+        assertEquals(7, unlockPeriod)
+        assertEquals(3, cooldownCyclesRemaining(unlockPeriod, currentPeriod = 4))
+        assertEquals(1, cooldownCyclesRemaining(unlockPeriod, currentPeriod = 6))
+        assertEquals(0, cooldownCyclesRemaining(unlockPeriod, currentPeriod = 7))
+    }
+
+    @Test
+    fun cooldown_remaining_supports_time_and_cycle_types() {
+        assertEquals(
+            CooldownRemaining.Time(60),
+            cooldownRemaining(
+                cooldown = Cooldown.Time(minutes = 1),
+                expireAtMillis = 61_000L,
+                unlockPeriod = 0,
+                nowMillis = 1_000L,
+                currentPeriod = 1,
+            ),
+        )
+        assertEquals(
+            CooldownRemaining.Cycles(2),
+            cooldownRemaining(
+                cooldown = Cooldown.ByCycle(days = 2),
+                expireAtMillis = 0L,
+                unlockPeriod = 5,
+                nowMillis = 1_000L,
+                currentPeriod = 3,
+            ),
+        )
     }
 
     @Test

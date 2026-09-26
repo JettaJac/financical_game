@@ -50,6 +50,7 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -60,6 +61,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.financial_game.R
 import com.example.financial_game.domain.CardItem
+import com.example.financial_game.domain.CooldownRemaining
 import com.example.financial_game.domain.FoodItem
 import com.example.financial_game.domain.Resource
 import com.example.financial_game.domain.EnergyItem
@@ -67,7 +69,7 @@ import com.example.financial_game.domain.GameEvent
 import com.example.financial_game.domain.GameEvents
 import com.example.financial_game.domain.HappinessItem
 import com.example.financial_game.domain.Goals
-import com.example.financial_game.domain.cooldownSecondsRemaining
+import com.example.financial_game.domain.cooldownRemaining
 import com.example.financial_game.ui.theme.NunitoFontFamily
 
 private val HomePurple = Color(0xFF8743D3)
@@ -203,6 +205,11 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
                 onGoalSelected = { onAction(PetAction.SelectGoal(it)) },
             )
         }
+        HomeOverlay.PersonalAccount -> PersonalAccountScreen(
+            initialState = state.resources,
+            onBack = { onAction(PetAction.CloseOverlay) },
+            onApply = { onAction(PetAction.ApplyPetAppearance(it)) },
+        )
         null -> Unit
     }
 
@@ -532,6 +539,8 @@ private fun HomeBottomPanel(
                     money = state.resources.money,
                     level = state.resources.level,
                     cooldownExpires = state.resources.cooldownExpires,
+                    cooldownUnlockPeriods = state.resources.cooldownUnlockPeriods,
+                    currentPeriod = state.resources.currentPeriod,
                     nowMillis = state.nowMillis,
                     onBuyClick = onBuyClick,
                     horizontalPadding = metrics.horizontalPadding,
@@ -542,6 +551,8 @@ private fun HomeBottomPanel(
                     money = state.resources.money,
                     level = state.resources.level,
                     cooldownExpires = state.resources.cooldownExpires,
+                    cooldownUnlockPeriods = state.resources.cooldownUnlockPeriods,
+                    currentPeriod = state.resources.currentPeriod,
                     nowMillis = state.nowMillis,
                     onBuyClick = onBuyClick,
                     horizontalPadding = metrics.horizontalPadding,
@@ -552,6 +563,8 @@ private fun HomeBottomPanel(
                     money = state.resources.money,
                     level = state.resources.level,
                     cooldownExpires = state.resources.cooldownExpires,
+                    cooldownUnlockPeriods = state.resources.cooldownUnlockPeriods,
+                    currentPeriod = state.resources.currentPeriod,
                     nowMillis = state.nowMillis,
                     onBuyClick = onBuyClick,
                     horizontalPadding = metrics.horizontalPadding,
@@ -714,6 +727,8 @@ private fun CardRow(
     money: Int,
     level: Int,
     cooldownExpires: Map<String, Long>,
+    cooldownUnlockPeriods: Map<String, Int>,
+    currentPeriod: Int,
     nowMillis: Long,
     onBuyClick: (CardItem) -> Unit,
     horizontalPadding: Dp,
@@ -744,14 +759,17 @@ private fun CardRow(
                 horizontalArrangement = Arrangement.spacedBy(itemGap),
             ) {
                 pageItems.forEach { product ->
-                    val cooldownRemainingSeconds = cooldownSecondsRemaining(
+                    val remainingCooldown = cooldownRemaining(
+                        cooldown = product.item.cooldown,
                         expireAtMillis = cooldownExpires[product.item.storageId] ?: 0L,
+                        unlockPeriod = cooldownUnlockPeriods[product.item.storageId] ?: 0,
                         nowMillis = nowMillis,
+                        currentPeriod = currentPeriod,
                     )
                     ProductCard(
                         product = product,
-                        canBuy = money >= product.item.price && cooldownRemainingSeconds == 0 && level >= product.item.level,
-                        cooldownRemainingSeconds = cooldownRemainingSeconds,
+                        canBuy = money >= product.item.price && remainingCooldown == null && level >= product.item.level,
+                        remainingCooldown = remainingCooldown,
                         onBuyClick = { onBuyClick(product.item) },
                         modifier = Modifier.weight(1f),
                     )
@@ -797,7 +815,7 @@ private fun ProductPageIndicator(
 private fun ProductCard(
     product: CardItemUI,
     canBuy: Boolean,
-    cooldownRemainingSeconds: Int,
+    remainingCooldown: CooldownRemaining?,
     onBuyClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -843,13 +861,17 @@ private fun ProductCard(
             shape = RoundedCornerShape(27)
         ) {
             Text(
-                text = if (cooldownRemainingSeconds > 0) {
-                    stringResource(
+                text = when (remainingCooldown) {
+                    is CooldownRemaining.Time -> stringResource(
                         R.string.cooldown_remaining,
-                        formatCountdown(cooldownRemainingSeconds),
+                        formatCountdown(remainingCooldown.seconds),
                     )
-                } else {
-                    stringResource(R.string.buy_price, product.item.price)
+                    is CooldownRemaining.Cycles -> pluralStringResource(
+                        R.plurals.cooldown_cycles_remaining,
+                        remainingCooldown.days,
+                        remainingCooldown.days,
+                    )
+                    null -> stringResource(R.string.buy_price, product.item.price)
                 },
                 autoSize = TextAutoSize.StepBased(
                     minFontSize = 7.sp,
@@ -931,13 +953,14 @@ private fun MenuOverlay(onAction: (PetAction) -> Unit) {
             Column(
                 modifier = Modifier.fillMaxWidth().padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 Text(
                     stringResource(R.string.menu),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                 )
+                Spacer(Modifier.height(8.dp))
                 Button(
                     onClick = { onAction(PetAction.CloseOverlay) },
                     modifier = Modifier.fillMaxWidth(),
@@ -950,6 +973,30 @@ private fun MenuOverlay(onAction: (PetAction) -> Unit) {
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(stringResource(R.string.restart_action))
+                }
+                TextButton(
+                    onClick = { onAction(PetAction.OpenPersonalAccount) },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.change_character_action))
+                }
+                TextButton(
+                    onClick = {},
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.parent_area_action))
+                }
+                TextButton(
+                    onClick = {},
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.demo_mode_action))
+                }
+                TextButton(
+                    onClick = {},
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.support_action))
                 }
                 TextButton(
                     onClick = { onAction(PetAction.Exit) },

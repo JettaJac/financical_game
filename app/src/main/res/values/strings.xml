@@ -28,7 +28,20 @@
     <string name="menu">МЕНЮ</string>
     <string name="continue_action">Продолжить</string>
     <string name="restart_action">Рестарт</string>
-    <string name="exit_action">Выйти</string>
+    <string name="change_character_action">Изменить персонажа</string>
+    <string name="parent_area_action">Родительская</string>
+    <string name="demo_mode_action">Демонстрационный режим</string>
+    <string name="support_action">Поддержка</string>
+    <string name="exit_action">Выход</string>
+
+    <!-- Personal account -->
+    <string name="personal_account_title">Личный кабинет</string>
+    <string name="personal_account_back">Назад</string>
+    <string name="personal_account_name">Имя</string>
+    <string name="personal_account_colour">Цвет</string>
+    <string name="personal_account_eyes">Глаза</string>
+    <string name="personal_account_fur">Шерсть</string>
+    <string name="apply_action">Применить</string>
 
     <!-- Store -->
     <string name="store">МАГАЗИН</string>
@@ -38,6 +51,12 @@
     <string name="buy">Купить</string>
     <string name="buy_price">Купить · %1$d ₽</string>
     <string name="cooldown_remaining">Через %1$s</string>
+    <plurals name="cooldown_cycles_remaining">
+        <item quantity="one">Через %1$d день</item>
+        <item quantity="few">Через %1$d дня</item>
+        <item quantity="many">Через %1$d дней</item>
+        <item quantity="other">Через %1$d дня</item>
+    </plurals>
 
     <!-- Events -->
     <string name="event_sports_section_description">Друг предложил пойти\nна спортивную секцию</string>

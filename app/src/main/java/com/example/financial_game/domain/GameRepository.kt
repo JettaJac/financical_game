@@ -10,6 +10,8 @@ interface GameRepository {
 
     suspend fun completeTimerCycle()
 
+    suspend fun advanceExpiredCycles(nowMillis: Long)
+
     suspend fun buyCollar()
 
     suspend fun buyCareItem(item: CardItem)
@@ -22,11 +24,26 @@ interface GameRepository {
 
     suspend fun completeOnboarding(setup: PetSetup)
 
+    suspend fun updatePetAppearance(appearance: PetAppearance)
+
     suspend fun reset()
 }
 
 internal fun moneyAfterCycle(money: Int, income: Int, expense: Int): Int =
     money + income - expense
+
+internal fun hasCycleExpired(cycleEndsAtMillis: Long, nowMillis: Long): Boolean =
+    cycleEndsAtMillis > 0L && nowMillis >= cycleEndsAtMillis
+
+internal fun nextCycleEnd(nowMillis: Long): Long =
+    nowMillis + GameDefaults.CYCLE_DURATION_MILLIS
+
+internal fun cycleSecondsRemaining(cycleEndsAtMillis: Long, nowMillis: Long): Int {
+    val remainingMillis = (cycleEndsAtMillis - nowMillis).coerceAtLeast(0L)
+    return ((remainingMillis + 999L) / 1_000L)
+        .coerceAtMost(Int.MAX_VALUE.toLong())
+        .toInt()
+}
 
 internal fun moneyAfterPurchase(money: Int, price: Int): Int =
     if (money >= price) money - price else money
