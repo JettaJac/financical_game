@@ -57,6 +57,14 @@
         <item quantity="many">Через %1$d дней</item>
         <item quantity="other">Через %1$d дня</item>
     </plurals>
+    <string name="shop_broom">Веник</string>
+    <string name="shop_flower_pot">Горшок с цветком</string>
+    <string name="shop_favourite_mug">Любимая кружка</string>
+    <string name="shop_floor_lamp">Торшер в комнату</string>
+    <string name="shop_soft_rug">Мягкий красивый коврик</string>
+    <string name="shop_soft_armchair">Мягкое кресло</string>
+    <string name="shop_stylish_scarf">Стильный шарф</string>
+    <string name="shop_glowing_orb">Светящийся шар</string>
 
     <!-- Events -->
     <string name="event_sports_section_description">Друг предложил пойти\nна спортивную секцию</string>

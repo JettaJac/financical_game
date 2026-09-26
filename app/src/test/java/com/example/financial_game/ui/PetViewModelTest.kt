@@ -14,6 +14,7 @@ import com.example.financial_game.domain.Cooldown
 import com.example.financial_game.domain.CooldownRemaining
 import com.example.financial_game.domain.Effect
 import com.example.financial_game.domain.Resource
+import com.example.financial_game.domain.ShopItem
 import com.example.financial_game.domain.Goals
 import com.example.financial_game.domain.canApplyEffects
 import com.example.financial_game.domain.cycleSecondsRemaining
@@ -23,6 +24,27 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class PetViewModelTest {
+    @Test
+    fun shop_items_match_prices_levels_and_effects() {
+        assertEquals(0, ShopItem.Broom.price)
+        assertEquals(1, ShopItem.Broom.level)
+        assertEquals(
+            listOf(Effect(Resource.Health, 0), Effect(Resource.Happiness, -5), Effect(Resource.Energy, -10)),
+            ShopItem.Broom.careEffects,
+        )
+        assertEquals(15, ShopItem.FlowerPot.price)
+        assertEquals(10, ShopItem.FavouriteMug.price)
+        assertEquals(15, ShopItem.FloorLamp.price)
+        assertEquals(2, ShopItem.FloorLamp.level)
+        assertEquals(15, ShopItem.SoftRug.price)
+        assertEquals(25, ShopItem.SoftArmchair.price)
+        assertEquals(35, ShopItem.StylishScarf.price)
+        assertEquals(3, ShopItem.StylishScarf.level)
+        assertEquals(35, ShopItem.GlowingOrb.price)
+        assertEquals(ShopItem.StylishScarf.careEffects, ShopItem.GlowingOrb.careEffects)
+        assertEquals(Cooldown.None, ShopItem.GlowingOrb.cooldown)
+    }
+
     @Test
     fun countdown_is_formatted_as_minutes_and_seconds() {
         assertEquals("20:00", formatCountdown(TIMER_SECONDS))

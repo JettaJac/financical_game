@@ -24,6 +24,7 @@ data class GameSnapshot(
     val goalTarget: Int = GameDefaults.GOAL_TARGET,
     val level: Int = GameDefaults.LEVEL,
     val purchasedGoalIds: Set<String> = emptySet(),
+    val purchasedShopItemIds: Set<String> = emptySet(),
 
     val currentPeriod: Int = GameDefaults.CURRENT_PERIOD,
     val cycleEndsAtMillis: Long = 0L,

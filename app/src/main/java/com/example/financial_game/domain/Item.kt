@@ -11,6 +11,8 @@ interface CardItem {
 }
 
 sealed interface Cooldown {
+    data object None : Cooldown
+
     data class Time(val minutes: Int) : Cooldown {
         init { require(minutes > 0) }
     }
@@ -51,6 +53,7 @@ internal fun cooldownRemaining(
     nowMillis: Long,
     currentPeriod: Int,
 ): CooldownRemaining? = when (cooldown) {
+    Cooldown.None -> null
     is Cooldown.Time -> cooldownSecondsRemaining(expireAtMillis, nowMillis)
         .takeIf { it > 0 }
         ?.let(CooldownRemaining::Time)
@@ -209,4 +212,39 @@ enum class EnergyItem(
 
     override val storageId: String
         get() = "energy_$name"
+}
+
+enum class ShopItem(
+    override val price: Int,
+    override val careEffects: List<Effect>,
+    override val level: Int,
+    override val cooldown: Cooldown = Cooldown.None,
+) : CardItem {
+    Broom(price = 0, level = 1, careEffects = listOf(
+        Effect(Resource.Health, 0), Effect(Resource.Happiness, -5), Effect(Resource.Energy, -10),
+    )),
+    FlowerPot(price = 15, level = 1, careEffects = listOf(
+        Effect(Resource.Health, 0), Effect(Resource.Happiness, 5), Effect(Resource.Energy, 2),
+    )),
+    FavouriteMug(price = 10, level = 1, careEffects = listOf(
+        Effect(Resource.Health, 0), Effect(Resource.Happiness, 2), Effect(Resource.Energy, 3),
+    )),
+    FloorLamp(price = 15, level = 2, careEffects = listOf(
+        Effect(Resource.Health, 0), Effect(Resource.Happiness, 4), Effect(Resource.Energy, 3),
+    )),
+    SoftRug(price = 15, level = 2, careEffects = listOf(
+        Effect(Resource.Health, 0), Effect(Resource.Happiness, 3), Effect(Resource.Energy, 4),
+    )),
+    SoftArmchair(price = 25, level = 2, careEffects = listOf(
+        Effect(Resource.Health, 0), Effect(Resource.Happiness, 3), Effect(Resource.Energy, 8),
+    )),
+    StylishScarf(price = 35, level = 3, careEffects = listOf(
+        Effect(Resource.Health, 10), Effect(Resource.Happiness, 10), Effect(Resource.Energy, 5),
+    )),
+    GlowingOrb(price = 35, level = 3, careEffects = listOf(
+        Effect(Resource.Health, 10), Effect(Resource.Happiness, 10), Effect(Resource.Energy, 5),
+    ));
+
+    override val storageId: String
+        get() = "shop_$name"
 }

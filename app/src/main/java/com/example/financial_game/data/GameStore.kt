@@ -21,6 +21,7 @@ import com.example.financial_game.domain.HairStyle
 import com.example.financial_game.domain.PetAppearance
 import com.example.financial_game.domain.PetSetup
 import com.example.financial_game.domain.Resource
+import com.example.financial_game.domain.ShopItem
 import com.example.financial_game.domain.cooldownExpireAt
 import com.example.financial_game.domain.cooldownUnlockPeriod
 import com.example.financial_game.domain.hasCycleExpired
@@ -60,6 +61,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
     private val goalTarget = intPreferencesKey("goal_target")
     private val goalId = stringPreferencesKey("goal_id")
     private val purchasedGoalIds = stringSetPreferencesKey("purchased_goal_ids")
+    private val purchasedShopItemIds = stringSetPreferencesKey("purchased_shop_item_ids")
     private val income = intPreferencesKey("income")
     private val expense = intPreferencesKey("expense")
     private val level = intPreferencesKey("level")
@@ -104,6 +106,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 goalTarget = checkNotNull(preferences[goalTarget]),
                 level = checkNotNull(preferences[level]),
                 purchasedGoalIds = checkNotNull(preferences[purchasedGoalIds]),
+                purchasedShopItemIds = checkNotNull(preferences[purchasedShopItemIds]),
                 currentPeriod = checkNotNull(preferences[currentPeriod]),
                 cycleEndsAtMillis = checkNotNull(preferences[cycleEndsAtMillis]),
                 onboardingCompleted = checkNotNull(preferences[onboardingCompleted]),
@@ -131,6 +134,9 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             if (preferences[goalTarget] == null) preferences[goalTarget] = GameDefaults.GOAL_TARGET
             if (preferences[level] == null) preferences[level] = GameDefaults.LEVEL
             if (preferences[purchasedGoalIds] == null) preferences[purchasedGoalIds] = emptySet()
+            if (preferences[purchasedShopItemIds] == null) {
+                preferences[purchasedShopItemIds] = emptySet()
+            }
             if (preferences[currentPeriod] == null) preferences[currentPeriod] = GameDefaults.CURRENT_PERIOD
             if (preferences[cycleEndsAtMillis] == null) {
                 preferences[cycleEndsAtMillis] = nowMillis + GameDefaults.CYCLE_DURATION_MILLIS
@@ -174,6 +180,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             preferences[expense] = GameDefaults.EXPENSE
             preferences[level] = GameDefaults.LEVEL
             preferences[purchasedGoalIds] = emptySet()
+            preferences[purchasedShopItemIds] = emptySet()
             preferences[currentPeriod] = GameDefaults.CURRENT_PERIOD
             preferences[cycleEndsAtMillis] =
                 System.currentTimeMillis() + GameDefaults.CYCLE_DURATION_MILLIS
@@ -209,7 +216,11 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
         context.gameDataStore.edit { preferences ->
             val nowMillis = System.currentTimeMillis()
             val currentCycle = checkNotNull(preferences[currentPeriod])
+            val purchasedShopItems = checkNotNull(preferences[purchasedShopItemIds])
+            if (item is ShopItem && item.storageId in purchasedShopItems) return@edit
+
             when (item.cooldown) {
+                Cooldown.None -> Unit
                 is Cooldown.Time -> {
                     val cooldownExpire = preferences[cooldownExpireKey(item)] ?: 0L
                     if (cooldownExpire > nowMillis) return@edit
@@ -219,6 +230,9 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                     if (unlockPeriod > currentCycle) return@edit
                 }
             }
+
+            val currentLevel = checkNotNull(preferences[level])
+            if (currentLevel < item.level) return@edit
 
             val currentMoney = checkNotNull(preferences[money])
             if (currentMoney < item.price) return@edit
@@ -239,6 +253,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             }
 
             when (val cooldown = item.cooldown) {
+                Cooldown.None -> Unit
                 is Cooldown.Time -> {
                     preferences[cooldownExpireKey(item)] =
                         cooldownExpireAt(nowMillis, cooldown.minutes)
@@ -247,6 +262,10 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                     preferences[cooldownPeriodKey(item)] =
                         cooldownUnlockPeriod(currentCycle, cooldown.days)
                 }
+            }
+
+            if (item is ShopItem) {
+                preferences[purchasedShopItemIds] = purchasedShopItems + item.storageId
             }
         }
     }

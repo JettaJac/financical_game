@@ -65,6 +65,7 @@ import com.example.financial_game.domain.CardItem
 import com.example.financial_game.domain.CooldownRemaining
 import com.example.financial_game.domain.FoodItem
 import com.example.financial_game.domain.Resource
+import com.example.financial_game.domain.ShopItem
 import com.example.financial_game.domain.EnergyItem
 import com.example.financial_game.domain.GameEvent
 import com.example.financial_game.domain.GameEvents
@@ -154,6 +155,17 @@ private val EnergyItems = listOf(
     CardItemUI(EnergyItem.SPA, R.drawable.spa, R.string.spa),
     CardItemUI(EnergyItem.BodyMassage, R.drawable.body_massage, R.string.body_massage),
     CardItemUI(EnergyItem.Yoga, R.drawable.yoga, R.string.yoga),
+)
+
+private val ShopItems = listOf(
+    CardItemUI(ShopItem.Broom, R.drawable.shop_broom, R.string.shop_broom),
+    CardItemUI(ShopItem.FlowerPot, R.drawable.shop_flower_pot, R.string.shop_flower_pot),
+    CardItemUI(ShopItem.FavouriteMug, R.drawable.shop_mug, R.string.shop_favourite_mug),
+    CardItemUI(ShopItem.FloorLamp, R.drawable.shop_floor_lamp, R.string.shop_floor_lamp),
+    CardItemUI(ShopItem.SoftRug, R.drawable.shop_rug, R.string.shop_soft_rug),
+    CardItemUI(ShopItem.SoftArmchair, R.drawable.shop_armchair, R.string.shop_soft_armchair),
+    CardItemUI(ShopItem.StylishScarf, R.drawable.shop_scarf, R.string.shop_stylish_scarf),
+    CardItemUI(ShopItem.GlowingOrb, R.drawable.shop_glowing_orb, R.string.shop_glowing_orb),
 )
 
 
@@ -577,7 +589,20 @@ private fun HomeBottomPanel(
                     horizontalPadding = metrics.horizontalPadding,
                     itemGap = metrics.itemGap,
                 )
-                HomeSection.Shop, HomeSection.Tasks -> SectionPlaceholder(
+                HomeSection.Shop -> CardRow(
+                    items = ShopItems,
+                    money = state.resources.money,
+                    level = state.resources.level,
+                    cooldownExpires = state.resources.cooldownExpires,
+                    cooldownUnlockPeriods = state.resources.cooldownUnlockPeriods,
+                    currentPeriod = state.resources.currentPeriod,
+                    nowMillis = state.nowMillis,
+                    onBuyClick = onBuyClick,
+                    horizontalPadding = metrics.horizontalPadding,
+                    itemGap = metrics.itemGap,
+                    purchasedItemIds = state.resources.purchasedShopItemIds,
+                )
+                HomeSection.Tasks -> SectionPlaceholder(
                     section = state.selectedSection,
                     horizontalPadding = metrics.horizontalPadding,
                     verticalPadding = metrics.itemGap,
@@ -740,6 +765,7 @@ private fun CardRow(
     onBuyClick: (CardItem) -> Unit,
     horizontalPadding: Dp,
     itemGap: Dp,
+    purchasedItemIds: Set<String> = emptySet(),
     modifier: Modifier = Modifier,
 ) {
     if (items.isEmpty()) return
@@ -766,6 +792,7 @@ private fun CardRow(
                 horizontalArrangement = Arrangement.spacedBy(itemGap),
             ) {
                 pageItems.forEach { product ->
+                    val alreadyPurchased = product.item.storageId in purchasedItemIds
                     val remainingCooldown = cooldownRemaining(
                         cooldown = product.item.cooldown,
                         expireAtMillis = cooldownExpires[product.item.storageId] ?: 0L,
@@ -775,7 +802,11 @@ private fun CardRow(
                     )
                     ProductCard(
                         product = product,
-                        canBuy = money >= product.item.price && remainingCooldown == null && level >= product.item.level,
+                        canBuy = money >= product.item.price &&
+                            remainingCooldown == null &&
+                            level >= product.item.level &&
+                            !alreadyPurchased,
+                        alreadyPurchased = alreadyPurchased,
                         remainingCooldown = remainingCooldown,
                         onBuyClick = { onBuyClick(product.item) },
                         modifier = Modifier.weight(1f),
@@ -822,6 +853,7 @@ private fun ProductPageIndicator(
 private fun ProductCard(
     product: CardItemUI,
     canBuy: Boolean,
+    alreadyPurchased: Boolean,
     remainingCooldown: CooldownRemaining?,
     onBuyClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -868,17 +900,18 @@ private fun ProductCard(
             shape = RoundedCornerShape(27)
         ) {
             Text(
-                text = when (remainingCooldown) {
-                    is CooldownRemaining.Time -> stringResource(
+                text = when {
+                    alreadyPurchased -> stringResource(R.string.goal_purchased)
+                    remainingCooldown is CooldownRemaining.Time -> stringResource(
                         R.string.cooldown_remaining,
                         formatCountdown(remainingCooldown.seconds),
                     )
-                    is CooldownRemaining.Cycles -> pluralStringResource(
+                    remainingCooldown is CooldownRemaining.Cycles -> pluralStringResource(
                         R.plurals.cooldown_cycles_remaining,
                         remainingCooldown.days,
                         remainingCooldown.days,
                     )
-                    null -> stringResource(R.string.buy_price, product.item.price)
+                    else -> stringResource(R.string.buy_price, product.item.price)
                 },
                 autoSize = TextAutoSize.StepBased(
                     minFontSize = 7.sp,
