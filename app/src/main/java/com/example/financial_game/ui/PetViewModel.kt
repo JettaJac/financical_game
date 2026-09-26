@@ -35,6 +35,7 @@ internal fun formatCountdown(totalSeconds: Int): String {
 
 internal fun hasJustReachedGoal(previous: GameSnapshot?, current: GameSnapshot): Boolean {
     if (!current.onboardingCompleted || current.goalTarget <= 0) return false
+    if (current.goalId in current.purchasedGoalIds) return false
     if (current.money < current.goalTarget) return false
     if (previous == null || !previous.onboardingCompleted || previous.goalId != current.goalId) {
         return true

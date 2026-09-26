@@ -156,6 +156,13 @@ class PetViewModelTest {
 
         assertEquals(true, hasJustReachedGoal(before, reached))
         assertEquals(false, hasJustReachedGoal(reached, reached.copy(money = 120)))
+        assertEquals(
+            false,
+            hasJustReachedGoal(
+                before,
+                reached.copy(purchasedGoalIds = setOf(Goals.Pillow.name)),
+            ),
+        )
     }
 
     @Test

@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.example.financial_game.domain.GameDefaults
 import com.example.financial_game.domain.GameRepository
@@ -58,6 +59,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
     private val goalTitle = stringPreferencesKey("goal_title")
     private val goalTarget = intPreferencesKey("goal_target")
     private val goalId = stringPreferencesKey("goal_id")
+    private val purchasedGoalIds = stringSetPreferencesKey("purchased_goal_ids")
     private val income = intPreferencesKey("income")
     private val expense = intPreferencesKey("expense")
     private val level = intPreferencesKey("level")
@@ -101,6 +103,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 expense = checkNotNull(preferences[expense]),
                 goalTarget = checkNotNull(preferences[goalTarget]),
                 level = checkNotNull(preferences[level]),
+                purchasedGoalIds = checkNotNull(preferences[purchasedGoalIds]),
                 currentPeriod = checkNotNull(preferences[currentPeriod]),
                 cycleEndsAtMillis = checkNotNull(preferences[cycleEndsAtMillis]),
                 onboardingCompleted = checkNotNull(preferences[onboardingCompleted]),
@@ -127,6 +130,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             if (preferences[expense] == null) preferences[expense] = GameDefaults.EXPENSE
             if (preferences[goalTarget] == null) preferences[goalTarget] = GameDefaults.GOAL_TARGET
             if (preferences[level] == null) preferences[level] = GameDefaults.LEVEL
+            if (preferences[purchasedGoalIds] == null) preferences[purchasedGoalIds] = emptySet()
             if (preferences[currentPeriod] == null) preferences[currentPeriod] = GameDefaults.CURRENT_PERIOD
             if (preferences[cycleEndsAtMillis] == null) {
                 preferences[cycleEndsAtMillis] = nowMillis + GameDefaults.CYCLE_DURATION_MILLIS
@@ -169,6 +173,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             preferences[income] = GameDefaults.INCOME
             preferences[expense] = GameDefaults.EXPENSE
             preferences[level] = GameDefaults.LEVEL
+            preferences[purchasedGoalIds] = emptySet()
             preferences[currentPeriod] = GameDefaults.CURRENT_PERIOD
             preferences[cycleEndsAtMillis] =
                 System.currentTimeMillis() + GameDefaults.CYCLE_DURATION_MILLIS
@@ -250,6 +255,9 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
         val safePrice = price.coerceAtLeast(0)
         var purchased = false
         context.gameDataStore.edit { preferences ->
+            val purchasedGoals = checkNotNull(preferences[purchasedGoalIds])
+            if (goal.name in purchasedGoals) return@edit
+
             val currentMoney = checkNotNull(preferences[money])
             if (currentMoney < safePrice) return@edit
 
@@ -269,6 +277,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
 
             val currentLevel = checkNotNull(preferences[level])
             preferences[level] = levelAfterGoalPurchase(currentLevel, goal.level)
+            preferences[purchasedGoalIds] = purchasedGoals + goal.name
             purchased = true
         }
         return purchased
@@ -276,6 +285,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
 
     override suspend fun selectGoal(goal: Goals) {
         context.gameDataStore.edit { preferences ->
+            if (goal.name in checkNotNull(preferences[purchasedGoalIds])) return@edit
             preferences[goalId] = goal.name
             preferences[goalTitle] = context.getString(goal.titleRes)
             preferences[goalTarget] = goal.target

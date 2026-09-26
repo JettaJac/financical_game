@@ -41,6 +41,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -189,6 +190,7 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
                 money = state.resources.money,
                 target = state.resources.goalTarget,
                 goal = goal,
+                alreadyPurchased = goal.name in state.resources.purchasedGoalIds,
                 onBuy = {
                     onAction(PetAction.BuyGoal(goal, state.resources.goalTarget))
                 },
@@ -196,14 +198,19 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
             )
         }
         HomeOverlay.GoalSelection -> {
-            val purchasedGoal = Goals.fromStorageId(state.resources.goalId)
             val availableGoals = Goals.entries
-                .filter { it.level <= state.resources.level && it != purchasedGoal }
-                .ifEmpty { Goals.entries.filter { it.level <= state.resources.level } }
-            GoalSelectionScreen(
-                goals = availableGoals,
-                onGoalSelected = { onAction(PetAction.SelectGoal(it)) },
-            )
+                .filter {
+                    it.level <= state.resources.level &&
+                        it.name !in state.resources.purchasedGoalIds
+                }
+            if (availableGoals.isEmpty()) {
+                LaunchedEffect(Unit) { onAction(PetAction.CloseOverlay) }
+            } else {
+                GoalSelectionScreen(
+                    goals = availableGoals,
+                    onGoalSelected = { onAction(PetAction.SelectGoal(it)) },
+                )
+            }
         }
         HomeOverlay.PersonalAccount -> PersonalAccountScreen(
             initialState = state.resources,

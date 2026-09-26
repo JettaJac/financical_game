@@ -72,6 +72,7 @@ internal fun GoalOverlay(
     money: Int,
     target: Int,
     goal: Goals,
+    alreadyPurchased: Boolean,
     onBuy: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -297,7 +298,7 @@ internal fun GoalOverlay(
                     Spacer(Modifier.height(14.dp))
                     Button(
                         onClick = onBuy,
-                        enabled = money >= target,
+                        enabled = money >= target && !alreadyPurchased,
                         modifier = Modifier.fillMaxWidth().height(50.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = GoalPurple,
@@ -308,7 +309,9 @@ internal fun GoalOverlay(
                         shape = RoundedCornerShape(10.dp),
                     ) {
                         Text(
-                            text = stringResource(R.string.buy),
+                            text = stringResource(
+                                if (alreadyPurchased) R.string.goal_purchased else R.string.buy,
+                            ),
                             fontFamily = NunitoFontFamily,
                             fontWeight = FontWeight.Bold,
                         )
