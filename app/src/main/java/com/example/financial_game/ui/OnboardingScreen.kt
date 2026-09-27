@@ -174,6 +174,7 @@ private fun IntroOnboardingStep(
 ) {
     OnboardingStage(
         animationAssetPath = HELLO_ANIMATION,
+        lowerFinnick = true,
         modifier = modifier.selectable(
             selected = false,
             enabled = true,
@@ -186,8 +187,8 @@ private fun IntroOnboardingStep(
                 R.string.onboarding_greeting,
             ),
             modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = 64.dp, end = 16.dp)
+                .align(Alignment.TopCenter)
+                .padding(top = 192.dp, start = 16.dp, end = 16.dp)
                 .widthIn(max = 250.dp),
         )
     }
@@ -200,6 +201,7 @@ private fun HelpOnboardingStep(
 ) {
     OnboardingStage(
         animationAssetPath = TALKING_ANIMATION,
+        lowerFinnick = true,
         modifier = modifier,
     ) {
         PetSpeechBubble(
@@ -207,8 +209,8 @@ private fun HelpOnboardingStep(
                 R.string.onboarding_explanation
             ),
             modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = 64.dp, end = 16.dp)
+                .align(Alignment.TopCenter)
+                .padding(top = 192.dp, start = 16.dp, end = 16.dp)
                 .widthIn(max = 250.dp),
         )
 
@@ -229,13 +231,14 @@ private fun NameOnboardingStep(
 ) {
     OnboardingStage(
         animationAssetPath = TALKING_ANIMATION,
+        lowerFinnick = true,
         modifier = modifier,
     ) {
         PetSpeechBubble(
             text = stringResource(R.string.onboarding_name_question),
             modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = 64.dp, end = 16.dp)
+                .align(Alignment.TopCenter)
+                .padding(top = 192.dp, start = 16.dp, end = 16.dp)
                 .widthIn(max = 245.dp),
         )
         Column(
@@ -595,6 +598,7 @@ private fun ChoiceTile(
 @Composable
 private fun OnboardingStage(
     animationAssetPath: String,
+    lowerFinnick: Boolean = false,
     modifier: Modifier = Modifier,
     content: @Composable BoxWithConstraintsScope.() -> Unit,
 ) {
@@ -635,7 +639,8 @@ private fun OnboardingStage(
             maxHeight * 0.43f * (6f / 7f),
             350.dp,
         )
-        val finnTopPadding = (maxHeight * 0.24f).coerceIn(140.dp, 190.dp)
+        val finnTopPadding = (maxHeight * 0.24f).coerceIn(140.dp, 190.dp) +
+            if (lowerFinnick) backgroundLift + 32.dp else 0.dp
         FinnickAnimation(
             assetPath = animationAssetPath,
             modifier = Modifier
