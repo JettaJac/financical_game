@@ -484,8 +484,9 @@ private fun GoalChoiceCard(goal: Goals) {
         )
         GoalValueBadge(
             text = goal.target.toString(),
-            iconRes = R.drawable.ic_coin,
+            iconRes = R.drawable.coin_money,
             contentDescription = stringResource(R.string.coins),
+            tintIcon = false,
             modifier = Modifier.align(Alignment.TopStart).padding(8.dp),
         )
         if (effect != null) {
@@ -518,6 +519,7 @@ private fun GoalValueBadge(
     text: String,
     @DrawableRes iconRes: Int,
     contentDescription: String,
+    tintIcon: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -540,7 +542,7 @@ private fun GoalValueBadge(
                 painter = painterResource(iconRes),
                 contentDescription = contentDescription,
                 modifier = Modifier.size(16.dp),
-                colorFilter = ColorFilter.tint(OnboardingPurple),
+                colorFilter = if (tintIcon) ColorFilter.tint(OnboardingPurple) else null,
             )
         }
     }
