@@ -79,6 +79,9 @@ private val HomePurpleDark = Color(0xFF4B2163)
 private val HomeSurface = Color(0xFFFCF7FF)
 private val HomeTrack = Color(0xFFE6C1FA)
 
+internal fun roundedMinutesRemaining(seconds: Int): Int =
+    ((seconds.coerceAtLeast(0).toLong() + 59L) / 60L).toInt()
+
 private data class HomeLayoutMetrics(
     val horizontalPadding: Dp,
     val headerHeight: Dp,
@@ -278,7 +281,6 @@ private fun HomePage(state: PetState, onAction: (PetAction) -> Unit) {
 
         QuickActions(
             secondsRemaining = state.secondsRemaining,
-            currentPeriod = state.resources.currentPeriod,
             onShopClick = { onAction(PetAction.OpenShop) },
             onSkipCycle = { onAction(PetAction.ForceNextCycle )},
             tileSize = metrics.quickActionSize,
@@ -480,7 +482,6 @@ private fun HeaderValue(
 @Composable
 private fun QuickActions(
     secondsRemaining: Int,
-    currentPeriod: Int,
     onShopClick: () -> Unit,
     onSkipCycle: () -> Unit,
     tileSize: Dp,
@@ -506,7 +507,7 @@ private fun QuickActions(
                 strokeCap = StrokeCap.Round,
             )
             Text(
-                text = currentPeriod.toString(),
+                text = roundedMinutesRemaining(secondsRemaining).toString(),
                 color = Color.White,
                 fontSize = 15.sp,
                 modifier = Modifier.align(Alignment.Center),

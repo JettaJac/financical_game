@@ -52,6 +52,15 @@ class PetViewModelTest {
     }
 
     @Test
+    fun cycle_time_is_rounded_up_to_minutes() {
+        assertEquals(20, roundedMinutesRemaining(1_200))
+        assertEquals(20, roundedMinutesRemaining(1_199))
+        assertEquals(1, roundedMinutesRemaining(60))
+        assertEquals(1, roundedMinutesRemaining(1))
+        assertEquals(0, roundedMinutesRemaining(0))
+    }
+
+    @Test
     fun collar_price_matches_spec() {
         assertEquals(100, COLLAR_PRICE)
     }
