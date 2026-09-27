@@ -36,6 +36,9 @@ import com.example.financial_game.domain.moneyAfterPurchase
 import com.example.financial_game.domain.moneyAfterCompletedCycles
 import com.example.financial_game.domain.isAvailable
 import com.example.financial_game.domain.weekForPeriod
+import com.example.financial_game.domain.budgetWeekForPeriod
+import com.example.financial_game.domain.dayForPeriod
+import com.example.financial_game.domain.MandatoryBudget
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -89,6 +92,10 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
     private val cycleEndsAtMillis = longPreferencesKey("cycle_ends_at_millis")
     private val onboardingCompleted = booleanPreferencesKey("onboarding_completed")
     private val eventUnlockedTaskIds = stringSetPreferencesKey("event_unlocked_task_ids")
+    private val budgetPlanWeek = intPreferencesKey("budget_plan_week")
+    private val plannedOptionalExpenses = intPreferencesKey("planned_optional_expenses")
+    private val actualOptionalExpenses = intPreferencesKey("actual_optional_expenses")
+    private val budgetTutorialCompleted = booleanPreferencesKey("budget_tutorial_completed")
 
     override val snapshot: Flow<GameSnapshot> = flow {
         emitAll(context.gameDataStore.data.map { preferences ->
@@ -125,6 +132,10 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 currentPeriod = checkNotNull(preferences[currentPeriod]),
                 cycleEndsAtMillis = checkNotNull(preferences[cycleEndsAtMillis]),
                 onboardingCompleted = checkNotNull(preferences[onboardingCompleted]),
+                budgetPlanWeek = checkNotNull(preferences[budgetPlanWeek]),
+                plannedOptionalExpenses = checkNotNull(preferences[plannedOptionalExpenses]),
+                actualOptionalExpenses = checkNotNull(preferences[actualOptionalExpenses]),
+                budgetTutorialCompleted = checkNotNull(preferences[budgetTutorialCompleted]),
                 cooldownUnlockCycles = cooldownUnlockCycles,
                 taskUseCounts = taskUseCounts,
                 taskWeeklyUseCounts = taskWeeklyUseCounts,
@@ -166,6 +177,21 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 preferences[cycleEndsAtMillis] = nowMillis + GameDefaults.CYCLE_DURATION_MILLIS
             }
             if (preferences[onboardingCompleted] == null) preferences[onboardingCompleted] = false
+            if (preferences[plannedOptionalExpenses] == null) preferences[plannedOptionalExpenses] = 0
+            if (preferences[actualOptionalExpenses] == null) preferences[actualOptionalExpenses] = 0
+            if (preferences[budgetTutorialCompleted] == null) {
+                preferences[budgetTutorialCompleted] = false
+            }
+            if (preferences[budgetPlanWeek] == null) {
+                val period = checkNotNull(preferences[currentPeriod])
+                preferences[budgetPlanWeek] = if (
+                    preferences[onboardingCompleted] == true && dayForPeriod(period) != 1
+                ) {
+                    budgetWeekForPeriod(period)
+                } else {
+                    0
+                }
+            }
             if (preferences[eventUnlockedTaskIds] == null) {
                 preferences[eventUnlockedTaskIds] = emptySet()
             }
@@ -177,7 +203,11 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 preferences[goalTarget] = GameDefaults.GOAL_TARGET
             }
 
-            if (preferences[onboardingCompleted] == true) {
+            val period = checkNotNull(preferences[currentPeriod])
+            if (
+                preferences[onboardingCompleted] == true &&
+                checkNotNull(preferences[budgetPlanWeek]) >= budgetWeekForPeriod(period)
+            ) {
                 advanceExpiredCycles(preferences, nowMillis)
             }
             migrateLegacyCooldowns(preferences, nowMillis)
@@ -215,6 +245,10 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             preferences[purchasedShopItemIds] = emptySet()
             preferences[eventUnlockedTaskIds] = emptySet()
             preferences[currentPeriod] = GameDefaults.CURRENT_PERIOD
+            preferences[budgetPlanWeek] = 0
+            preferences[plannedOptionalExpenses] = 0
+            preferences[actualOptionalExpenses] = 0
+            preferences[budgetTutorialCompleted] = false
             preferences[cycleEndsAtMillis] =
                 System.currentTimeMillis() + GameDefaults.CYCLE_DURATION_MILLIS
             preferences[onboardingCompleted] = false
@@ -241,6 +275,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             val currentMoney = checkNotNull(preferences[money])
             if (currentMoney >= COLLAR_PRICE) {
                 preferences[money] = moneyAfterPurchase(currentMoney, COLLAR_PRICE)
+                recordOptionalExpense(preferences, COLLAR_PRICE)
             }
         }
     }
@@ -282,6 +317,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             if (currentMoney < item.price) return@edit
 
             preferences[money] = moneyAfterPurchase(currentMoney, item.price)
+            recordOptionalExpense(preferences, item.price)
 
             for (effect in item.careEffects) {
                 when (effect.resource) {
@@ -386,6 +422,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                     Resource.Money -> preferences[money] = currentMoney + change
                 }
             }
+            recordOptionalExpense(preferences, (-moneyChange).coerceAtLeast(0))
         }
     }
 
@@ -411,6 +448,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             if (currentMoney < PET_APPEARANCE_CHANGE_PRICE) return@edit
 
             preferences[money] = currentMoney - PET_APPEARANCE_CHANGE_PRICE
+            recordOptionalExpense(preferences, PET_APPEARANCE_CHANGE_PRICE)
             preferences[petName] = appearance.name.trim()
             preferences[hairColour] = appearance.hairColour.name
             preferences[eyeColour] = appearance.eyeColour.name
@@ -418,6 +456,21 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             updated = true
         }
         return updated
+    }
+
+    override suspend fun saveBudgetPlan(optionalExpenses: Int) {
+        context.gameDataStore.edit { preferences ->
+            val period = checkNotNull(preferences[currentPeriod])
+            preferences[budgetPlanWeek] = budgetWeekForPeriod(period)
+            preferences[plannedOptionalExpenses] = optionalExpenses.coerceIn(
+                minimumValue = 0,
+                maximumValue = MandatoryBudget.maximumOptionalExpense,
+            )
+            preferences[actualOptionalExpenses] = 0
+            preferences[budgetTutorialCompleted] = true
+            preferences[cycleEndsAtMillis] =
+                System.currentTimeMillis() + GameDefaults.CYCLE_DURATION_MILLIS
+        }
     }
 
     private fun advanceExpiredCycles(preferences: MutablePreferences, nowMillis: Long) {
@@ -487,6 +540,14 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             (checkNotNull(preferences[happiness]) - resourceDecrease).coerceAtLeast(0)
         preferences[health] =
             (checkNotNull(preferences[health]) - resourceDecrease).coerceAtLeast(0)
+    }
+
+    private fun recordOptionalExpense(preferences: MutablePreferences, amount: Int) {
+        if (amount <= 0) return
+        val period = checkNotNull(preferences[currentPeriod])
+        if (preferences[budgetPlanWeek] != budgetWeekForPeriod(period)) return
+        preferences[actualOptionalExpenses] =
+            (preferences[actualOptionalExpenses] ?: 0) + amount
     }
 
     private companion object {

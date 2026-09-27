@@ -26,6 +26,8 @@ interface GameRepository {
 
     suspend fun updatePetAppearance(appearance: PetAppearance): Boolean
 
+    suspend fun saveBudgetPlan(optionalExpenses: Int)
+
     suspend fun reset()
 }
 

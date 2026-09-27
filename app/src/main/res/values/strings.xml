@@ -24,6 +24,35 @@
     </string-array>
     <string name="timer">Таймер</string>
 
+    <!-- Weekly budget planning -->
+    <string name="budget_intro_message">Давай составим план бюджета, чтобы мне хватило на всё!</string>
+    <string name="budget_make_plan">Составить план</string>
+    <string name="budget_choose_category_guide">Теперь давай выберем, к какой категории ты отнесёшь эту позицию</string>
+    <string name="budget_choose_frequency_guide">Отличный выбор! Теперь уточни, к какому виду она относится</string>
+    <string name="budget_choose_category">Выбери категорию</string>
+    <string name="budget_choose_subcategory">Выбери подкатегорию</string>
+    <string name="budget_income">Доходы</string>
+    <string name="budget_expenses">Расходы</string>
+    <string name="budget_recurring">Постоянные</string>
+    <string name="budget_irregular">Нерегулярные</string>
+    <string name="budget_savings">Накопления</string>
+    <string name="budget_mandatory_success">Отлично! Все обязательные доходы и расходы распределены правильно</string>
+    <string name="budget_optional_guide">Теперь запланируем необязательные расходы на неделю. Предлагаю начать с 20 монет</string>
+    <string name="budget_optional_too_high">Так расходов получится больше доходов. Запланируй не больше %1$d монет, чтобы итоговый баланс был не ниже нуля.</string>
+    <string name="budget_optional_maximum">Максимум при текущем бюджете: %1$d</string>
+    <string name="budget_enter_amount">Введи сумму</string>
+    <string name="budget_review_guide">Давай проверим бюджет и согласуем его!</string>
+    <string name="budget_total">Итог:</string>
+    <string name="budget_total_expenses">Всего расходов:</string>
+    <string name="budget_balance_hint">Разница между доходами и расходами</string>
+    <string name="budget_to_game">К игре</string>
+    <string name="budget_optional_expenses">Необязательные расходы</string>
+    <string name="budget_pocket_money">Карманные деньги</string>
+    <string name="budget_school_lunch">Школьные обеды</string>
+    <string name="budget_mobile_service">Связь</string>
+    <string name="budget_vitamins">Витамины</string>
+    <string name="budget_sports_section">Спортивная секция</string>
+
     <!-- Home: sections -->
     <string name="health">Здоровье</string>
     <string name="food">Еда</string>

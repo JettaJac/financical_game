@@ -81,6 +81,7 @@ import com.example.financial_game.domain.cooldownRemaining
 import com.example.financial_game.domain.dayForPeriod
 import com.example.financial_game.domain.isAvailable
 import com.example.financial_game.domain.weekForPeriod
+import com.example.financial_game.domain.needsBudgetPlanning
 import com.example.financial_game.ui.theme.NunitoFontFamily
 
 private val HomePurple = Color(0xFF8743D3)
@@ -205,6 +206,15 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
         OnboardingScreen(
             initialState = state.resources,
             onComplete = { onAction(PetAction.CompleteOnboarding(it)) },
+        )
+        return
+    }
+
+    if (needsBudgetPlanning(state.resources)) {
+        BudgetPlanningScreen(
+            firstPlanning = !state.resources.budgetTutorialCompleted,
+            previousOptionalExpenses = state.resources.plannedOptionalExpenses,
+            onComplete = { onAction(PetAction.CompleteBudgetPlanning(it)) },
         )
         return
     }

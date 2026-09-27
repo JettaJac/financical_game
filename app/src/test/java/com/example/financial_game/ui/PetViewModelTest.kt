@@ -22,10 +22,50 @@ import com.example.financial_game.domain.cycleSecondsRemaining
 import com.example.financial_game.domain.hasCycleExpired
 import com.example.financial_game.domain.nextCycleEnd
 import com.example.financial_game.domain.isAvailable
+import com.example.financial_game.domain.MandatoryBudget
+import com.example.financial_game.domain.needsBudgetPlanning
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class PetViewModelTest {
+    @Test
+    fun budget_planning_is_required_at_the_start_of_each_week() {
+        assertEquals(85, MandatoryBudget.income)
+        assertEquals(55, MandatoryBudget.expense)
+        assertEquals(30, MandatoryBudget.maximumOptionalExpense)
+        assertEquals(
+            true,
+            needsBudgetPlanning(
+                GameSnapshot(
+                    onboardingCompleted = true,
+                    currentPeriod = 1,
+                    budgetPlanWeek = 0,
+                ),
+            ),
+        )
+        assertEquals(
+            false,
+            needsBudgetPlanning(
+                GameSnapshot(
+                    onboardingCompleted = true,
+                    currentPeriod = 1,
+                    budgetPlanWeek = 1,
+                ),
+            ),
+        )
+        assertEquals(
+            true,
+            needsBudgetPlanning(
+                GameSnapshot(
+                    onboardingCompleted = true,
+                    currentPeriod = 8,
+                    budgetPlanWeek = 1,
+                    budgetTutorialCompleted = true,
+                ),
+            ),
+        )
+    }
+
     @Test
     fun task_items_keep_product_order() {
         assertEquals(

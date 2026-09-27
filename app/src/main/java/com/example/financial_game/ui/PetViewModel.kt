@@ -16,6 +16,7 @@ import com.example.financial_game.domain.PetSetup
 import com.example.financial_game.domain.Resource
 import com.example.financial_game.domain.canApplyEffects
 import com.example.financial_game.domain.cycleSecondsRemaining
+import com.example.financial_game.domain.needsBudgetPlanning
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.delay
@@ -89,6 +90,7 @@ sealed interface PetAction {
     data object Restart : PetAction
     data class CompleteOnboarding(val setup: PetSetup) : PetAction
     data class ApplyPetAppearance(val appearance: PetAppearance) : PetAction
+    data class CompleteBudgetPlanning(val optionalExpenses: Int) : PetAction
 
     data object Exit : PetAction
 }
@@ -139,6 +141,7 @@ class PetViewModel @Inject constructor(private val repository: GameRepository) :
             val nowMillis = System.currentTimeMillis()
             val currentState = _state.value
             if (!currentState.resources.onboardingCompleted) continue
+            if (needsBudgetPlanning(currentState.resources)) continue
 
             val secondsRemaining = cycleSecondsRemaining(
                 currentState.resources.cycleEndsAtMillis,
@@ -209,6 +212,9 @@ class PetViewModel @Inject constructor(private val repository: GameRepository) :
                 repository.completeOnboarding(action.setup)
             }
             is PetAction.ApplyPetAppearance -> updatePetAppearance(action.appearance)
+            is PetAction.CompleteBudgetPlanning -> viewModelScope.launch {
+                repository.saveBudgetPlan(action.optionalExpenses)
+            }
         }
     }
 
