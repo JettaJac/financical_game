@@ -6,6 +6,8 @@ enum class EyeColour { Violet, Green, Blue }
 
 enum class HairStyle { Default, Hairy, Curly }
 
+const val PET_APPEARANCE_CHANGE_PRICE = 100
+
 data class PetAppearance(
     val name: String,
     val hairColour: HairColour,

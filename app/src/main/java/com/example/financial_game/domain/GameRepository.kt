@@ -24,7 +24,7 @@ interface GameRepository {
 
     suspend fun completeOnboarding(setup: PetSetup)
 
-    suspend fun updatePetAppearance(appearance: PetAppearance)
+    suspend fun updatePetAppearance(appearance: PetAppearance): Boolean
 
     suspend fun reset()
 }

@@ -19,6 +19,7 @@ import com.example.financial_game.domain.Goals
 import com.example.financial_game.domain.HairColour
 import com.example.financial_game.domain.HairStyle
 import com.example.financial_game.domain.PetAppearance
+import com.example.financial_game.domain.PET_APPEARANCE_CHANGE_PRICE
 import com.example.financial_game.domain.PetSetup
 import com.example.financial_game.domain.Resource
 import com.example.financial_game.domain.ShopItem
@@ -349,13 +350,20 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
         }
     }
 
-    override suspend fun updatePetAppearance(appearance: PetAppearance) {
+    override suspend fun updatePetAppearance(appearance: PetAppearance): Boolean {
+        var updated = false
         context.gameDataStore.edit { preferences ->
+            val currentMoney = checkNotNull(preferences[money])
+            if (currentMoney < PET_APPEARANCE_CHANGE_PRICE) return@edit
+
+            preferences[money] = currentMoney - PET_APPEARANCE_CHANGE_PRICE
             preferences[petName] = appearance.name.trim()
             preferences[hairColour] = appearance.hairColour.name
             preferences[eyeColour] = appearance.eyeColour.name
             preferences[hairStyle] = appearance.hairStyle.name
+            updated = true
         }
+        return updated
     }
 
     private fun advanceExpiredCycles(preferences: MutablePreferences, nowMillis: Long) {

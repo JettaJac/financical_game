@@ -98,6 +98,7 @@ class PetViewModel @Inject constructor(private val repository: GameRepository) :
     private val _state = MutableStateFlow(PetState())
     val state = _state.asStateFlow()
     private var goalPurchaseInProgress = false
+    private var appearanceUpdateInProgress = false
 
     init {
         viewModelScope.launch {
@@ -207,10 +208,7 @@ class PetViewModel @Inject constructor(private val repository: GameRepository) :
             is PetAction.CompleteOnboarding -> viewModelScope.launch {
                 repository.completeOnboarding(action.setup)
             }
-            is PetAction.ApplyPetAppearance -> viewModelScope.launch {
-                repository.updatePetAppearance(action.appearance)
-                _state.update { it.copy(overlay = null) }
-            }
+            is PetAction.ApplyPetAppearance -> updatePetAppearance(action.appearance)
         }
     }
 
@@ -243,6 +241,20 @@ class PetViewModel @Inject constructor(private val repository: GameRepository) :
                 }
             } finally {
                 goalPurchaseInProgress = false
+            }
+        }
+    }
+
+    private fun updatePetAppearance(appearance: PetAppearance) {
+        if (appearanceUpdateInProgress) return
+        appearanceUpdateInProgress = true
+        viewModelScope.launch {
+            try {
+                if (repository.updatePetAppearance(appearance)) {
+                    _state.update { it.copy(overlay = null) }
+                }
+            } finally {
+                appearanceUpdateInProgress = false
             }
         }
     }
