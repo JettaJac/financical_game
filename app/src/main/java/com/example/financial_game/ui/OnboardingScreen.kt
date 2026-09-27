@@ -441,13 +441,13 @@ internal fun GoalSelectionScreen(
                 text = stringResource(R.string.onboarding_choose_goal),
                 color = OnboardingPurpleDark,
                 fontFamily = NunitoFontFamily,
-                fontSize = 23.sp,
+                fontSize = 21.sp,
                 fontWeight = FontWeight.ExtraBold,
             )
             Spacer(Modifier.height(8.dp))
             HorizontalPager(
                 state = pagerState,
-                modifier = Modifier.fillMaxWidth().height(140.dp),
+                modifier = Modifier.fillMaxWidth().height(120.dp),
                 pageSpacing = 12.dp,
             ) { page ->
                 GoalChoiceCard(goals[page])
