@@ -2,6 +2,7 @@ package com.example.financial_game.data
 
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
@@ -23,8 +24,9 @@ import com.example.financial_game.domain.PET_APPEARANCE_CHANGE_PRICE
 import com.example.financial_game.domain.PetSetup
 import com.example.financial_game.domain.Resource
 import com.example.financial_game.domain.ShopItem
-import com.example.financial_game.domain.cooldownExpireAt
-import com.example.financial_game.domain.cooldownUnlockPeriod
+import com.example.financial_game.domain.cooldownUnlockCycle
+import com.example.financial_game.domain.currentCyclePosition
+import com.example.financial_game.domain.cycleSecondsRemaining
 import com.example.financial_game.domain.hasCycleExpired
 import com.example.financial_game.domain.nextCycleEnd
 import com.example.financial_game.domain.levelAfterGoalPurchase
@@ -39,14 +41,14 @@ import kotlinx.coroutines.flow.map
 
 private val Context.gameDataStore by preferencesDataStore("game")
 
-private const val COOLDOWN_EXPIRE_PREFIX = "cooldown_expire_"
-private const val COOLDOWN_PERIOD_PREFIX = "cooldown_period_"
+private const val COOLDOWN_UNLOCK_CYCLE_PREFIX = "cooldown_unlock_cycle_"
+private const val LEGACY_COOLDOWN_EXPIRE_PREFIX = "cooldown_expire_"
+private const val LEGACY_COOLDOWN_PERIOD_PREFIX = "cooldown_period_"
 
-private fun cooldownExpireKey(item: CardItem) =
-    longPreferencesKey("$COOLDOWN_EXPIRE_PREFIX${item.storageId}")
+private fun cooldownUnlockCycleKey(storageId: String) =
+    doublePreferencesKey("$COOLDOWN_UNLOCK_CYCLE_PREFIX$storageId")
 
-private fun cooldownPeriodKey(item: CardItem) =
-    intPreferencesKey("$COOLDOWN_PERIOD_PREFIX${item.storageId}")
+private fun cooldownUnlockCycleKey(item: CardItem) = cooldownUnlockCycleKey(item.storageId)
 
 @Singleton
 class GameStore @Inject constructor(@ApplicationContext private val context: Context) : GameRepository {
@@ -72,19 +74,10 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
 
     override val snapshot: Flow<GameSnapshot> = flow {
         emitAll(context.gameDataStore.data.map { preferences ->
-            val cooldownExpires = preferences.asMap()
+            val cooldownUnlockCycles = preferences.asMap()
                 .mapNotNull { (key, value) ->
-                    if (key.name.startsWith(COOLDOWN_EXPIRE_PREFIX) && value is Long) {
-                        key.name.removePrefix(COOLDOWN_EXPIRE_PREFIX) to value
-                    } else {
-                        null
-                    }
-                }
-                .toMap()
-            val cooldownUnlockPeriods = preferences.asMap()
-                .mapNotNull { (key, value) ->
-                    if (key.name.startsWith(COOLDOWN_PERIOD_PREFIX) && value is Int) {
-                        key.name.removePrefix(COOLDOWN_PERIOD_PREFIX) to value
+                    if (key.name.startsWith(COOLDOWN_UNLOCK_CYCLE_PREFIX) && value is Double) {
+                        key.name.removePrefix(COOLDOWN_UNLOCK_CYCLE_PREFIX) to value
                     } else {
                         null
                     }
@@ -111,8 +104,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 currentPeriod = checkNotNull(preferences[currentPeriod]),
                 cycleEndsAtMillis = checkNotNull(preferences[cycleEndsAtMillis]),
                 onboardingCompleted = checkNotNull(preferences[onboardingCompleted]),
-                cooldownExpires = cooldownExpires,
-                cooldownUnlockPeriods = cooldownUnlockPeriods,
+                cooldownUnlockCycles = cooldownUnlockCycles,
             )
         })
     }
@@ -154,6 +146,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             if (preferences[onboardingCompleted] == true) {
                 advanceExpiredCycles(preferences, nowMillis)
             }
+            migrateLegacyCooldowns(preferences, nowMillis)
         }
     }
 
@@ -161,8 +154,9 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
         context.gameDataStore.edit { preferences ->
             preferences.asMap().keys
                 .filter {
-                    it.name.startsWith(COOLDOWN_EXPIRE_PREFIX) ||
-                        it.name.startsWith(COOLDOWN_PERIOD_PREFIX)
+                    it.name.startsWith(COOLDOWN_UNLOCK_CYCLE_PREFIX) ||
+                        it.name.startsWith(LEGACY_COOLDOWN_EXPIRE_PREFIX) ||
+                        it.name.startsWith(LEGACY_COOLDOWN_PERIOD_PREFIX)
                 }
                 .forEach { preferences.remove(it) }
 
@@ -215,20 +209,22 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
 
     override suspend fun buyCareItem(item: CardItem) {
         context.gameDataStore.edit { preferences ->
-            val nowMillis = System.currentTimeMillis()
             val currentCycle = checkNotNull(preferences[currentPeriod])
+            val currentCyclePosition = currentCyclePosition(
+                currentPeriod = currentCycle,
+                cycleSecondsRemaining = cycleSecondsRemaining(
+                    cycleEndsAtMillis = checkNotNull(preferences[cycleEndsAtMillis]),
+                    nowMillis = System.currentTimeMillis(),
+                ),
+            )
             val purchasedShopItems = checkNotNull(preferences[purchasedShopItemIds])
             if (item is ShopItem && item.storageId in purchasedShopItems) return@edit
 
             when (item.cooldown) {
                 Cooldown.None -> Unit
-                is Cooldown.Time -> {
-                    val cooldownExpire = preferences[cooldownExpireKey(item)] ?: 0L
-                    if (cooldownExpire > nowMillis) return@edit
-                }
-                is Cooldown.ByCycle -> {
-                    val unlockPeriod = preferences[cooldownPeriodKey(item)] ?: 0
-                    if (unlockPeriod > currentCycle) return@edit
+                is Cooldown.Cycles -> {
+                    val unlockCycle = preferences[cooldownUnlockCycleKey(item)] ?: 0.0
+                    if (unlockCycle > currentCyclePosition) return@edit
                 }
             }
 
@@ -255,13 +251,11 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
 
             when (val cooldown = item.cooldown) {
                 Cooldown.None -> Unit
-                is Cooldown.Time -> {
-                    preferences[cooldownExpireKey(item)] =
-                        cooldownExpireAt(nowMillis, cooldown.minutes)
-                }
-                is Cooldown.ByCycle -> {
-                    preferences[cooldownPeriodKey(item)] =
-                        cooldownUnlockPeriod(currentCycle, cooldown.days)
+                is Cooldown.Cycles -> {
+                    preferences[cooldownUnlockCycleKey(item)] = cooldownUnlockCycle(
+                        currentCyclePosition = currentCyclePosition,
+                        cooldownCycles = cooldown.value,
+                    )
                 }
             }
 
@@ -372,6 +366,42 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
 
         applyCompletedCycles(preferences, count = 1)
         preferences[cycleEndsAtMillis] = nextCycleEnd(nowMillis)
+    }
+
+    private fun migrateLegacyCooldowns(preferences: MutablePreferences, nowMillis: Long) {
+        val legacyEntries = preferences.asMap().entries.filter { (key, _) ->
+            key.name.startsWith(LEGACY_COOLDOWN_EXPIRE_PREFIX) ||
+                key.name.startsWith(LEGACY_COOLDOWN_PERIOD_PREFIX)
+        }
+        if (legacyEntries.isEmpty()) return
+
+        val cyclePosition = currentCyclePosition(
+            currentPeriod = checkNotNull(preferences[currentPeriod]),
+            cycleSecondsRemaining = cycleSecondsRemaining(
+                cycleEndsAtMillis = checkNotNull(preferences[cycleEndsAtMillis]),
+                nowMillis = nowMillis,
+            ),
+        )
+        legacyEntries.forEach { (key, value) ->
+            val unlockCycle = when {
+                key.name.startsWith(LEGACY_COOLDOWN_EXPIRE_PREFIX) && value is Long -> {
+                    val remainingMillis = (value - nowMillis).coerceAtLeast(0L)
+                    cyclePosition +
+                        remainingMillis.toDouble() / GameDefaults.CYCLE_DURATION_MILLIS
+                }
+                key.name.startsWith(LEGACY_COOLDOWN_PERIOD_PREFIX) && value is Int ->
+                    value.toDouble()
+                else -> null
+            }
+            val storageId = key.name
+                .removePrefix(LEGACY_COOLDOWN_EXPIRE_PREFIX)
+                .removePrefix(LEGACY_COOLDOWN_PERIOD_PREFIX)
+            val newKey = cooldownUnlockCycleKey(storageId)
+            if (unlockCycle != null && preferences[newKey] == null && unlockCycle > cyclePosition) {
+                preferences[newKey] = unlockCycle
+            }
+            preferences.remove(key)
+        }
     }
 
     private fun applyCompletedCycles(preferences: MutablePreferences, count: Int) {

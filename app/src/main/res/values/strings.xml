@@ -53,13 +53,6 @@
     <string name="buy">Купить</string>
     <string name="buy_price">Купить · %1$d ₽</string>
     <string name="cooldown_remaining">Через %1$s</string>
-    <plurals name="cooldown_cycles_remaining">
-        <item quantity="one">Через %1$d день</item>
-        <item quantity="few">Через %1$d дня</item>
-        <item quantity="many">Через %1$d дней</item>
-        <item quantity="other">Через %1$d дня</item>
-    </plurals>
-    <string name="shop_broom">Веник</string>
     <string name="shop_flower_pot">Горшок с цветком</string>
     <string name="shop_favourite_mug">Любимая кружка</string>
     <string name="shop_floor_lamp">Торшер в комнату</string>

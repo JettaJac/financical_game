@@ -5,11 +5,10 @@ import com.example.financial_game.data.GameSnapshot
 import com.example.financial_game.domain.moneyAfterCycle
 import com.example.financial_game.domain.moneyAfterPurchase
 import com.example.financial_game.domain.levelAfterGoalPurchase
-import com.example.financial_game.domain.cooldownExpireAt
-import com.example.financial_game.domain.cooldownCyclesRemaining
+import com.example.financial_game.domain.cooldownUnlockCycle
 import com.example.financial_game.domain.cooldownSecondsRemaining
-import com.example.financial_game.domain.cooldownUnlockPeriod
 import com.example.financial_game.domain.cooldownRemaining
+import com.example.financial_game.domain.currentCyclePosition
 import com.example.financial_game.domain.Cooldown
 import com.example.financial_game.domain.CooldownRemaining
 import com.example.financial_game.domain.Effect
@@ -26,12 +25,6 @@ import org.junit.Test
 class PetViewModelTest {
     @Test
     fun shop_items_match_prices_levels_and_effects() {
-        assertEquals(0, ShopItem.Broom.price)
-        assertEquals(1, ShopItem.Broom.level)
-        assertEquals(
-            listOf(Effect(Resource.Health, 0), Effect(Resource.Happiness, -5), Effect(Resource.Energy, -10)),
-            ShopItem.Broom.careEffects,
-        )
         assertEquals(15, ShopItem.FlowerPot.price)
         assertEquals(10, ShopItem.FavouriteMug.price)
         assertEquals(15, ShopItem.FloorLamp.price)
@@ -101,48 +94,52 @@ class PetViewModelTest {
     }
 
     @Test
-    fun time_cooldown_expire_is_calculated_from_minutes() {
-        assertEquals(121_000L, cooldownExpireAt(nowMillis = 1_000L, cooldownMinutes = 2))
+    fun cooldown_unlock_is_calculated_in_cycles() {
+        assertEquals(4.3, cooldownUnlockCycle(currentCyclePosition = 4.0, cooldownCycles = 0.3), 0.0)
     }
 
     @Test
-    fun cooldown_rounds_up_until_expire_time_is_reached() {
-        assertEquals(2, cooldownSecondsRemaining(expireAtMillis = 2_001L, nowMillis = 1_000L))
-        assertEquals(1, cooldownSecondsRemaining(expireAtMillis = 2_000L, nowMillis = 1_001L))
-        assertEquals(0, cooldownSecondsRemaining(expireAtMillis = 2_000L, nowMillis = 2_000L))
-        assertEquals(0, cooldownSecondsRemaining(expireAtMillis = 2_000L, nowMillis = 3_000L))
-    }
-
-    @Test
-    fun cycle_cooldown_unlocks_after_configured_number_of_days() {
-        val unlockPeriod = cooldownUnlockPeriod(currentPeriod = 4, cooldownDays = 3)
-
-        assertEquals(7, unlockPeriod)
-        assertEquals(3, cooldownCyclesRemaining(unlockPeriod, currentPeriod = 4))
-        assertEquals(1, cooldownCyclesRemaining(unlockPeriod, currentPeriod = 6))
-        assertEquals(0, cooldownCyclesRemaining(unlockPeriod, currentPeriod = 7))
-    }
-
-    @Test
-    fun cooldown_remaining_supports_time_and_cycle_types() {
+    fun cooldown_seconds_scale_with_cycle_duration() {
         assertEquals(
-            CooldownRemaining.Time(60),
-            cooldownRemaining(
-                cooldown = Cooldown.Time(minutes = 1),
-                expireAtMillis = 61_000L,
-                unlockPeriod = 0,
-                nowMillis = 1_000L,
-                currentPeriod = 1,
+            360,
+            cooldownSecondsRemaining(
+                unlockCycle = 4.3,
+                currentCyclePosition = 4.0,
+                cycleDurationSeconds = 1_200,
             ),
         )
         assertEquals(
-            CooldownRemaining.Cycles(2),
+            180,
+            cooldownSecondsRemaining(
+                unlockCycle = 4.3,
+                currentCyclePosition = 4.0,
+                cycleDurationSeconds = 600,
+            ),
+        )
+    }
+
+    @Test
+    fun current_cycle_position_includes_elapsed_fraction() {
+        assertEquals(
+            4.5,
+            currentCyclePosition(
+                currentPeriod = 4,
+                cycleSecondsRemaining = 600,
+                cycleDurationSeconds = 1_200,
+            ),
+            0.0,
+        )
+    }
+
+    @Test
+    fun cooldown_remaining_is_shown_in_seconds() {
+        assertEquals(
+            CooldownRemaining.Time(360),
             cooldownRemaining(
-                cooldown = Cooldown.ByCycle(days = 2),
-                expireAtMillis = 0L,
-                unlockPeriod = 5,
-                nowMillis = 1_000L,
-                currentPeriod = 3,
+                cooldown = Cooldown.Cycles(0.3),
+                unlockCycle = 1.3,
+                currentPeriod = 1,
+                cycleSecondsRemaining = 1_200,
             ),
         )
     }

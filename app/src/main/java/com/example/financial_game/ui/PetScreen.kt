@@ -56,7 +56,6 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -574,10 +573,9 @@ private fun HomeBottomPanel(
                     items = FoodItems,
                     money = state.resources.money,
                     level = state.resources.level,
-                    cooldownExpires = state.resources.cooldownExpires,
-                    cooldownUnlockPeriods = state.resources.cooldownUnlockPeriods,
+                    cooldownUnlockCycles = state.resources.cooldownUnlockCycles,
                     currentPeriod = state.resources.currentPeriod,
-                    nowMillis = state.nowMillis,
+                    cycleSecondsRemaining = state.secondsRemaining,
                     onBuyClick = onBuyClick,
                     horizontalPadding = metrics.horizontalPadding,
                     itemGap = metrics.itemGap,
@@ -586,10 +584,9 @@ private fun HomeBottomPanel(
                     items = HappinessItems,
                     money = state.resources.money,
                     level = state.resources.level,
-                    cooldownExpires = state.resources.cooldownExpires,
-                    cooldownUnlockPeriods = state.resources.cooldownUnlockPeriods,
+                    cooldownUnlockCycles = state.resources.cooldownUnlockCycles,
                     currentPeriod = state.resources.currentPeriod,
-                    nowMillis = state.nowMillis,
+                    cycleSecondsRemaining = state.secondsRemaining,
                     onBuyClick = onBuyClick,
                     horizontalPadding = metrics.horizontalPadding,
                     itemGap = metrics.itemGap,
@@ -598,10 +595,9 @@ private fun HomeBottomPanel(
                     items = EnergyItems,
                     money = state.resources.money,
                     level = state.resources.level,
-                    cooldownExpires = state.resources.cooldownExpires,
-                    cooldownUnlockPeriods = state.resources.cooldownUnlockPeriods,
+                    cooldownUnlockCycles = state.resources.cooldownUnlockCycles,
                     currentPeriod = state.resources.currentPeriod,
-                    nowMillis = state.nowMillis,
+                    cycleSecondsRemaining = state.secondsRemaining,
                     onBuyClick = onBuyClick,
                     horizontalPadding = metrics.horizontalPadding,
                     itemGap = metrics.itemGap,
@@ -610,10 +606,9 @@ private fun HomeBottomPanel(
                     items = ShopItems,
                     money = state.resources.money,
                     level = state.resources.level,
-                    cooldownExpires = state.resources.cooldownExpires,
-                    cooldownUnlockPeriods = state.resources.cooldownUnlockPeriods,
+                    cooldownUnlockCycles = state.resources.cooldownUnlockCycles,
                     currentPeriod = state.resources.currentPeriod,
-                    nowMillis = state.nowMillis,
+                    cycleSecondsRemaining = state.secondsRemaining,
                     onBuyClick = onBuyClick,
                     horizontalPadding = metrics.horizontalPadding,
                     itemGap = metrics.itemGap,
@@ -775,10 +770,9 @@ private fun CardRow(
     items: List<CardItemUI>,
     money: Int,
     level: Int,
-    cooldownExpires: Map<String, Long>,
-    cooldownUnlockPeriods: Map<String, Int>,
+    cooldownUnlockCycles: Map<String, Double>,
     currentPeriod: Int,
-    nowMillis: Long,
+    cycleSecondsRemaining: Int,
     onBuyClick: (CardItem) -> Unit,
     horizontalPadding: Dp,
     itemGap: Dp,
@@ -812,10 +806,9 @@ private fun CardRow(
                     val alreadyPurchased = product.item.storageId in purchasedItemIds
                     val remainingCooldown = cooldownRemaining(
                         cooldown = product.item.cooldown,
-                        expireAtMillis = cooldownExpires[product.item.storageId] ?: 0L,
-                        unlockPeriod = cooldownUnlockPeriods[product.item.storageId] ?: 0,
-                        nowMillis = nowMillis,
+                        unlockCycle = cooldownUnlockCycles[product.item.storageId] ?: 0.0,
                         currentPeriod = currentPeriod,
+                        cycleSecondsRemaining = cycleSecondsRemaining,
                     )
                     ProductCard(
                         product = product,
@@ -930,19 +923,6 @@ private fun ProductCard(
                     text = stringResource(
                         R.string.cooldown_remaining,
                         formatCountdown(remainingCooldown.seconds),
-                    ),
-                    autoSize = TextAutoSize.StepBased(
-                        minFontSize = 7.sp,
-                        maxFontSize = 10.sp,
-                        stepSize = 0.5.sp,
-                    ),
-                    maxLines = 1,
-                )
-                remainingCooldown is CooldownRemaining.Cycles -> Text(
-                    text = pluralStringResource(
-                        R.plurals.cooldown_cycles_remaining,
-                        remainingCooldown.days,
-                        remainingCooldown.days,
                     ),
                     autoSize = TextAutoSize.StepBased(
                         minFontSize = 7.sp,

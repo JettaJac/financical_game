@@ -29,6 +29,5 @@ data class GameSnapshot(
     val currentPeriod: Int = GameDefaults.CURRENT_PERIOD,
     val cycleEndsAtMillis: Long = 0L,
     val onboardingCompleted: Boolean = false,
-    val cooldownExpires: Map<String, Long> = emptyMap(),
-    val cooldownUnlockPeriods: Map<String, Int> = emptyMap(),
+    val cooldownUnlockCycles: Map<String, Double> = emptyMap(),
 )
