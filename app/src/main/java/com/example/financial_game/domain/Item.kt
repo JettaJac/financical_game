@@ -225,6 +225,145 @@ enum class EnergyItem(
         get() = "energy_$name"
 }
 
+sealed interface TaskUsageLimit {
+    data object None : TaskUsageLimit
+    data class PerWeek(val count: Int) : TaskUsageLimit
+    data class Total(val count: Int) : TaskUsageLimit
+}
+
+enum class TaskItem(
+    val earnings: Int,
+    override val level: Int,
+    override val cooldown: Cooldown,
+    override val careEffects: List<Effect>,
+    val activeDays: IntRange = 1..7,
+    val usageLimit: TaskUsageLimit = TaskUsageLimit.None,
+    val requiredTaskStorageId: String? = null,
+    val requiresEvent: Boolean = false,
+) : CardItem {
+    GetReady(
+        earnings = 0,
+        level = 1,
+        cooldown = Cooldown.None,
+        careEffects = taskEffects(health = 0, happiness = -5, energy = -5),
+    ),
+    Lessons(
+        earnings = 0,
+        level = 1,
+        cooldown = Cooldown.None,
+        activeDays = 1..5,
+        careEffects = taskEffects(health = 0, happiness = -5, energy = -5),
+    ),
+    Cleaning(
+        earnings = 0,
+        level = 1,
+        cooldown = Cooldown.None,
+        activeDays = 6..7,
+        careEffects = taskEffects(health = 0, happiness = -5, energy = -10),
+    ),
+    BeadCrafts(
+        earnings = 0,
+        level = 2,
+        cooldown = Cooldown.None,
+        usageLimit = TaskUsageLimit.PerWeek(3),
+        requiredTaskStorageId = "task_GetReady",
+        careEffects = taskEffects(health = -3, happiness = 0, energy = -3),
+    ),
+    DeliverNewspapers(
+        earnings = 25,
+        level = 2,
+        cooldown = Cooldown.Cycles(5.0),
+        requiredTaskStorageId = "task_Lessons",
+        careEffects = taskEffects(health = -10, happiness = 0, energy = -10, money = 25),
+    ),
+    HandOutFlyers(
+        earnings = 30,
+        level = 2,
+        cooldown = Cooldown.Cycles(6.0),
+        usageLimit = TaskUsageLimit.Total(5),
+        careEffects = taskEffects(health = -8, happiness = 0, energy = -8, money = 30),
+    ),
+    RecyclePaper(
+        earnings = 0,
+        level = 2,
+        cooldown = Cooldown.Cycles(1.0),
+        requiresEvent = true,
+        careEffects = taskEffects(health = -5, happiness = 0, energy = -5),
+    ),
+    FeedNeighboursCat(
+        earnings = 40,
+        level = 2,
+        cooldown = Cooldown.Cycles(7.0),
+        careEffects = taskEffects(health = -5, happiness = 0, energy = -10, money = 40),
+    ),
+    WalkNeighboursDog(
+        earnings = 50,
+        level = 3,
+        cooldown = Cooldown.Cycles(5.0),
+        careEffects = taskEffects(health = -15, happiness = 0, energy = -15, money = 50),
+    ),
+    HelpGrandfather(
+        earnings = 20,
+        level = 3,
+        cooldown = Cooldown.Cycles(1.0),
+        activeDays = 6..7,
+        usageLimit = TaskUsageLimit.Total(5),
+        requiresEvent = true,
+        careEffects = taskEffects(health = -2, happiness = 0, energy = -2, money = 20),
+    ),
+    WaterPlants(
+        earnings = 10,
+        level = 3,
+        cooldown = Cooldown.Cycles(1.0),
+        requiresEvent = true,
+        careEffects = taskEffects(health = -2, happiness = 0, energy = -2, money = 10),
+    );
+
+    override val price: Int = 0
+    override val storageId: String
+        get() = "task_$name"
+}
+
+internal fun TaskItem.isAvailable(
+    currentPeriod: Int,
+    totalUses: Int,
+    weeklyUses: Int,
+    usageWeek: Int,
+    completedTaskCounts: Map<String, Int>,
+    eventUnlocked: Boolean,
+): Boolean {
+    val currentWeek = weekForPeriod(currentPeriod)
+    val usesThisWeek = if (usageWeek == currentWeek) weeklyUses else 0
+    if (dayForPeriod(currentPeriod) !in activeDays) return false
+    if (requiresEvent && !eventUnlocked) return false
+    if (requiredTaskStorageId != null && completedTaskCounts[requiredTaskStorageId] == null) {
+        return false
+    }
+    return when (val limit = usageLimit) {
+        TaskUsageLimit.None -> true
+        is TaskUsageLimit.PerWeek -> usesThisWeek < limit.count
+        is TaskUsageLimit.Total -> totalUses < limit.count
+    }
+}
+
+internal fun dayForPeriod(currentPeriod: Int): Int =
+    ((currentPeriod.coerceAtLeast(1) - 1) % 7) + 1
+
+internal fun weekForPeriod(currentPeriod: Int): Int =
+    (currentPeriod.coerceAtLeast(1) - 1) / 7
+
+private fun taskEffects(
+    health: Int,
+    happiness: Int,
+    energy: Int,
+    money: Int = 0,
+): List<Effect> = buildList {
+    add(Effect(Resource.Health, health))
+    add(Effect(Resource.Happiness, happiness))
+    add(Effect(Resource.Energy, energy))
+    if (money != 0) add(Effect(Resource.Money, money))
+}
+
 enum class ShopItem(
     override val price: Int,
     override val careEffects: List<Effect>,

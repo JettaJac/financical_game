@@ -24,6 +24,22 @@
     <string name="tasks">Список дел</string>
     <string name="section_placeholder">Здесь скоро появится содержимое</string>
 
+    <!-- Tasks and jobs -->
+    <string name="task_get_ready">Привести себя в порядок</string>
+    <string name="task_lessons">Уроки</string>
+    <string name="task_cleaning">Уборка</string>
+    <string name="task_bead_crafts">Сделать поделки из бисера</string>
+    <string name="task_deliver_newspapers">Разносить газеты</string>
+    <string name="task_hand_out_flyers">Раздавать листовки</string>
+    <string name="task_recycle_paper">Сдал макулатуру</string>
+    <string name="task_feed_neighbours_cat">Кормить соседского кота, пока соседи в отпуске</string>
+    <string name="task_walk_neighbours_dog">Выгул соседской собаки</string>
+    <string name="task_help_grandfather">Помочь дедушке разобрать гараж</string>
+    <string name="task_water_plants">Поливать растения</string>
+    <string name="task_do">Выполнить</string>
+    <string name="task_do_with_reward">Выполнить · +%1$d</string>
+    <string name="task_unavailable">Недоступно</string>
+
     <!-- Menu -->
     <string name="menu">МЕНЮ</string>
     <string name="continue_action">Продолжить</string>

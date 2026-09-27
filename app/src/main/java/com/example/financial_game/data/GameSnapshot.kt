@@ -30,4 +30,8 @@ data class GameSnapshot(
     val cycleEndsAtMillis: Long = 0L,
     val onboardingCompleted: Boolean = false,
     val cooldownUnlockCycles: Map<String, Double> = emptyMap(),
+    val taskUseCounts: Map<String, Int> = emptyMap(),
+    val taskWeeklyUseCounts: Map<String, Int> = emptyMap(),
+    val taskUseWeeks: Map<String, Int> = emptyMap(),
+    val eventUnlockedTaskIds: Set<String> = emptySet(),
 )

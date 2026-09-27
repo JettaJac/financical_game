@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.MutablePreferences
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -24,6 +25,7 @@ import com.example.financial_game.domain.PET_APPEARANCE_CHANGE_PRICE
 import com.example.financial_game.domain.PetSetup
 import com.example.financial_game.domain.Resource
 import com.example.financial_game.domain.ShopItem
+import com.example.financial_game.domain.TaskItem
 import com.example.financial_game.domain.cooldownUnlockCycle
 import com.example.financial_game.domain.currentCyclePosition
 import com.example.financial_game.domain.cycleSecondsRemaining
@@ -31,6 +33,8 @@ import com.example.financial_game.domain.hasCycleExpired
 import com.example.financial_game.domain.nextCycleEnd
 import com.example.financial_game.domain.levelAfterGoalPurchase
 import com.example.financial_game.domain.moneyAfterPurchase
+import com.example.financial_game.domain.isAvailable
+import com.example.financial_game.domain.weekForPeriod
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -44,11 +48,23 @@ private val Context.gameDataStore by preferencesDataStore("game")
 private const val COOLDOWN_UNLOCK_CYCLE_PREFIX = "cooldown_unlock_cycle_"
 private const val LEGACY_COOLDOWN_EXPIRE_PREFIX = "cooldown_expire_"
 private const val LEGACY_COOLDOWN_PERIOD_PREFIX = "cooldown_period_"
+private const val TASK_USE_COUNT_PREFIX = "task_use_count_"
+private const val TASK_WEEKLY_USE_COUNT_PREFIX = "task_weekly_use_count_"
+private const val TASK_USE_WEEK_PREFIX = "task_use_week_"
 
 private fun cooldownUnlockCycleKey(storageId: String) =
     doublePreferencesKey("$COOLDOWN_UNLOCK_CYCLE_PREFIX$storageId")
 
 private fun cooldownUnlockCycleKey(item: CardItem) = cooldownUnlockCycleKey(item.storageId)
+
+private fun taskUseCountKey(item: TaskItem) =
+    intPreferencesKey("$TASK_USE_COUNT_PREFIX${item.storageId}")
+
+private fun taskWeeklyUseCountKey(item: TaskItem) =
+    intPreferencesKey("$TASK_WEEKLY_USE_COUNT_PREFIX${item.storageId}")
+
+private fun taskUseWeekKey(item: TaskItem) =
+    intPreferencesKey("$TASK_USE_WEEK_PREFIX${item.storageId}")
 
 @Singleton
 class GameStore @Inject constructor(@ApplicationContext private val context: Context) : GameRepository {
@@ -71,6 +87,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
     private val currentPeriod = intPreferencesKey("current_period")
     private val cycleEndsAtMillis = longPreferencesKey("cycle_ends_at_millis")
     private val onboardingCompleted = booleanPreferencesKey("onboarding_completed")
+    private val eventUnlockedTaskIds = stringSetPreferencesKey("event_unlocked_task_ids")
 
     override val snapshot: Flow<GameSnapshot> = flow {
         emitAll(context.gameDataStore.data.map { preferences ->
@@ -83,6 +100,9 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                     }
                 }
                 .toMap()
+            val taskUseCounts = preferences.intMap(TASK_USE_COUNT_PREFIX)
+            val taskWeeklyUseCounts = preferences.intMap(TASK_WEEKLY_USE_COUNT_PREFIX)
+            val taskUseWeeks = preferences.intMap(TASK_USE_WEEK_PREFIX)
 
             GameSnapshot(
                 name = checkNotNull(preferences[petName]),
@@ -105,6 +125,10 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 cycleEndsAtMillis = checkNotNull(preferences[cycleEndsAtMillis]),
                 onboardingCompleted = checkNotNull(preferences[onboardingCompleted]),
                 cooldownUnlockCycles = cooldownUnlockCycles,
+                taskUseCounts = taskUseCounts,
+                taskWeeklyUseCounts = taskWeeklyUseCounts,
+                taskUseWeeks = taskUseWeeks,
+                eventUnlockedTaskIds = checkNotNull(preferences[eventUnlockedTaskIds]),
             )
         })
     }
@@ -135,6 +159,9 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 preferences[cycleEndsAtMillis] = nowMillis + GameDefaults.CYCLE_DURATION_MILLIS
             }
             if (preferences[onboardingCompleted] == null) preferences[onboardingCompleted] = false
+            if (preferences[eventUnlockedTaskIds] == null) {
+                preferences[eventUnlockedTaskIds] = emptySet()
+            }
 
             if (preferences[goalTitle] == LEGACY_GOAL_TITLE &&
                 preferences[goalTarget] == LEGACY_GOAL_TARGET
@@ -156,7 +183,10 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 .filter {
                     it.name.startsWith(COOLDOWN_UNLOCK_CYCLE_PREFIX) ||
                         it.name.startsWith(LEGACY_COOLDOWN_EXPIRE_PREFIX) ||
-                        it.name.startsWith(LEGACY_COOLDOWN_PERIOD_PREFIX)
+                        it.name.startsWith(LEGACY_COOLDOWN_PERIOD_PREFIX) ||
+                        it.name.startsWith(TASK_USE_COUNT_PREFIX) ||
+                        it.name.startsWith(TASK_WEEKLY_USE_COUNT_PREFIX) ||
+                        it.name.startsWith(TASK_USE_WEEK_PREFIX)
                 }
                 .forEach { preferences.remove(it) }
 
@@ -176,6 +206,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             preferences[level] = GameDefaults.LEVEL
             preferences[purchasedGoalIds] = emptySet()
             preferences[purchasedShopItemIds] = emptySet()
+            preferences[eventUnlockedTaskIds] = emptySet()
             preferences[currentPeriod] = GameDefaults.CURRENT_PERIOD
             preferences[cycleEndsAtMillis] =
                 System.currentTimeMillis() + GameDefaults.CYCLE_DURATION_MILLIS
@@ -219,6 +250,15 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             )
             val purchasedShopItems = checkNotNull(preferences[purchasedShopItemIds])
             if (item is ShopItem && item.storageId in purchasedShopItems) return@edit
+            if (item is TaskItem && !item.isAvailable(
+                    currentPeriod = currentCycle,
+                    totalUses = preferences[taskUseCountKey(item)] ?: 0,
+                    weeklyUses = preferences[taskWeeklyUseCountKey(item)] ?: 0,
+                    usageWeek = preferences[taskUseWeekKey(item)] ?: -1,
+                    completedTaskCounts = preferences.intMap(TASK_USE_COUNT_PREFIX),
+                    eventUnlocked = item.storageId in checkNotNull(preferences[eventUnlockedTaskIds]),
+                )
+            ) return@edit
 
             when (item.cooldown) {
                 Cooldown.None -> Unit
@@ -261,6 +301,19 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
 
             if (item is ShopItem) {
                 preferences[purchasedShopItemIds] = purchasedShopItems + item.storageId
+            }
+            if (item is TaskItem) {
+                val currentWeek = weekForPeriod(currentCycle)
+                val previousWeek = preferences[taskUseWeekKey(item)] ?: -1
+                val weeklyUses = if (previousWeek == currentWeek) {
+                    preferences[taskWeeklyUseCountKey(item)] ?: 0
+                } else {
+                    0
+                }
+                preferences[taskUseCountKey(item)] =
+                    (preferences[taskUseCountKey(item)] ?: 0) + 1
+                preferences[taskWeeklyUseCountKey(item)] = weeklyUses + 1
+                preferences[taskUseWeekKey(item)] = currentWeek
             }
         }
     }
@@ -431,3 +484,13 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
 
 private fun <T : Enum<T>> List<T>.findByName(name: String?, fallback: T): T =
     firstOrNull { it.name == name } ?: fallback
+
+private fun Preferences.intMap(prefix: String): Map<String, Int> = asMap()
+    .mapNotNull { (key, value) ->
+        if (key.name.startsWith(prefix) && value is Int) {
+            key.name.removePrefix(prefix) to value
+        } else {
+            null
+        }
+    }
+    .toMap()

@@ -14,15 +14,64 @@ import com.example.financial_game.domain.CooldownRemaining
 import com.example.financial_game.domain.Effect
 import com.example.financial_game.domain.Resource
 import com.example.financial_game.domain.ShopItem
+import com.example.financial_game.domain.TaskItem
 import com.example.financial_game.domain.Goals
 import com.example.financial_game.domain.canApplyEffects
 import com.example.financial_game.domain.cycleSecondsRemaining
 import com.example.financial_game.domain.hasCycleExpired
 import com.example.financial_game.domain.nextCycleEnd
+import com.example.financial_game.domain.isAvailable
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class PetViewModelTest {
+    @Test
+    fun task_items_keep_product_order() {
+        assertEquals(
+            listOf(
+                TaskItem.GetReady,
+                TaskItem.Lessons,
+                TaskItem.Cleaning,
+                TaskItem.BeadCrafts,
+                TaskItem.DeliverNewspapers,
+                TaskItem.HandOutFlyers,
+                TaskItem.RecyclePaper,
+                TaskItem.FeedNeighboursCat,
+                TaskItem.WalkNeighboursDog,
+                TaskItem.HelpGrandfather,
+                TaskItem.WaterPlants,
+            ),
+            TaskItem.entries,
+        )
+    }
+
+    @Test
+    fun task_cycle_and_usage_requirements_are_applied() {
+        assertEquals(
+            true,
+            TaskItem.Lessons.isAvailable(5, 0, 0, -1, emptyMap(), false),
+        )
+        assertEquals(
+            false,
+            TaskItem.Lessons.isAvailable(6, 0, 0, -1, emptyMap(), false),
+        )
+        assertEquals(
+            true,
+            TaskItem.Cleaning.isAvailable(6, 0, 0, -1, emptyMap(), false),
+        )
+        assertEquals(
+            false,
+            TaskItem.BeadCrafts.isAvailable(
+                currentPeriod = 1,
+                totalUses = 3,
+                weeklyUses = 3,
+                usageWeek = 0,
+                completedTaskCounts = mapOf(TaskItem.GetReady.storageId to 1),
+                eventUnlocked = false,
+            ),
+        )
+    }
+
     @Test
     fun shop_items_match_prices_levels_and_effects() {
         assertEquals(15, ShopItem.FlowerPot.price)

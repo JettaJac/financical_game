@@ -70,12 +70,14 @@ import com.example.financial_game.domain.CooldownRemaining
 import com.example.financial_game.domain.FoodItem
 import com.example.financial_game.domain.Resource
 import com.example.financial_game.domain.ShopItem
+import com.example.financial_game.domain.TaskItem
 import com.example.financial_game.domain.EnergyItem
 import com.example.financial_game.domain.GameEvent
 import com.example.financial_game.domain.GameEvents
 import com.example.financial_game.domain.HappinessItem
 import com.example.financial_game.domain.Goals
 import com.example.financial_game.domain.cooldownRemaining
+import com.example.financial_game.domain.isAvailable
 import com.example.financial_game.ui.theme.NunitoFontFamily
 
 private val HomePurple = Color(0xFF8743D3)
@@ -172,6 +174,20 @@ private val ShopItems = listOf(
     CardItemUI(ShopItem.SoftArmchair, R.drawable.shop_armchair, R.string.shop_soft_armchair),
     CardItemUI(ShopItem.StylishScarf, R.drawable.shop_scarf, R.string.shop_stylish_scarf),
     CardItemUI(ShopItem.GlowingOrb, R.drawable.shop_glowing_orb, R.string.shop_glowing_orb),
+)
+
+private val TaskItems = listOf(
+    CardItemUI(TaskItem.GetReady, R.drawable.pet_main, R.string.task_get_ready),
+    CardItemUI(TaskItem.Lessons, R.drawable.budget_master, R.string.task_lessons),
+    CardItemUI(TaskItem.Cleaning, R.drawable.ic_tasks, R.string.task_cleaning),
+    CardItemUI(TaskItem.BeadCrafts, R.drawable.carbon_piggy_bank, R.string.task_bead_crafts),
+    CardItemUI(TaskItem.DeliverNewspapers, R.drawable.ic_tasks, R.string.task_deliver_newspapers),
+    CardItemUI(TaskItem.HandOutFlyers, R.drawable.ic_tasks, R.string.task_hand_out_flyers),
+    CardItemUI(TaskItem.RecyclePaper, R.drawable.carbon_piggy_bank, R.string.task_recycle_paper),
+    CardItemUI(TaskItem.FeedNeighboursCat, R.drawable.pet_main, R.string.task_feed_neighbours_cat),
+    CardItemUI(TaskItem.WalkNeighboursDog, R.drawable.trip, R.string.task_walk_neighbours_dog),
+    CardItemUI(TaskItem.HelpGrandfather, R.drawable.shop_armchair, R.string.task_help_grandfather),
+    CardItemUI(TaskItem.WaterPlants, R.drawable.shop_flower_pot, R.string.task_water_plants),
 )
 
 
@@ -614,10 +630,20 @@ private fun HomeBottomPanel(
                     itemGap = metrics.itemGap,
                     purchasedItemIds = state.resources.purchasedShopItemIds,
                 )
-                HomeSection.Tasks -> SectionPlaceholder(
-                    section = state.selectedSection,
+                HomeSection.Tasks -> CardRow(
+                    items = TaskItems,
+                    money = state.resources.money,
+                    level = state.resources.level,
+                    cooldownUnlockCycles = state.resources.cooldownUnlockCycles,
+                    currentPeriod = state.resources.currentPeriod,
+                    cycleSecondsRemaining = state.secondsRemaining,
+                    onBuyClick = onBuyClick,
                     horizontalPadding = metrics.horizontalPadding,
-                    verticalPadding = metrics.itemGap,
+                    itemGap = metrics.itemGap,
+                    taskUseCounts = state.resources.taskUseCounts,
+                    taskWeeklyUseCounts = state.resources.taskWeeklyUseCounts,
+                    taskUseWeeks = state.resources.taskUseWeeks,
+                    eventUnlockedTaskIds = state.resources.eventUnlockedTaskIds,
                 )
             }
         }
@@ -777,6 +803,10 @@ private fun CardRow(
     horizontalPadding: Dp,
     itemGap: Dp,
     purchasedItemIds: Set<String> = emptySet(),
+    taskUseCounts: Map<String, Int> = emptyMap(),
+    taskWeeklyUseCounts: Map<String, Int> = emptyMap(),
+    taskUseWeeks: Map<String, Int> = emptyMap(),
+    eventUnlockedTaskIds: Set<String> = emptySet(),
     modifier: Modifier = Modifier,
 ) {
     if (items.isEmpty()) return
@@ -804,6 +834,16 @@ private fun CardRow(
             ) {
                 pageItems.forEach { product ->
                     val alreadyPurchased = product.item.storageId in purchasedItemIds
+                    val taskAvailable = (product.item as? TaskItem)?.let { task ->
+                        task.isAvailable(
+                            currentPeriod = currentPeriod,
+                            totalUses = taskUseCounts[task.storageId] ?: 0,
+                            weeklyUses = taskWeeklyUseCounts[task.storageId] ?: 0,
+                            usageWeek = taskUseWeeks[task.storageId] ?: -1,
+                            completedTaskCounts = taskUseCounts,
+                            eventUnlocked = task.storageId in eventUnlockedTaskIds,
+                        )
+                    } ?: true
                     val remainingCooldown = cooldownRemaining(
                         cooldown = product.item.cooldown,
                         unlockCycle = cooldownUnlockCycles[product.item.storageId] ?: 0.0,
@@ -815,6 +855,7 @@ private fun CardRow(
                         canBuy = money >= product.item.price &&
                             remainingCooldown == null &&
                             level >= product.item.level &&
+                            taskAvailable &&
                             !alreadyPurchased,
                         alreadyPurchased = alreadyPurchased,
                         remainingCooldown = remainingCooldown,
@@ -892,9 +933,9 @@ private fun ProductCard(
                 maxFontSize = 11.sp,
                 stepSize = 0.5.sp,
             ),
-            lineHeight = 14.sp,
+            lineHeight = 12.sp,
             textAlign = TextAlign.Center,
-            maxLines = 1,
+            maxLines = if (product.item is TaskItem) 2 else 1,
         )
         CareStats(product.item)
         Button(
@@ -931,6 +972,30 @@ private fun ProductCard(
                     ),
                     maxLines = 1,
                 )
+                product.item is TaskItem && !canBuy -> Text(
+                    text = stringResource(R.string.task_unavailable),
+                    autoSize = TextAutoSize.StepBased(
+                        minFontSize = 7.sp,
+                        maxFontSize = 10.sp,
+                        stepSize = 0.5.sp,
+                    ),
+                    maxLines = 1,
+                )
+                product.item is TaskItem -> {
+                    Text(
+                        text = if (product.item.earnings > 0) {
+                            stringResource(R.string.task_do_with_reward, product.item.earnings)
+                        } else {
+                            stringResource(R.string.task_do)
+                        },
+                        autoSize = TextAutoSize.StepBased(
+                            minFontSize = 7.sp,
+                            maxFontSize = 10.sp,
+                            stepSize = 0.5.sp,
+                        ),
+                        maxLines = 1,
+                    )
+                }
                 else -> {
                     Text(
                         text = stringResource(R.string.buy),
