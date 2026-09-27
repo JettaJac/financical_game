@@ -52,6 +52,18 @@
     <string name="budget_mobile_service">Связь</string>
     <string name="budget_vitamins">Витамины</string>
     <string name="budget_sports_section">Спортивная секция</string>
+    <string name="budget_period_results">Итоги</string>
+    <string name="budget_period_success_summary">Молодец, ты хорошо справился за эту неделю!</string>
+    <string name="budget_period_failed_summary">В этот раз расходы превысили план. В следующую неделю получится лучше!</string>
+    <string name="budget_planned">запланировано</string>
+    <string name="budget_actual">фактически</string>
+    <string name="budget_additional_income">Дополнительные</string>
+    <string name="budget_recurring_expenses">Обязательные</string>
+    <string name="budget_period_income_total">Всего доходов</string>
+    <string name="budget_period_expense_total">Всего расходов</string>
+    <string name="budget_period_next">Далее</string>
+    <string name="budget_success_message">Ты молодец! Твой бюджет точен, лови 10 монет!</string>
+    <string name="budget_collect_reward">Забрать монеты</string>
 
     <!-- Home: sections -->
     <string name="health">Здоровье</string>

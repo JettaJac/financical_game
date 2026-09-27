@@ -28,6 +28,8 @@ interface GameRepository {
 
     suspend fun saveBudgetPlan(optionalExpenses: Int)
 
+    suspend fun completeBudgetReview()
+
     suspend fun reset()
 }
 

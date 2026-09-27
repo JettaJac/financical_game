@@ -32,6 +32,8 @@ data class GameSnapshot(
     val budgetPlanWeek: Int = 0,
     val plannedOptionalExpenses: Int = 0,
     val actualOptionalExpenses: Int = 0,
+    val actualAdditionalIncome: Int = 0,
+    val lastReviewedBudgetWeek: Int = 0,
     val budgetTutorialCompleted: Boolean = false,
     val cooldownUnlockCycles: Map<String, Double> = emptyMap(),
     val taskUseCounts: Map<String, Int> = emptyMap(),

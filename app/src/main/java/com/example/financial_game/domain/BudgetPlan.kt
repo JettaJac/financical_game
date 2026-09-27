@@ -60,7 +60,32 @@ object MandatoryBudget {
     val maximumOptionalExpense: Int = (income - expense).coerceAtLeast(0)
 }
 
+data class BudgetPeriodResult(
+    val plannedIncome: Int,
+    val actualIncome: Int,
+    val plannedExpenses: Int,
+    val actualExpenses: Int,
+) {
+    val isSuccessful: Boolean
+        get() = actualIncome >= plannedIncome && actualExpenses <= plannedExpenses
+}
+
 internal fun budgetWeekForPeriod(currentPeriod: Int): Int = weekForPeriod(currentPeriod) + 1
+
+internal fun budgetPeriodResult(snapshot: GameSnapshot): BudgetPeriodResult = BudgetPeriodResult(
+    plannedIncome = MandatoryBudget.income,
+    actualIncome = MandatoryBudget.income + snapshot.actualAdditionalIncome,
+    plannedExpenses = MandatoryBudget.expense + snapshot.plannedOptionalExpenses,
+    actualExpenses = MandatoryBudget.expense + snapshot.actualOptionalExpenses,
+)
+
+internal fun needsBudgetReview(snapshot: GameSnapshot): Boolean {
+    if (!snapshot.onboardingCompleted) return false
+    val completedWeek = budgetWeekForPeriod(snapshot.currentPeriod) - 1
+    return completedWeek > 0 &&
+        snapshot.budgetPlanWeek == completedWeek &&
+        snapshot.lastReviewedBudgetWeek < completedWeek
+}
 
 internal fun needsBudgetPlanning(snapshot: GameSnapshot): Boolean =
     snapshot.onboardingCompleted &&

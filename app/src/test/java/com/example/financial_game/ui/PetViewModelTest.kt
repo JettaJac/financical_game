@@ -23,11 +23,40 @@ import com.example.financial_game.domain.hasCycleExpired
 import com.example.financial_game.domain.nextCycleEnd
 import com.example.financial_game.domain.isAvailable
 import com.example.financial_game.domain.MandatoryBudget
+import com.example.financial_game.domain.budgetPeriodResult
 import com.example.financial_game.domain.needsBudgetPlanning
+import com.example.financial_game.domain.needsBudgetReview
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class PetViewModelTest {
+    @Test
+    fun completed_budget_week_compares_plan_with_actual_values() {
+        val successfulSnapshot = GameSnapshot(
+            onboardingCompleted = true,
+            currentPeriod = 8,
+            budgetPlanWeek = 1,
+            plannedOptionalExpenses = 20,
+            actualOptionalExpenses = 15,
+            actualAdditionalIncome = 25,
+        )
+
+        assertEquals(true, needsBudgetReview(successfulSnapshot))
+        assertEquals(true, budgetPeriodResult(successfulSnapshot).isSuccessful)
+        assertEquals(110, budgetPeriodResult(successfulSnapshot).actualIncome)
+        assertEquals(70, budgetPeriodResult(successfulSnapshot).actualExpenses)
+        assertEquals(
+            false,
+            budgetPeriodResult(
+                successfulSnapshot.copy(actualOptionalExpenses = 21),
+            ).isSuccessful,
+        )
+        assertEquals(
+            false,
+            needsBudgetReview(successfulSnapshot.copy(lastReviewedBudgetWeek = 1)),
+        )
+    }
+
     @Test
     fun budget_planning_is_required_at_the_start_of_each_week() {
         assertEquals(85, MandatoryBudget.income)
