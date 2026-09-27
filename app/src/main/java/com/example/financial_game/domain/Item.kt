@@ -220,9 +220,6 @@ enum class ShopItem(
     override val level: Int,
     override val cooldown: Cooldown = Cooldown.None,
 ) : CardItem {
-    Broom(price = 0, level = 1, careEffects = listOf(
-        Effect(Resource.Health, 0), Effect(Resource.Happiness, -5), Effect(Resource.Energy, -10),
-    )),
     FlowerPot(price = 15, level = 1, careEffects = listOf(
         Effect(Resource.Health, 0), Effect(Resource.Happiness, 5), Effect(Resource.Energy, 2),
     )),

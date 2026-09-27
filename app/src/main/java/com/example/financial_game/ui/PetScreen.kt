@@ -158,7 +158,6 @@ private val EnergyItems = listOf(
 )
 
 private val ShopItems = listOf(
-    CardItemUI(ShopItem.Broom, R.drawable.shop_broom, R.string.shop_broom),
     CardItemUI(ShopItem.FlowerPot, R.drawable.shop_flower_pot, R.string.shop_flower_pot),
     CardItemUI(ShopItem.FavouriteMug, R.drawable.shop_mug, R.string.shop_favourite_mug),
     CardItemUI(ShopItem.FloorLamp, R.drawable.shop_floor_lamp, R.string.shop_floor_lamp),
