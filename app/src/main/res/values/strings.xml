@@ -28,6 +28,8 @@
     <string name="menu">МЕНЮ</string>
     <string name="continue_action">Продолжить</string>
     <string name="restart_action">Рестарт</string>
+    <string name="restart_confirmation">Вы уверены?</string>
+    <string name="cancel_action">Отмена</string>
     <string name="change_character_action">Изменить персонажа</string>
     <string name="parent_area_action">Родительская</string>
     <string name="demo_mode_action">Демонстрационный режим</string>

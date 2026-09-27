@@ -33,6 +33,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -42,6 +43,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -1036,6 +1041,8 @@ private fun PageDots(isVisible: Boolean) {
 
 @Composable
 private fun MenuOverlay(onAction: (PetAction) -> Unit) {
+    var showRestartConfirmation by rememberSaveable { mutableStateOf(false) }
+
     Dialog(onDismissRequest = { onAction(PetAction.CloseOverlay) }) {
         Surface(shape = RoundedCornerShape(24.dp), tonalElevation = 8.dp) {
             Column(
@@ -1057,7 +1064,7 @@ private fun MenuOverlay(onAction: (PetAction) -> Unit) {
                     Text(stringResource(R.string.continue_action))
                 }
                 TextButton(
-                    onClick = { onAction(PetAction.Restart) },
+                    onClick = { showRestartConfirmation = true },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(stringResource(R.string.restart_action))
@@ -1094,6 +1101,28 @@ private fun MenuOverlay(onAction: (PetAction) -> Unit) {
                 }
             }
         }
+    }
+
+    if (showRestartConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showRestartConfirmation = false },
+            title = { Text(stringResource(R.string.restart_confirmation)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showRestartConfirmation = false
+                        onAction(PetAction.Restart)
+                    },
+                ) {
+                    Text(stringResource(R.string.restart_action))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRestartConfirmation = false }) {
+                    Text(stringResource(R.string.cancel_action))
+                }
+            },
+        )
     }
 }
 
