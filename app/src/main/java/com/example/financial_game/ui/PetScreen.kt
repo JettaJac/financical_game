@@ -265,6 +265,18 @@ private fun HomePage(state: PetState, onAction: (PetAction) -> Unit) {
             modifier = Modifier.align(Alignment.TopCenter),
         )
 
+        Text(
+            text = stringResource(R.string.goal_level, state.resources.level),
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = metrics.headerHeight + 2.dp),
+            color = HomePurpleDark,
+            fontFamily = NunitoFontFamily,
+            fontSize = 15.sp,
+            lineHeight = 18.sp,
+            fontWeight = FontWeight.Bold,
+        )
+
         QuickActions(
             secondsRemaining = state.secondsRemaining,
             currentPeriod = state.resources.currentPeriod,
@@ -895,31 +907,67 @@ private fun ProductCard(
                 disabledContainerColor = HomePurple.copy(alpha = 0.22f),
                 disabledContentColor = HomePurpleDark.copy(alpha = 0.62f),
             ),
-            contentPadding = PaddingValues(horizontal = 2.dp),
-            modifier = Modifier.fillMaxWidth().heightIn(min = 32.dp, max = 42.dp),
+            contentPadding = PaddingValues(horizontal = 1.dp, vertical = 0.dp),
+            modifier = Modifier.fillMaxWidth().heightIn(min = 28.dp, max = 32.dp),
             shape = RoundedCornerShape(27)
         ) {
-            Text(
-                text = when {
-                    alreadyPurchased -> stringResource(R.string.goal_purchased)
-                    remainingCooldown is CooldownRemaining.Time -> stringResource(
+            when {
+                alreadyPurchased -> Text(
+                    text = stringResource(R.string.goal_purchased),
+                    autoSize = TextAutoSize.StepBased(
+                        minFontSize = 7.sp,
+                        maxFontSize = 10.sp,
+                        stepSize = 0.5.sp,
+                    ),
+                    maxLines = 1,
+                )
+                remainingCooldown is CooldownRemaining.Time -> Text(
+                    text = stringResource(
                         R.string.cooldown_remaining,
                         formatCountdown(remainingCooldown.seconds),
-                    )
-                    remainingCooldown is CooldownRemaining.Cycles -> pluralStringResource(
+                    ),
+                    autoSize = TextAutoSize.StepBased(
+                        minFontSize = 7.sp,
+                        maxFontSize = 10.sp,
+                        stepSize = 0.5.sp,
+                    ),
+                    maxLines = 1,
+                )
+                remainingCooldown is CooldownRemaining.Cycles -> Text(
+                    text = pluralStringResource(
                         R.plurals.cooldown_cycles_remaining,
                         remainingCooldown.days,
                         remainingCooldown.days,
+                    ),
+                    autoSize = TextAutoSize.StepBased(
+                        minFontSize = 7.sp,
+                        maxFontSize = 10.sp,
+                        stepSize = 0.5.sp,
+                    ),
+                    maxLines = 1,
+                )
+                else -> {
+                    Text(
+                        text = stringResource(R.string.buy),
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
                     )
-                    else -> stringResource(R.string.buy_price, product.item.price)
-                },
-                autoSize = TextAutoSize.StepBased(
-                    minFontSize = 7.sp,
-                    maxFontSize = 10.sp,
-                    stepSize = 0.5.sp,
-                ),
-                maxLines = 1,
-            )
+                    Spacer(Modifier.width(3.dp))
+                    Text(
+                        text = product.item.price.toString(),
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                    )
+                    Spacer(Modifier.width(2.dp))
+                    Image(
+                        painter = painterResource(R.drawable.coin_money),
+                        contentDescription = stringResource(R.string.coins),
+                        modifier = Modifier.size(13.dp),
+                    )
+                }
+            }
         }
     }
 }
