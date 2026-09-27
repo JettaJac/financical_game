@@ -2,7 +2,7 @@ package com.example.financial_game.ui
 
 import com.example.financial_game.R
 import com.example.financial_game.data.GameSnapshot
-import com.example.financial_game.domain.moneyAfterCycle
+import com.example.financial_game.domain.moneyAfterCompletedCycles
 import com.example.financial_game.domain.moneyAfterPurchase
 import com.example.financial_game.domain.levelAfterGoalPurchase
 import com.example.financial_game.domain.cooldownUnlockCycle
@@ -12,6 +12,7 @@ import com.example.financial_game.domain.currentCyclePosition
 import com.example.financial_game.domain.Cooldown
 import com.example.financial_game.domain.CooldownRemaining
 import com.example.financial_game.domain.Effect
+import com.example.financial_game.domain.GameDefaults
 import com.example.financial_game.domain.Resource
 import com.example.financial_game.domain.ShopItem
 import com.example.financial_game.domain.TaskItem
@@ -108,8 +109,44 @@ class PetViewModelTest {
     }
 
     @Test
-    fun timer_cycle_applies_income_minus_expense() {
-        assertEquals(125, moneyAfterCycle(money = 100, income = 35, expense = 10))
+    fun recurring_income_and_expenses_are_applied_only_at_week_end() {
+        assertEquals(85, GameDefaults.POCKET_MONEY_INCOME)
+        assertEquals(30, GameDefaults.SCHOOL_LUNCH_EXPENSE)
+        assertEquals(10, GameDefaults.MOBILE_SERVICE_EXPENSE)
+        assertEquals(5, GameDefaults.VITAMINS_EXPENSE)
+        assertEquals(10, GameDefaults.SPORTS_SECTION_EXPENSE)
+        assertEquals(55, GameDefaults.EXPENSE)
+
+        assertEquals(
+            100,
+            moneyAfterCompletedCycles(
+                money = 100,
+                income = 85,
+                expense = 55,
+                currentPeriod = 1,
+                completedCycles = 6,
+            ),
+        )
+        assertEquals(
+            130,
+            moneyAfterCompletedCycles(
+                money = 100,
+                income = 85,
+                expense = 55,
+                currentPeriod = 7,
+                completedCycles = 1,
+            ),
+        )
+        assertEquals(
+            160,
+            moneyAfterCompletedCycles(
+                money = 100,
+                income = 85,
+                expense = 55,
+                currentPeriod = 1,
+                completedCycles = 14,
+            ),
+        )
     }
 
     @Test

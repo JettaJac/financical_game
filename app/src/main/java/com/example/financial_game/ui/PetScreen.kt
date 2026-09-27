@@ -56,6 +56,7 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -77,7 +78,9 @@ import com.example.financial_game.domain.GameEvents
 import com.example.financial_game.domain.HappinessItem
 import com.example.financial_game.domain.Goals
 import com.example.financial_game.domain.cooldownRemaining
+import com.example.financial_game.domain.dayForPeriod
 import com.example.financial_game.domain.isAvailable
+import com.example.financial_game.domain.weekForPeriod
 import com.example.financial_game.ui.theme.NunitoFontFamily
 
 private val HomePurple = Color(0xFF8743D3)
@@ -393,11 +396,14 @@ private fun HomeHeader(
                 .padding(horizontal = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            val day = dayForPeriod(state.resources.currentPeriod)
+            val weekday = stringArrayResource(R.array.weekdays_short)[day - 1]
             Text(
                 text = stringResource(
                     R.string.period_value,
-                    (state.resources.currentPeriod % 7),
-                    state.resources.currentPeriod / 7,
+                    day,
+                    weekday,
+                    weekForPeriod(state.resources.currentPeriod) + 1,
                 ),
                 color = HomePurple,
                 fontSize = 16.sp,

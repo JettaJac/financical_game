@@ -8,8 +8,14 @@ object GameDefaults {
     const val HEALTH = 70
     const val HAPPINESS = 70
     const val ENERGY = 70
-    const val INCOME = 30
-    const val EXPENSE = 10
+    const val POCKET_MONEY_INCOME = 85
+    const val SCHOOL_LUNCH_EXPENSE = 30
+    const val MOBILE_SERVICE_EXPENSE = 10
+    const val VITAMINS_EXPENSE = 5
+    const val SPORTS_SECTION_EXPENSE = 10
+    const val INCOME = POCKET_MONEY_INCOME
+    const val EXPENSE = SCHOOL_LUNCH_EXPENSE + MOBILE_SERVICE_EXPENSE +
+        VITAMINS_EXPENSE + SPORTS_SECTION_EXPENSE
     const val LEVEL = 1
     const val CURRENT_PERIOD = 1
     const val GOAL = "Подушка"

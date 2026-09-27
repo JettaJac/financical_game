@@ -12,7 +12,16 @@
     <string name="expense">расход: %1$d</string>
     <string name="money">%1$d$</string>
     <string name="progress_value">%1$d / %2$d</string>
-    <string name="period_value">%1$d день %2$d неделя</string>
+    <string name="period_value">%1$d день (%2$s) %3$d неделя</string>
+    <string-array name="weekdays_short">
+        <item>ПН</item>
+        <item>ВТ</item>
+        <item>СР</item>
+        <item>ЧТ</item>
+        <item>ПТ</item>
+        <item>СБ</item>
+        <item>ВС</item>
+    </string-array>
     <string name="timer">Таймер</string>
 
     <!-- Home: sections -->

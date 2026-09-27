@@ -29,8 +29,19 @@ interface GameRepository {
     suspend fun reset()
 }
 
-internal fun moneyAfterCycle(money: Int, income: Int, expense: Int): Int =
-    money + income - expense
+internal fun completedWeeks(currentPeriod: Int, completedCycles: Int): Int {
+    if (completedCycles <= 0) return 0
+    val safePeriod = currentPeriod.coerceAtLeast(1)
+    return (safePeriod + completedCycles - 1) / 7 - (safePeriod - 1) / 7
+}
+
+internal fun moneyAfterCompletedCycles(
+    money: Int,
+    income: Int,
+    expense: Int,
+    currentPeriod: Int,
+    completedCycles: Int,
+): Int = money + (income - expense) * completedWeeks(currentPeriod, completedCycles)
 
 internal fun hasCycleExpired(cycleEndsAtMillis: Long, nowMillis: Long): Boolean =
     cycleEndsAtMillis > 0L && nowMillis >= cycleEndsAtMillis

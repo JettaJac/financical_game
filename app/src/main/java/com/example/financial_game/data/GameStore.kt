@@ -33,6 +33,7 @@ import com.example.financial_game.domain.hasCycleExpired
 import com.example.financial_game.domain.nextCycleEnd
 import com.example.financial_game.domain.levelAfterGoalPurchase
 import com.example.financial_game.domain.moneyAfterPurchase
+import com.example.financial_game.domain.moneyAfterCompletedCycles
 import com.example.financial_game.domain.isAvailable
 import com.example.financial_game.domain.weekForPeriod
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -146,8 +147,14 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             if (preferences[energy] == null) preferences[energy] = GameDefaults.ENERGY
             if (preferences[goalTitle] == null) preferences[goalTitle] = GameDefaults.GOAL
             if (preferences[goalId] == null) preferences[goalId] = Goals.Pillow.name
-            if (preferences[income] == null) preferences[income] = GameDefaults.INCOME
-            if (preferences[expense] == null) preferences[expense] = GameDefaults.EXPENSE
+            val hasLegacyRecurringMoney =
+                preferences[income] == LEGACY_INCOME && preferences[expense] == LEGACY_EXPENSE
+            if (preferences[income] == null || hasLegacyRecurringMoney) {
+                preferences[income] = GameDefaults.INCOME
+            }
+            if (preferences[expense] == null || hasLegacyRecurringMoney) {
+                preferences[expense] = GameDefaults.EXPENSE
+            }
             if (preferences[goalTarget] == null) preferences[goalTarget] = GameDefaults.GOAL_TARGET
             if (preferences[level] == null) preferences[level] = GameDefaults.LEVEL
             if (preferences[purchasedGoalIds] == null) preferences[purchasedGoalIds] = emptySet()
@@ -463,8 +470,15 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
         val currentMoney = checkNotNull(preferences[money])
         val currentIncome = checkNotNull(preferences[income])
         val currentExpense = checkNotNull(preferences[expense])
-        preferences[money] = currentMoney + (currentIncome - currentExpense) * count
-        preferences[currentPeriod] = checkNotNull(preferences[currentPeriod]) + count
+        val periodBeforeCompletion = checkNotNull(preferences[currentPeriod])
+        preferences[money] = moneyAfterCompletedCycles(
+            money = currentMoney,
+            income = currentIncome,
+            expense = currentExpense,
+            currentPeriod = periodBeforeCompletion,
+            completedCycles = count,
+        )
+        preferences[currentPeriod] = periodBeforeCompletion + count
 
         val resourceDecrease = 20 * count
         preferences[energy] =
@@ -479,6 +493,8 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
         const val COLLAR_PRICE = 100
         const val LEGACY_GOAL_TITLE = "GOAL"
         const val LEGACY_GOAL_TARGET = 1
+        const val LEGACY_INCOME = 30
+        const val LEGACY_EXPENSE = 10
     }
 }
 
