@@ -40,4 +40,11 @@ data class GameSnapshot(
     val taskWeeklyUseCounts: Map<String, Int> = emptyMap(),
     val taskUseWeeks: Map<String, Int> = emptyMap(),
     val eventUnlockedTaskIds: Set<String> = emptySet(),
+    val eventFlags: Set<String> = emptySet(),
+    val completedEventIds: Set<String> = emptySet(),
+    val eventPeriodOccurrences: Set<String> = emptySet(),
+    val handledScenarioEntryIds: Set<String> = emptySet(),
+    val eventPoolHandledCycles: Set<String> = emptySet(),
+    val activeJobIds: Set<String> = emptySet(),
+    val jobRemainingActions: Map<String, Int> = emptyMap(),
 )

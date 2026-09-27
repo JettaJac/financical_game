@@ -1,0 +1,85 @@
+[
+  {"id":"w1d1_help_mom","week":1,"day":1,"eventId":"help_mom_dinner"},
+
+  {"id":"w1d2_marketplace_training","week":1,"day":2,"eventId":"marketplace_training"},
+  {"id":"w1d2_newspaper_offer","week":1,"day":2,"eventId":"newspaper_offer"},
+  {"id":"w1d2_grandma","week":1,"day":2,"eventId":"grandma_gift"},
+
+  {"id":"w1d3_discount","week":1,"day":3,"eventId":"store_discount"},
+  {"id":"w1d3_toy_sale","week":1,"day":3,"eventId":"marketplace_toy_sale","requiresFlags":["trainedMarketplace"]},
+  {"id":"w1d3_flyers_offer","week":1,"day":3,"eventId":"flyers_offer"},
+  {"id":"w1d3_newspaper_action_1","week":1,"day":3,"jobActionId":"newspaper_friend"},
+  {"id":"w1d3_pet_offer","week":1,"day":3,"eventId":"pet_sitting_offer"},
+  {"id":"w1d3_friend_debt","week":1,"day":3,"eventId":"friend_repaid_debt"},
+
+  {"id":"w1d4_deposit_offer","week":1,"day":4,"eventId":"deposit_offer"},
+  {"id":"w1d4_newspaper_action_2","week":1,"day":4,"jobActionId":"newspaper_friend"},
+  {"id":"w1d4_sports_section","week":1,"day":4,"eventId":"friend_sports_section"},
+  {"id":"w1d4_pet_action_1","week":1,"day":4,"jobActionId":"neighbours_pet"},
+  {"id":"w1d4_handmade","week":1,"day":4,"eventId":"handmade_30","requiresFlags":["braidedBracelets"]},
+  {"id":"w1d4_deposit_again","week":1,"day":4,"eventId":"forced_deposit_offer"},
+
+  {"id":"w1d5_newspaper_action_3","week":1,"day":5,"jobActionId":"newspaper_friend"},
+  {"id":"w1d5_pet_action_2","week":1,"day":5,"jobActionId":"neighbours_pet"},
+  {"id":"w1d5_jacket_money","week":1,"day":5,"eventId":"money_in_jacket"},
+
+  {"id":"w1d6_board_game","week":1,"day":6,"eventId":"board_game","minBalanceExclusive":265},
+  {"id":"w1d6_handmade","week":1,"day":6,"eventId":"handmade_20","requiresFlags":["braidedBracelets"]},
+  {"id":"w1d6_weather","week":1,"day":6,"eventId":"good_weather"},
+  {"id":"w1d6_newspaper_action_4","week":1,"day":6,"jobActionId":"newspaper_friend"},
+  {"id":"w1d6_pet_action_3","week":1,"day":6,"jobActionId":"neighbours_pet"},
+
+  {"id":"w1d7_newspaper_action_5","week":1,"day":7,"jobActionId":"newspaper_friend"},
+  {"id":"w1d7_pet_action_4","week":1,"day":7,"jobActionId":"neighbours_pet"},
+  {"id":"w1d7_friend_birthday","week":1,"day":7,"eventId":"friend_birthday"},
+  {"id":"w1d7_recycle","week":1,"day":7,"eventId":"recycle_paper"},
+
+  {"id":"w2d1_praise","week":2,"day":1,"eventId":"praise_1"},
+  {"id":"w2d1_dog_offer","week":2,"day":1,"eventId":"dog_walking_offer"},
+  {"id":"w2d1_pet_action_5","week":2,"day":1,"jobActionId":"neighbours_pet"},
+  {"id":"w2d1_charity","week":2,"day":1,"eventId":"charity"},
+  {"id":"w2d1_baking","week":2,"day":1,"jobActionId":"neighbour_baking"},
+
+  {"id":"w2d2_cinema","week":2,"day":2,"eventId":"cinema"},
+  {"id":"w2d2_pet_action_6","week":2,"day":2,"jobActionId":"neighbours_pet"},
+  {"id":"w2d2_rainbow","week":2,"day":2,"eventId":"rainbow"},
+  {"id":"w2d2_bed","week":2,"day":2,"eventId":"bed_broken"},
+  {"id":"w2d2_dog_action_1","week":2,"day":2,"jobActionId":"walk_neighbours_dog"},
+  {"id":"w2d2_random_money","week":2,"day":2,"eventId":"random_money","requiresFlags":["charityAccepted"]},
+
+  {"id":"w2d3_dog_action_2","week":2,"day":3,"jobActionId":"walk_neighbours_dog"},
+  {"id":"w2d3_lost_coin","week":2,"day":3,"eventId":"lost_coin"},
+  {"id":"w2d3_lunch_rise","week":2,"day":3,"eventId":"lunch_price_rise"},
+  {"id":"w2d3_pet_action_7","week":2,"day":3,"jobActionId":"neighbours_pet"},
+  {"id":"w2d3_flood","week":2,"day":3,"eventId":"flooded_room"},
+  {"id":"w2d3_flyers_action","week":2,"day":3,"jobActionId":"pet_shop_flyers"},
+
+  {"id":"w2d4_quiz","week":2,"day":4,"eventId":"tv_quiz"},
+  {"id":"w2d4_dog_action_3","week":2,"day":4,"jobActionId":"walk_neighbours_dog"},
+  {"id":"w2d4_garage_first","week":2,"day":4,"jobActionId":"grandfather_garage","moneyOverride":0},
+  {"id":"w2d4_fair","week":2,"day":4,"eventId":"neighbour_fair"},
+  {"id":"w2d4_charger","week":2,"day":4,"eventId":"broken_charger"},
+
+  {"id":"w2d5_lessons_cancelled","week":2,"day":5,"eventId":"lessons_cancelled"},
+  {"id":"w2d5_praise","week":2,"day":5,"eventId":"praise_2"},
+  {"id":"w2d5_dog_action_4","week":2,"day":5,"jobActionId":"walk_neighbours_dog"},
+  {"id":"w2d5_pillow","week":2,"day":5,"eventId":"torn_pillow"},
+  {"id":"w2d5_aunt","week":2,"day":5,"eventId":"aunt_letter"},
+
+  {"id":"w2d6_dog_action_5","week":2,"day":6,"jobActionId":"walk_neighbours_dog"},
+  {"id":"w2d6_phone","week":2,"day":6,"eventId":"new_phone"},
+  {"id":"w2d6_garage","week":2,"day":6,"jobActionId":"grandfather_garage","moneyOverride":20},
+  {"id":"w2d6_baking","week":2,"day":6,"jobActionId":"neighbour_baking"},
+  {"id":"w2d6_berries","week":2,"day":6,"jobActionId":"berries"},
+  {"id":"w2d6_park","week":2,"day":6,"eventId":"park_trip_35"},
+
+  {"id":"w2d7_deposit","week":2,"day":7,"eventId":"deposit_offer"},
+  {"id":"w2d7_dog_action_6","week":2,"day":7,"jobActionId":"walk_neighbours_dog"},
+  {"id":"w2d7_park","week":2,"day":7,"eventId":"park_trip_40"},
+  {"id":"w2d7_garage","week":2,"day":7,"jobActionId":"grandfather_garage","moneyOverride":15},
+  {"id":"w2d7_recycle","week":2,"day":7,"eventId":"recycle_paper"},
+  {"id":"w2d7_deleted_game","week":2,"day":7,"eventId":"deleted_game"},
+
+  {"id":"w3d1_newspaper_permanent","week":3,"day":1,"eventId":"newspaper_permanent_offer"},
+  {"id":"w3d1_dog_action_7","week":3,"day":1,"jobActionId":"walk_neighbours_dog"}
+]

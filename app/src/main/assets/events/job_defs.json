@@ -1,0 +1,13 @@
+[
+  {"id":"newspaper_friend","payout":25,"statCost":{"health":-10,"happiness":0,"energy":-10},"remainingActions":5,"allowedCycles":"any","periodLimit":null,"taskStorageId":"task_DeliverNewspapers"},
+  {"id":"newspaper_permanent","payout":25,"statCost":{"health":-10,"happiness":0,"energy":-10},"remainingActions":-1,"allowedCycles":"any","periodLimit":null,"taskStorageId":"task_DeliverNewspapers"},
+  {"id":"neighbours_pet","payout":40,"statCost":{"health":-5,"happiness":0,"energy":-10},"remainingActions":7,"allowedCycles":"any","periodLimit":null,"taskStorageId":"task_FeedNeighboursCat"},
+  {"id":"pet_shop_flyers","payout":30,"statCost":{"health":-8,"happiness":0,"energy":-8},"remainingActions":5,"allowedCycles":"any","periodLimit":1,"taskStorageId":"task_HandOutFlyers"},
+  {"id":"walk_neighbours_dog","payout":55,"statCost":{"health":-15,"happiness":0,"energy":-15},"remainingActions":7,"allowedCycles":"any","periodLimit":null,"taskStorageId":"task_WalkNeighboursDog"},
+  {"id":"neighbour_baking","payout":30,"statCost":{"health":-10,"happiness":0,"energy":-10},"remainingActions":-1,"allowedCycles":"weekend","periodLimit":2,"taskStorageId":null},
+  {"id":"grandfather_garage","payout":15,"statCost":{"health":-7,"happiness":2,"energy":-10},"remainingActions":5,"allowedCycles":"cycle6_or7","periodLimit":2,"taskStorageId":"task_HelpGrandfather"},
+  {"id":"berries","payout":30,"statCost":{"health":-7,"happiness":0,"energy":-7},"remainingActions":-1,"allowedCycles":"any","periodLimit":3,"taskStorageId":null},
+  {"id":"marketplace_sale","payout":40,"statCost":{"health":-10,"happiness":10,"energy":-10},"remainingActions":1,"allowedCycles":"any","periodLimit":1,"taskStorageId":null},
+  {"id":"handmade","payout":30,"statCost":{"health":0,"happiness":10,"energy":0},"remainingActions":-1,"allowedCycles":"any","periodLimit":3,"taskStorageId":"task_BeadCrafts"},
+  {"id":"recycle_paper","payout":20,"statCost":{"health":-5,"happiness":0,"energy":-5},"remainingActions":-1,"allowedCycles":"any","periodLimit":1,"taskStorageId":"task_RecyclePaper"}
+]

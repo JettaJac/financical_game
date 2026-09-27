@@ -2,6 +2,8 @@ package com.example.financial_game.domain
 
 import com.example.financial_game.data.GameSnapshot
 import kotlinx.coroutines.flow.Flow
+import com.example.financial_game.domain.events.JobDef
+import com.example.financial_game.domain.events.ScheduledEvent
 
 interface GameRepository {
     val snapshot: Flow<GameSnapshot>
@@ -29,6 +31,12 @@ interface GameRepository {
     suspend fun saveBudgetPlan(optionalExpenses: Int)
 
     suspend fun completeBudgetReview()
+
+    suspend fun resolveScheduledEvent(
+        event: ScheduledEvent,
+        unlockedJob: JobDef?,
+        accepted: Boolean,
+    )
 
     suspend fun reset()
 }

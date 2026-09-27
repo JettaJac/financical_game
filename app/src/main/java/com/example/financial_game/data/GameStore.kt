@@ -40,6 +40,10 @@ import com.example.financial_game.domain.budgetWeekForPeriod
 import com.example.financial_game.domain.dayForPeriod
 import com.example.financial_game.domain.MandatoryBudget
 import com.example.financial_game.domain.BudgetPeriodResult
+import com.example.financial_game.domain.events.EventFrequency
+import com.example.financial_game.domain.events.JobDef
+import com.example.financial_game.domain.events.ScheduledEvent
+import com.example.financial_game.domain.events.canResolveScheduledEvent
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -56,6 +60,16 @@ private const val LEGACY_COOLDOWN_PERIOD_PREFIX = "cooldown_period_"
 private const val TASK_USE_COUNT_PREFIX = "task_use_count_"
 private const val TASK_WEEKLY_USE_COUNT_PREFIX = "task_weekly_use_count_"
 private const val TASK_USE_WEEK_PREFIX = "task_use_week_"
+private const val JOB_REMAINING_ACTIONS_PREFIX = "job_remaining_actions_"
+private const val JOB_FOR_TASK_PREFIX = "job_for_task_"
+private const val JOB_PAYOUT_PREFIX = "job_payout_"
+private const val JOB_HEALTH_PREFIX = "job_health_"
+private const val JOB_HAPPINESS_PREFIX = "job_happiness_"
+private const val JOB_ENERGY_PREFIX = "job_energy_"
+private const val JOB_ALLOWED_CYCLES_PREFIX = "job_allowed_cycles_"
+private const val JOB_PERIOD_LIMIT_PREFIX = "job_period_limit_"
+private const val NEXT_PURCHASE_DISCOUNT_FLAG = "nextPurchaseHalfPrice"
+private const val BRAIDED_BRACELETS_FLAG = "braidedBracelets"
 
 private fun cooldownUnlockCycleKey(storageId: String) =
     doublePreferencesKey("$COOLDOWN_UNLOCK_CYCLE_PREFIX$storageId")
@@ -70,6 +84,21 @@ private fun taskWeeklyUseCountKey(item: TaskItem) =
 
 private fun taskUseWeekKey(item: TaskItem) =
     intPreferencesKey("$TASK_USE_WEEK_PREFIX${item.storageId}")
+
+private fun jobRemainingActionsKey(jobId: String) =
+    intPreferencesKey("$JOB_REMAINING_ACTIONS_PREFIX$jobId")
+
+private fun jobForTaskKey(taskStorageId: String) =
+    stringPreferencesKey("$JOB_FOR_TASK_PREFIX$taskStorageId")
+
+private fun jobPayoutKey(jobId: String) = intPreferencesKey("$JOB_PAYOUT_PREFIX$jobId")
+private fun jobHealthKey(jobId: String) = intPreferencesKey("$JOB_HEALTH_PREFIX$jobId")
+private fun jobHappinessKey(jobId: String) = intPreferencesKey("$JOB_HAPPINESS_PREFIX$jobId")
+private fun jobEnergyKey(jobId: String) = intPreferencesKey("$JOB_ENERGY_PREFIX$jobId")
+private fun jobAllowedCyclesKey(jobId: String) =
+    stringPreferencesKey("$JOB_ALLOWED_CYCLES_PREFIX$jobId")
+private fun jobPeriodLimitKey(jobId: String) =
+    intPreferencesKey("$JOB_PERIOD_LIMIT_PREFIX$jobId")
 
 @Singleton
 class GameStore @Inject constructor(@ApplicationContext private val context: Context) : GameRepository {
@@ -99,6 +128,12 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
     private val actualAdditionalIncome = intPreferencesKey("actual_additional_income")
     private val lastReviewedBudgetWeek = intPreferencesKey("last_reviewed_budget_week")
     private val budgetTutorialCompleted = booleanPreferencesKey("budget_tutorial_completed")
+    private val eventFlags = stringSetPreferencesKey("event_flags")
+    private val completedEventIds = stringSetPreferencesKey("completed_event_ids")
+    private val eventPeriodOccurrences = stringSetPreferencesKey("event_period_occurrences")
+    private val handledScenarioEntryIds = stringSetPreferencesKey("handled_scenario_entry_ids")
+    private val eventPoolHandledCycles = stringSetPreferencesKey("event_pool_handled_cycles")
+    private val activeJobIds = stringSetPreferencesKey("active_job_ids")
 
     override val snapshot: Flow<GameSnapshot> = flow {
         emitAll(context.gameDataStore.data.map { preferences ->
@@ -114,6 +149,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             val taskUseCounts = preferences.intMap(TASK_USE_COUNT_PREFIX)
             val taskWeeklyUseCounts = preferences.intMap(TASK_WEEKLY_USE_COUNT_PREFIX)
             val taskUseWeeks = preferences.intMap(TASK_USE_WEEK_PREFIX)
+            val jobRemainingActions = preferences.intMap(JOB_REMAINING_ACTIONS_PREFIX)
 
             GameSnapshot(
                 name = checkNotNull(preferences[petName]),
@@ -146,6 +182,13 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 taskWeeklyUseCounts = taskWeeklyUseCounts,
                 taskUseWeeks = taskUseWeeks,
                 eventUnlockedTaskIds = checkNotNull(preferences[eventUnlockedTaskIds]),
+                eventFlags = checkNotNull(preferences[eventFlags]),
+                completedEventIds = checkNotNull(preferences[completedEventIds]),
+                eventPeriodOccurrences = checkNotNull(preferences[eventPeriodOccurrences]),
+                handledScenarioEntryIds = checkNotNull(preferences[handledScenarioEntryIds]),
+                eventPoolHandledCycles = checkNotNull(preferences[eventPoolHandledCycles]),
+                activeJobIds = checkNotNull(preferences[activeJobIds]),
+                jobRemainingActions = jobRemainingActions,
             )
         })
     }
@@ -204,6 +247,18 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             if (preferences[eventUnlockedTaskIds] == null) {
                 preferences[eventUnlockedTaskIds] = emptySet()
             }
+            if (preferences[eventFlags] == null) preferences[eventFlags] = emptySet()
+            if (preferences[completedEventIds] == null) preferences[completedEventIds] = emptySet()
+            if (preferences[eventPeriodOccurrences] == null) {
+                preferences[eventPeriodOccurrences] = emptySet()
+            }
+            if (preferences[handledScenarioEntryIds] == null) {
+                preferences[handledScenarioEntryIds] = emptySet()
+            }
+            if (preferences[eventPoolHandledCycles] == null) {
+                preferences[eventPoolHandledCycles] = emptySet()
+            }
+            if (preferences[activeJobIds] == null) preferences[activeJobIds] = emptySet()
 
             if (preferences[goalTitle] == LEGACY_GOAL_TITLE &&
                 preferences[goalTarget] == LEGACY_GOAL_TARGET
@@ -232,7 +287,15 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                         it.name.startsWith(LEGACY_COOLDOWN_PERIOD_PREFIX) ||
                         it.name.startsWith(TASK_USE_COUNT_PREFIX) ||
                         it.name.startsWith(TASK_WEEKLY_USE_COUNT_PREFIX) ||
-                        it.name.startsWith(TASK_USE_WEEK_PREFIX)
+                        it.name.startsWith(TASK_USE_WEEK_PREFIX) ||
+                        it.name.startsWith(JOB_REMAINING_ACTIONS_PREFIX) ||
+                        it.name.startsWith(JOB_FOR_TASK_PREFIX) ||
+                        it.name.startsWith(JOB_PAYOUT_PREFIX) ||
+                        it.name.startsWith(JOB_HEALTH_PREFIX) ||
+                        it.name.startsWith(JOB_HAPPINESS_PREFIX) ||
+                        it.name.startsWith(JOB_ENERGY_PREFIX) ||
+                        it.name.startsWith(JOB_ALLOWED_CYCLES_PREFIX) ||
+                        it.name.startsWith(JOB_PERIOD_LIMIT_PREFIX)
                 }
                 .forEach { preferences.remove(it) }
 
@@ -253,6 +316,12 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             preferences[purchasedGoalIds] = emptySet()
             preferences[purchasedShopItemIds] = emptySet()
             preferences[eventUnlockedTaskIds] = emptySet()
+            preferences[eventFlags] = emptySet()
+            preferences[completedEventIds] = emptySet()
+            preferences[eventPeriodOccurrences] = emptySet()
+            preferences[handledScenarioEntryIds] = emptySet()
+            preferences[eventPoolHandledCycles] = emptySet()
+            preferences[activeJobIds] = emptySet()
             preferences[currentPeriod] = GameDefaults.CURRENT_PERIOD
             preferences[budgetPlanWeek] = 0
             preferences[plannedOptionalExpenses] = 0
@@ -284,9 +353,12 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
     override suspend fun buyCollar() {
         context.gameDataStore.edit { preferences ->
             val currentMoney = checkNotNull(preferences[money])
-            if (currentMoney >= COLLAR_PRICE) {
-                preferences[money] = moneyAfterPurchase(currentMoney, COLLAR_PRICE)
-                recordOptionalExpense(preferences, COLLAR_PRICE)
+            val discounted = NEXT_PURCHASE_DISCOUNT_FLAG in checkNotNull(preferences[eventFlags])
+            val price = if (discounted) COLLAR_PRICE / 2 else COLLAR_PRICE
+            if (currentMoney >= price) {
+                preferences[money] = moneyAfterPurchase(currentMoney, price)
+                recordOptionalExpense(preferences, price)
+                if (discounted) consumeFlag(preferences, NEXT_PURCHASE_DISCOUNT_FLAG)
             }
         }
     }
@@ -303,6 +375,11 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             )
             val purchasedShopItems = checkNotNull(preferences[purchasedShopItemIds])
             if (item is ShopItem && item.storageId in purchasedShopItems) return@edit
+            val instanceJobId = if (item is TaskItem) {
+                preferences[jobForTaskKey(item.storageId)]
+            } else {
+                null
+            }
             if (item is TaskItem && !item.isAvailable(
                     currentPeriod = currentCycle,
                     totalUses = preferences[taskUseCountKey(item)] ?: 0,
@@ -313,24 +390,57 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 )
             ) return@edit
 
-            when (item.cooldown) {
-                Cooldown.None -> Unit
-                is Cooldown.Cycles -> {
-                    val unlockCycle = preferences[cooldownUnlockCycleKey(item)] ?: 0.0
-                    if (unlockCycle > currentCyclePosition) return@edit
+            if (instanceJobId != null &&
+                (preferences[jobRemainingActionsKey(instanceJobId)] ?: -1) == 0
+            ) return@edit
+            if (instanceJobId != null && item is TaskItem) {
+                val day = dayForPeriod(currentCycle)
+                val allowed = preferences[jobAllowedCyclesKey(instanceJobId)] ?: "Any"
+                if (allowed != "Any" && day !in 6..7) return@edit
+                val currentWeek = weekForPeriod(currentCycle)
+                val usesThisWeek = if (preferences[taskUseWeekKey(item)] == currentWeek) {
+                    preferences[taskWeeklyUseCountKey(item)] ?: 0
+                } else {
+                    0
+                }
+                val periodLimit = preferences[jobPeriodLimitKey(instanceJobId)] ?: -1
+                if (periodLimit >= 0 && usesThisWeek >= periodLimit) return@edit
+            }
+
+            if (instanceJobId == null) {
+                when (item.cooldown) {
+                    Cooldown.None -> Unit
+                    is Cooldown.Cycles -> {
+                        val unlockCycle = preferences[cooldownUnlockCycleKey(item)] ?: 0.0
+                        if (unlockCycle > currentCyclePosition) return@edit
+                    }
                 }
             }
 
             val currentLevel = checkNotNull(preferences[level])
-            if (currentLevel < item.level) return@edit
+            if (instanceJobId == null && currentLevel < item.level) return@edit
 
             val currentMoney = checkNotNull(preferences[money])
-            if (currentMoney < item.price) return@edit
+            val discounted = item is ShopItem &&
+                NEXT_PURCHASE_DISCOUNT_FLAG in checkNotNull(preferences[eventFlags])
+            val effectivePrice = if (discounted) item.price / 2 else item.price
+            if (currentMoney < effectivePrice) return@edit
 
-            preferences[money] = moneyAfterPurchase(currentMoney, item.price)
-            recordOptionalExpense(preferences, item.price)
+            preferences[money] = moneyAfterPurchase(currentMoney, effectivePrice)
+            recordOptionalExpense(preferences, effectivePrice)
+            if (discounted) consumeFlag(preferences, NEXT_PURCHASE_DISCOUNT_FLAG)
 
-            for (effect in item.careEffects) {
+            val appliedEffects = if (instanceJobId == null) {
+                item.careEffects
+            } else {
+                listOf(
+                    Effect(Resource.Health, preferences[jobHealthKey(instanceJobId)] ?: 0),
+                    Effect(Resource.Happiness, preferences[jobHappinessKey(instanceJobId)] ?: 0),
+                    Effect(Resource.Energy, preferences[jobEnergyKey(instanceJobId)] ?: 0),
+                    Effect(Resource.Money, preferences[jobPayoutKey(instanceJobId)] ?: 0),
+                )
+            }
+            for (effect in appliedEffects) {
                 when (effect.resource) {
                     Resource.Health -> preferences[health] =
                         (checkNotNull(preferences[health]) + effect.increase).coerceIn(0, 100)
@@ -344,19 +454,21 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             }
             recordAdditionalIncome(
                 preferences,
-                item.careEffects
+                appliedEffects
                     .filter { it.resource == Resource.Money }
                     .sumOf(Effect::increase)
                     .coerceAtLeast(0),
             )
 
-            when (val cooldown = item.cooldown) {
-                Cooldown.None -> Unit
-                is Cooldown.Cycles -> {
-                    preferences[cooldownUnlockCycleKey(item)] = cooldownUnlockCycle(
-                        currentCyclePosition = currentCyclePosition,
-                        cooldownCycles = cooldown.value,
-                    )
+            if (instanceJobId == null) {
+                when (val cooldown = item.cooldown) {
+                    Cooldown.None -> Unit
+                    is Cooldown.Cycles -> {
+                        preferences[cooldownUnlockCycleKey(item)] = cooldownUnlockCycle(
+                            currentCyclePosition = currentCyclePosition,
+                            cooldownCycles = cooldown.value,
+                        )
+                    }
                 }
             }
 
@@ -375,6 +487,19 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                     (preferences[taskUseCountKey(item)] ?: 0) + 1
                 preferences[taskWeeklyUseCountKey(item)] = weeklyUses + 1
                 preferences[taskUseWeekKey(item)] = currentWeek
+                if (item == TaskItem.BeadCrafts) addFlag(preferences, BRAIDED_BRACELETS_FLAG)
+                if (instanceJobId != null) {
+                    val remaining = preferences[jobRemainingActionsKey(instanceJobId)] ?: -1
+                    if (remaining > 0) {
+                        preferences[jobRemainingActionsKey(instanceJobId)] = remaining - 1
+                        if (remaining == 1) {
+                            preferences[eventUnlockedTaskIds] =
+                                checkNotNull(preferences[eventUnlockedTaskIds]) - item.storageId
+                            preferences[activeJobIds] =
+                                checkNotNull(preferences[activeJobIds]) - instanceJobId
+                        }
+                    }
+                }
             }
         }
     }
@@ -516,6 +641,57 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
         }
     }
 
+    override suspend fun resolveScheduledEvent(
+        event: ScheduledEvent,
+        unlockedJob: JobDef?,
+        accepted: Boolean,
+    ) {
+        context.gameDataStore.edit { preferences ->
+            val definition = event.definition
+            val currentWeek = weekForPeriod(checkNotNull(preferences[currentPeriod])) + 1
+            val occurrence = "${definition.id}@$currentWeek"
+            val alreadyHandled = when (definition.frequency) {
+                EventFrequency.Once,
+                EventFrequency.PermanentModifier,
+                -> definition.id in checkNotNull(preferences[completedEventIds])
+                EventFrequency.PerPeriod -> occurrence in
+                    checkNotNull(preferences[eventPeriodOccurrences])
+            }
+            if (alreadyHandled) return@edit
+            if (!canResolveScheduledEvent(event, accepted, checkNotNull(preferences[money]))) {
+                return@edit
+            }
+            if (accepted) {
+                applyEventDeltas(preferences, event)
+                preferences[eventFlags] =
+                    checkNotNull(preferences[eventFlags]) + definition.setsFlags
+                if (definition.permanentExpenseDelta != 0) {
+                    preferences[expense] = checkNotNull(preferences[expense]) +
+                        definition.permanentExpenseDelta
+                }
+                unlockedJob?.let { createJobInstance(preferences, it) }
+            }
+
+            event.scenarioStepId?.let { stepId ->
+                preferences[handledScenarioEntryIds] =
+                    checkNotNull(preferences[handledScenarioEntryIds]) + stepId
+            }
+            if (!event.isScripted) {
+                preferences[eventPoolHandledCycles] =
+                    checkNotNull(preferences[eventPoolHandledCycles]) +
+                    checkNotNull(preferences[currentPeriod]).toString()
+            }
+            when (definition.frequency) {
+                EventFrequency.Once,
+                EventFrequency.PermanentModifier,
+                -> preferences[completedEventIds] =
+                    checkNotNull(preferences[completedEventIds]) + definition.id
+                EventFrequency.PerPeriod -> preferences[eventPeriodOccurrences] =
+                    checkNotNull(preferences[eventPeriodOccurrences]) + occurrence
+            }
+        }
+    }
+
     private fun advanceExpiredCycles(preferences: MutablePreferences, nowMillis: Long) {
         val currentCycleEnd = checkNotNull(preferences[cycleEndsAtMillis])
         if (!hasCycleExpired(currentCycleEnd, nowMillis)) return
@@ -599,6 +775,41 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
         if (preferences[budgetPlanWeek] != budgetWeekForPeriod(period)) return
         preferences[actualAdditionalIncome] =
             (preferences[actualAdditionalIncome] ?: 0) + amount
+    }
+
+    private fun applyEventDeltas(preferences: MutablePreferences, event: ScheduledEvent) {
+        val deltas = event.appliedDeltas
+        preferences[health] = (checkNotNull(preferences[health]) + deltas.health).coerceIn(0, 100)
+        preferences[happiness] =
+            (checkNotNull(preferences[happiness]) + deltas.happiness).coerceIn(0, 100)
+        preferences[energy] = (checkNotNull(preferences[energy]) + deltas.energy).coerceIn(0, 100)
+        preferences[money] = checkNotNull(preferences[money]) + deltas.money
+        recordOptionalExpense(preferences, (-deltas.money).coerceAtLeast(0))
+        recordAdditionalIncome(preferences, deltas.money.coerceAtLeast(0))
+    }
+
+    private fun createJobInstance(preferences: MutablePreferences, job: JobDef) {
+        preferences[activeJobIds] = checkNotNull(preferences[activeJobIds]) + job.id
+        preferences[jobRemainingActionsKey(job.id)] = job.remainingActions
+        preferences[jobPayoutKey(job.id)] = job.payout
+        preferences[jobHealthKey(job.id)] = job.statCost.health
+        preferences[jobHappinessKey(job.id)] = job.statCost.happiness
+        preferences[jobEnergyKey(job.id)] = job.statCost.energy
+        preferences[jobAllowedCyclesKey(job.id)] = job.allowedCycles.name
+        preferences[jobPeriodLimitKey(job.id)] = job.periodLimit ?: -1
+        job.taskStorageId?.let { taskStorageId ->
+            preferences[jobForTaskKey(taskStorageId)] = job.id
+            preferences[eventUnlockedTaskIds] =
+                checkNotNull(preferences[eventUnlockedTaskIds]) + taskStorageId
+        }
+    }
+
+    private fun addFlag(preferences: MutablePreferences, flag: String) {
+        preferences[eventFlags] = checkNotNull(preferences[eventFlags]) + flag
+    }
+
+    private fun consumeFlag(preferences: MutablePreferences, flag: String) {
+        preferences[eventFlags] = checkNotNull(preferences[eventFlags]) - flag
     }
 
     private companion object {

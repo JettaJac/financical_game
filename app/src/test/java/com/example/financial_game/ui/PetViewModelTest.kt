@@ -13,11 +13,13 @@ import com.example.financial_game.domain.Cooldown
 import com.example.financial_game.domain.CooldownRemaining
 import com.example.financial_game.domain.Effect
 import com.example.financial_game.domain.GameDefaults
+import com.example.financial_game.domain.GameEvent
 import com.example.financial_game.domain.Resource
 import com.example.financial_game.domain.ShopItem
 import com.example.financial_game.domain.TaskItem
 import com.example.financial_game.domain.Goals
 import com.example.financial_game.domain.canApplyEffects
+import com.example.financial_game.domain.canDeclineEvent
 import com.example.financial_game.domain.cycleSecondsRemaining
 import com.example.financial_game.domain.hasCycleExpired
 import com.example.financial_game.domain.nextCycleEnd
@@ -26,10 +28,147 @@ import com.example.financial_game.domain.MandatoryBudget
 import com.example.financial_game.domain.budgetPeriodResult
 import com.example.financial_game.domain.needsBudgetPlanning
 import com.example.financial_game.domain.needsBudgetReview
+import com.example.financial_game.domain.events.EventCatalogData
+import com.example.financial_game.domain.events.EventDef
+import com.example.financial_game.domain.events.EventDeltas
+import com.example.financial_game.domain.events.EventFrequency
+import com.example.financial_game.domain.events.EventKind
+import com.example.financial_game.domain.events.EventScheduler
+import com.example.financial_game.domain.events.ScenarioStep
+import com.example.financial_game.domain.events.ScheduledEvent
+import com.example.financial_game.domain.events.canResolveScheduledEvent
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class PetViewModelTest {
+    @Test
+    fun unaffordable_event_cannot_be_accepted_and_can_always_be_declined() {
+        val forcedExpense = GameEvent(
+            descriptionRes = R.string.app_name,
+            illustrationRes = R.drawable.goal_pillow,
+            acceptEffects = listOf(Effect(Resource.Money, -50)),
+            canDecline = false,
+        )
+
+        assertEquals(false, canApplyEffects(money = 40, forcedExpense.acceptEffects))
+        assertEquals(true, canDeclineEvent(money = 40, forcedExpense))
+        assertEquals(false, canDeclineEvent(money = 50, forcedExpense))
+        assertEquals(
+            true,
+            canDeclineEvent(money = 50, forcedExpense.copy(canDecline = true)),
+        )
+    }
+
+    @Test
+    fun charity_can_be_declined_without_charging_money() {
+        val charity = ScheduledEvent(
+            definition = EventDef(
+                id = "charity",
+                title = "Charity",
+                kind = EventKind.Positive,
+                deltas = EventDeltas(money = -50),
+                canDecline = true,
+                frequency = EventFrequency.Once,
+                minLevel = 1,
+                requiresFlags = emptySet(),
+                setsFlags = setOf("charityAccepted"),
+                unlocksJobId = null,
+                hideRewardUntilAccept = false,
+                moneyFromCard = -50,
+                moneyFromScript = null,
+            ),
+            scenarioStepId = "w2d1_charity",
+            isScripted = true,
+            appliedDeltas = EventDeltas(money = -50),
+        )
+
+        assertEquals(true, canResolveScheduledEvent(charity, accepted = false, currentMoney = 0))
+        assertEquals(false, canResolveScheduledEvent(charity, accepted = true, currentMoney = 0))
+        assertEquals(true, canResolveScheduledEvent(charity, accepted = true, currentMoney = 50))
+    }
+
+    @Test
+    fun scheduler_prioritizes_script_and_uses_script_money_override() {
+        val event = EventDef(
+            id = "training",
+            title = "Training",
+            kind = EventKind.Training,
+            deltas = EventDeltas(money = 20),
+            canDecline = true,
+            frequency = EventFrequency.Once,
+            minLevel = 1,
+            requiresFlags = emptySet(),
+            setsFlags = setOf("trained"),
+            unlocksJobId = null,
+            hideRewardUntilAccept = false,
+            moneyFromCard = 20,
+            moneyFromScript = -20,
+            poolEligible = true,
+        )
+        val scheduler = EventScheduler(
+            EventCatalogData(
+                events = listOf(event),
+                jobs = emptyList(),
+                scenario = listOf(
+                    ScenarioStep(
+                        id = "w1d2_training",
+                        week = 1,
+                        day = 2,
+                        eventId = event.id,
+                        jobActionId = null,
+                        moneyOverride = null,
+                        requiresFlags = emptySet(),
+                        minBalanceExclusive = null,
+                    ),
+                ),
+            ),
+        )
+
+        val scheduled = scheduler.next(
+            GameSnapshot(
+                onboardingCompleted = true,
+                currentPeriod = 2,
+                budgetPlanWeek = 1,
+            ),
+        )
+
+        assertEquals("w1d2_training", scheduled?.scenarioStepId)
+        assertEquals(-20, scheduled?.appliedDeltas?.money)
+        assertEquals(true, scheduled?.isScripted)
+    }
+
+    @Test
+    fun scheduler_does_not_repeat_pool_event_in_the_same_cycle() {
+        val poolEvent = EventDef(
+            id = "weather",
+            title = "Weather",
+            kind = EventKind.Positive,
+            deltas = EventDeltas(happiness = 10),
+            canDecline = false,
+            frequency = EventFrequency.PerPeriod,
+            minLevel = 1,
+            requiresFlags = emptySet(),
+            setsFlags = emptySet(),
+            unlocksJobId = null,
+            hideRewardUntilAccept = false,
+            moneyFromCard = 0,
+            moneyFromScript = null,
+            poolEligible = true,
+        )
+        val scheduler = EventScheduler(EventCatalogData(listOf(poolEvent), emptyList(), emptyList()))
+        val snapshot = GameSnapshot(
+            onboardingCompleted = true,
+            currentPeriod = 16,
+            budgetPlanWeek = 3,
+        )
+
+        assertEquals("weather", scheduler.next(snapshot)?.definition?.id)
+        assertEquals(
+            null,
+            scheduler.next(snapshot.copy(eventPoolHandledCycles = setOf("16"))),
+        )
+    }
+
     @Test
     fun completed_budget_week_compares_plan_with_actual_values() {
         val successfulSnapshot = GameSnapshot(
@@ -139,6 +278,14 @@ class PetViewModelTest {
                 completedTaskCounts = mapOf(TaskItem.GetReady.storageId to 1),
                 eventUnlocked = false,
             ),
+        )
+        assertEquals(
+            false,
+            TaskItem.DeliverNewspapers.isAvailable(2, 0, 0, -1, emptyMap(), false),
+        )
+        assertEquals(
+            true,
+            TaskItem.DeliverNewspapers.isAvailable(2, 0, 0, -1, emptyMap(), true),
         )
     }
 

@@ -56,6 +56,7 @@ internal fun EventOverlay(
     acceptButtonText: String? = null,
     declineButtonText: String? = null,
     canClose: Boolean = false,
+    canAccept: Boolean = true,
     onAccept: (() -> Unit)? = null,
     onDecline: (() -> Unit)? = null,
     onClose: (() -> Unit)? = null,
@@ -104,7 +105,7 @@ internal fun EventOverlay(
                         )
 
                         Text(
-                            text = stringResource(event.descriptionRes),
+                            text = event.descriptionText ?: stringResource(event.descriptionRes),
                             modifier = Modifier.fillMaxWidth(),
                             color = EventPurpleDark,
                             fontFamily = NunitoFontFamily,
@@ -114,7 +115,13 @@ internal fun EventOverlay(
                         )
 
                         Spacer(Modifier.height(7.dp))
-                        EventEffects(event.acceptEffects)
+                        EventEffects(
+                            if (event.hideRewardUntilAccept) {
+                                event.acceptEffects.filterNot { it.resource == Resource.Money }
+                            } else {
+                                event.acceptEffects
+                            },
+                        )
 
                         if (acceptButtonText != null || declineButtonText != null) {
                             Spacer(Modifier.height(14.dp))
@@ -126,6 +133,7 @@ internal fun EventOverlay(
                                     EventButton(
                                         text = text,
                                         onClick = { onAccept?.invoke() },
+                                        enabled = canAccept,
                                         containerColor = EventPurple,
                                         contentColor = Color.White,
                                         modifier = Modifier.weight(1f),
@@ -235,12 +243,14 @@ private fun EventEffectValue(effect: Effect) {
 private fun EventButton(
     text: String,
     onClick: () -> Unit,
+    enabled: Boolean = true,
     containerColor: Color,
     contentColor: Color,
     modifier: Modifier = Modifier,
 ) {
     Button(
         onClick = onClick,
+        enabled = enabled,
         modifier = modifier.height(46.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = containerColor,

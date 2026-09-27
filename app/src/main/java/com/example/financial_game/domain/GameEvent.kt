@@ -3,6 +3,7 @@ package com.example.financial_game.domain
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import com.example.financial_game.R
+import com.example.financial_game.domain.events.ScheduledEvent
 
 data class GameEvent(
     @param:StringRes val descriptionRes: Int,
@@ -13,6 +14,10 @@ data class GameEvent(
     @param:StringRes val acceptButtonTextRes: Int = R.string.event_accept,
     @param:StringRes val declineButtonTextRes: Int = R.string.event_decline,
     val goalPurchase: GoalPurchase? = null,
+    val descriptionText: String? = null,
+    val canDecline: Boolean = true,
+    val hideRewardUntilAccept: Boolean = false,
+    val scheduledEvent: ScheduledEvent? = null,
 )
 
 data class GoalPurchase(
@@ -35,3 +40,6 @@ object GameEvents {
 
 internal fun canApplyEffects(money: Int, effects: List<Effect>): Boolean =
     money + effects.filter { it.resource == Resource.Money }.sumOf(Effect::increase) >= 0
+
+internal fun canDeclineEvent(money: Int, event: GameEvent): Boolean =
+    event.canDecline || !canApplyEffects(money, event.acceptEffects)

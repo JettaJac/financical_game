@@ -274,6 +274,7 @@ enum class TaskItem(
         level = 2,
         cooldown = Cooldown.Cycles(5.0),
         requiredTaskStorageId = "task_Lessons",
+        requiresEvent = true,
         careEffects = taskEffects(health = -10, happiness = 0, energy = -10, money = 25),
     ),
     HandOutFlyers(
@@ -281,6 +282,7 @@ enum class TaskItem(
         level = 2,
         cooldown = Cooldown.Cycles(6.0),
         usageLimit = TaskUsageLimit.Total(5),
+        requiresEvent = true,
         careEffects = taskEffects(health = -8, happiness = 0, energy = -8, money = 30),
     ),
     RecyclePaper(
@@ -294,13 +296,15 @@ enum class TaskItem(
         earnings = 40,
         level = 2,
         cooldown = Cooldown.Cycles(7.0),
+        requiresEvent = true,
         careEffects = taskEffects(health = -5, happiness = 0, energy = -10, money = 40),
     ),
     WalkNeighboursDog(
-        earnings = 50,
+        earnings = 55,
         level = 3,
         cooldown = Cooldown.Cycles(5.0),
-        careEffects = taskEffects(health = -15, happiness = 0, energy = -15, money = 50),
+        requiresEvent = true,
+        careEffects = taskEffects(health = -15, happiness = 0, energy = -15, money = 55),
     ),
     HelpGrandfather(
         earnings = 20,
@@ -336,7 +340,9 @@ internal fun TaskItem.isAvailable(
     val usesThisWeek = if (usageWeek == currentWeek) weeklyUses else 0
     if (dayForPeriod(currentPeriod) !in activeDays) return false
     if (requiresEvent && !eventUnlocked) return false
-    if (requiredTaskStorageId != null && completedTaskCounts[requiredTaskStorageId] == null) {
+    if (!eventUnlocked &&
+        requiredTaskStorageId != null && completedTaskCounts[requiredTaskStorageId] == null
+    ) {
         return false
     }
     return when (val limit = usageLimit) {

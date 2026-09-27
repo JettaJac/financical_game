@@ -84,6 +84,8 @@ import com.example.financial_game.domain.weekForPeriod
 import com.example.financial_game.domain.needsBudgetPlanning
 import com.example.financial_game.domain.needsBudgetReview
 import com.example.financial_game.domain.budgetPeriodResult
+import com.example.financial_game.domain.canApplyEffects
+import com.example.financial_game.domain.canDeclineEvent
 import com.example.financial_game.ui.theme.NunitoFontFamily
 
 private val HomePurple = Color(0xFF8743D3)
@@ -241,7 +243,13 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
     when (state.overlay) {
         HomeOverlay.Menu -> MenuOverlay(onAction)
         HomeOverlay.Shop -> ShopOverlay(
-            canBuy = state.resources.money >= COLLAR_PRICE,
+            canBuy = state.resources.money >= if (
+                "nextPurchaseHalfPrice" in state.resources.eventFlags
+            ) {
+                COLLAR_PRICE / 2
+            } else {
+                COLLAR_PRICE
+            },
             onAction = onAction,
         )
         HomeOverlay.Goal -> {
@@ -281,11 +289,17 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
     }
 
     state.activeEvent?.let { event ->
+        val canAcceptEvent = canApplyEffects(state.resources.money, event.acceptEffects)
         EventOverlay(
             event = event,
             acceptButtonText = stringResource(event.acceptButtonTextRes),
-            declineButtonText = stringResource(event.declineButtonTextRes),
+            declineButtonText = if (canDeclineEvent(state.resources.money, event)) {
+                stringResource(event.declineButtonTextRes)
+            } else {
+                null
+            },
             canClose = event.showCloseButton,
+            canAccept = canAcceptEvent,
             onAccept = { onAction(PetAction.AcceptEvent) },
             onDecline = { onAction(PetAction.DeclineEvent) },
             onClose = { onAction(PetAction.SkipEvent) },
@@ -658,6 +672,8 @@ private fun HomeBottomPanel(
                     horizontalPadding = metrics.horizontalPadding,
                     itemGap = metrics.itemGap,
                     purchasedItemIds = state.resources.purchasedShopItemIds,
+                    nextPurchaseHalfPrice =
+                        "nextPurchaseHalfPrice" in state.resources.eventFlags,
                 )
                 HomeSection.Tasks -> CardRow(
                     items = TaskItems,
@@ -836,6 +852,7 @@ private fun CardRow(
     taskWeeklyUseCounts: Map<String, Int> = emptyMap(),
     taskUseWeeks: Map<String, Int> = emptyMap(),
     eventUnlockedTaskIds: Set<String> = emptySet(),
+    nextPurchaseHalfPrice: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     if (items.isEmpty()) return
@@ -879,11 +896,20 @@ private fun CardRow(
                         currentPeriod = currentPeriod,
                         cycleSecondsRemaining = cycleSecondsRemaining,
                     )
+                    val effectivePrice = if (
+                        nextPurchaseHalfPrice && product.item is ShopItem
+                    ) {
+                        product.item.price / 2
+                    } else {
+                        product.item.price
+                    }
                     ProductCard(
                         product = product,
-                        canBuy = money >= product.item.price &&
+                        canBuy = money >= effectivePrice &&
                             remainingCooldown == null &&
-                            level >= product.item.level &&
+                            (level >= product.item.level ||
+                                (product.item is TaskItem &&
+                                    product.item.storageId in eventUnlockedTaskIds)) &&
                             taskAvailable &&
                             !alreadyPurchased,
                         alreadyPurchased = alreadyPurchased,

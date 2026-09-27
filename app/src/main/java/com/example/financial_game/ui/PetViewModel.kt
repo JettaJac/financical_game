@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.financial_game.R
 import com.example.financial_game.data.GameSnapshot
+import com.example.financial_game.data.EventCatalog
 import com.example.financial_game.domain.CardItem
 import com.example.financial_game.domain.Effect
 import com.example.financial_game.domain.GameEvent
@@ -18,6 +19,9 @@ import com.example.financial_game.domain.canApplyEffects
 import com.example.financial_game.domain.cycleSecondsRemaining
 import com.example.financial_game.domain.needsBudgetPlanning
 import com.example.financial_game.domain.needsBudgetReview
+import com.example.financial_game.domain.events.EventScheduler
+import com.example.financial_game.domain.events.ScheduledEvent
+import com.example.financial_game.domain.events.canResolveScheduledEvent
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.delay
@@ -98,11 +102,15 @@ sealed interface PetAction {
 }
 
 @HiltViewModel
-class PetViewModel @Inject constructor(private val repository: GameRepository) : ViewModel() {
+class PetViewModel @Inject constructor(
+    private val repository: GameRepository,
+    eventCatalog: EventCatalog,
+) : ViewModel() {
     private val _state = MutableStateFlow(PetState())
     val state = _state.asStateFlow()
     private var goalPurchaseInProgress = false
     private var appearanceUpdateInProgress = false
+    private val eventScheduler = EventScheduler(eventCatalog.data)
 
     init {
         viewModelScope.launch {
@@ -113,6 +121,13 @@ class PetViewModel @Inject constructor(private val repository: GameRepository) :
             launch {
                 repository.snapshot.collect { resources ->
                     val previous = _state.value.resources.takeIf { _state.value.isInitialized }
+                    val scheduledEvent = if (
+                        !needsBudgetReview(resources) && !needsBudgetPlanning(resources)
+                    ) {
+                        eventScheduler.next(resources)?.asGameEvent()
+                    } else {
+                        null
+                    }
                     val reachedGoalEvent = if (hasJustReachedGoal(previous, resources)) {
                         goalPurchaseEvent(resources)
                     } else {
@@ -128,8 +143,12 @@ class PetViewModel @Inject constructor(private val repository: GameRepository) :
                             ),
                             isInitialized = true,
                             nowMillis = nowMillis,
-                            overlay = if (reachedGoalEvent != null) null else it.overlay,
-                            activeEvent = reachedGoalEvent ?: it.activeEvent,
+                            overlay = if (scheduledEvent != null || reachedGoalEvent != null) {
+                                null
+                            } else {
+                                it.overlay
+                            },
+                            activeEvent = it.activeEvent ?: scheduledEvent ?: reachedGoalEvent,
                         )
                     }
                 }
@@ -143,6 +162,7 @@ class PetViewModel @Inject constructor(private val repository: GameRepository) :
             val nowMillis = System.currentTimeMillis()
             val currentState = _state.value
             if (!currentState.resources.onboardingCompleted) continue
+            if (currentState.activeEvent != null) continue
             if (needsBudgetReview(currentState.resources)) continue
             if (needsBudgetPlanning(currentState.resources)) continue
 
@@ -227,6 +247,18 @@ class PetViewModel @Inject constructor(private val repository: GameRepository) :
     private fun resolveEvent(accept: Boolean) {
         val currentState = _state.value
         val event = currentState.activeEvent ?: return
+        event.scheduledEvent?.let { scheduled ->
+            if (!canResolveScheduledEvent(scheduled, accept, currentState.resources.money)) return
+            _state.update { it.copy(activeEvent = null) }
+            viewModelScope.launch {
+                repository.resolveScheduledEvent(
+                    event = scheduled,
+                    unlockedJob = eventScheduler.jobFor(scheduled),
+                    accepted = accept,
+                )
+            }
+            return
+        }
         if (accept && event.goalPurchase != null) {
             purchaseGoal(event.goalPurchase)
             return
@@ -271,3 +303,13 @@ class PetViewModel @Inject constructor(private val repository: GameRepository) :
         }
     }
 }
+
+private fun ScheduledEvent.asGameEvent(): GameEvent = GameEvent(
+    descriptionRes = R.string.app_name,
+    descriptionText = definition.title,
+    illustrationRes = R.drawable.goal_pillow,
+    acceptEffects = acceptEffects,
+    canDecline = definition.canDecline,
+    hideRewardUntilAccept = definition.hideRewardUntilAccept,
+    scheduledEvent = this,
+)
