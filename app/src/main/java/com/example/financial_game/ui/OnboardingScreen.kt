@@ -231,7 +231,6 @@ private fun NameOnboardingStep(
 ) {
     OnboardingStage(
         animationAssetPath = TALKING_ANIMATION,
-        lowerFinnick = true,
         modifier = modifier,
     ) {
         PetSpeechBubble(
