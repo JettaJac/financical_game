@@ -1,71 +1,119 @@
 # AGENTS.md
 
 ## Project
-Offline Android companion. Source of truth: docs/SPEC.md.
-Human does not write Kotlin. Implement exactly the current SPEC.
-Do not invent extra features. Do not keep leftover UI from older SPEC versions.
 
-## Stack
-- Kotlin + Jetpack Compose + Material 3. No XML layouts.
-- Vector drawables for icons are allowed.
-- No network, Firebase, Retrofit, accounts.
-- DataStore Preferences for durable state.
-- Thin MVI: presentation / domain / data.
-- Hilt + KSP. Coroutines + Flow.
-- Three pages via HorizontalPager. No NavHost, no BottomBar.
-- Home screen visual assets come from `res/svg`, `res/webp`, and the supplied reference.
+Offline Android financial companion game. The implementation and current user requests are the source of truth; there is no separate `docs/SPEC.md`.
+
+Keep changes consistent with the existing product and remove obsolete behavior when a feature is replaced. Do not revive prototype UI or flows that are no longer present.
+
+## Stack and architecture
+
+- Kotlin, Jetpack Compose, Material 3; no XML layouts.
+- Single-activity application with Compose-managed screens and overlays; no `NavHost`.
+- Thin MVI-style flow: Compose UI → `PetAction` → `PetViewModel` → `GameRepository`/`GameStore` → `GameSnapshot`.
+- DataStore Preferences stores game state. Room stores goal history.
+- Hilt, KSP, Coroutines, and Flow.
+- Fully offline: no network services, accounts, Firebase, analytics, or Retrofit.
+- Use `collectAsStateWithLifecycle()` at the activity boundary.
+- Keep business rules out of Composables.
+- Update ViewModel state through `_state.update { it.copy(...) }`.
+- Put user-facing copy in `res/values/strings.xml`.
 
 ## Commands
-- Build: ./gradlew :app:assembleDebug
-- Unit tests: ./gradlew test
-- Run: android run
-- Docs: android docs "<query>"
-  Prefer Android CLI over raw sdkmanager/avdmanager.
 
-## UI rules
-- Layout and copy come only from docs/SPEC.md.
-- Home screen follows `res/references/main_screen.png`, including visible money and goal target.
-- Home overlays: Menu and Shop. Only one overlay at a time.
-- Menu: «Продолжить» dismisses, «Выйти» leaves the app.
-- Shop: close with X. One item «ошейник» price 100, black-square image, «Купить».
-- Buy is disabled/no-op if money < price. Successful buy subtracts price from money.
-- Home layout follows `res/references/main_screen.png`: header, room background, pet, five tabs, product cards.
-- Size screen regions from the available Compose constraints; do not position the phone layout for one fixed viewport.
-- The five home tabs are clickable and select the lower drawer section.
-- Food, happiness, and energy show three purchasable cards with one Buy button each.
-- Care-item Buy is disabled when money is insufficient; shop and tasks show placeholders.
-- The savings quick action above the pet opens the shop overlay.
-- collectAsStateWithLifecycle(). No business logic in Composables.
-- ViewModel state only via _state.update { it.copy(...) }.
-- User-facing strings in res/values/strings.xml.
+- Build: `./gradlew :app:assembleDebug`
+- Unit tests: `./gradlew testDebugUnitTest`
+- Install: `./gradlew installDebug`
+- Run and inspect devices with the Android CLI (`android run`, `android layout`, `android screen`).
 
-## State
-First-launch seeds are in SPEC.md.
-Persist across process death: money, health, happiness, energy, goalTarget, goalTitle, income, expense, level, currentPeriod.
-20-minute timer may reset to 20:00 after process death.
+## Current product flows
 
-## Timer economy
-Every time the countdown reaches 00:00:
-1. Apply money += (income - expense).
-2. Immediately restart the 20:00 cycle.
-   Do not add other timer side effects.
+### Onboarding
 
-## Forbidden
-- XML layouts
-- GlobalScope, collectAsState(), !!
-- Features not in SPEC.md
-- Rewriting Gradle from scratch
-- Extra shop items, auth, analytics
-- Reintroducing the v1 money/clock/linear-bars layout
+- Greeting, character naming, story, goal selection, fur colour, and fur style.
+- Eye-colour customization is not part of the UI.
+- The naming step uses the animation derived from `assets/webm/talking_default.webm`, with the character positioned on the rug.
+- Existing eye-colour data remains internal only for save compatibility.
 
-## Definition of Done
-Not done until:
-1. ./gradlew :app:assembleDebug passes
-2. android run shows screen 1 per SPEC
-3. swipe left/right reaches empty pages 2/3 and back
-4. timer wraps 20:00 → 00:00 → 20:00
-5. timer wrap updates money by (income - expense)
-6. buying the collar subtracts 100 when money is enough
-7. restart keeps persisted fields
-8. short report: files changed + how to verify
-9. home screen visually matches `res/references/main_screen.png` on a phone viewport
+### Home
+
+- Responsive header with current day/week, active goal, money, goal target, and progress.
+- Room background and pet occupy the main area.
+- Five lower tabs: food, happiness, energy, shop items, and tasks/jobs.
+- Food, happiness, and energy cards apply effects and use cycle-based cooldowns.
+- Shop items are permanent purchases where applicable.
+- Every task/job can be performed at most once per game cycle. Day, week, total-use, prerequisite, and event restrictions may additionally apply.
+- Changes to money and pet characteristics pulse the corresponding indicator icon.
+
+### Quick actions and overlays
+
+- Left quick action advances the cycle in the current demo flow.
+- The piggy-bank quick action opens the full-screen weekly budget overview, not a shop overlay.
+- Budget overview defaults to actual weekly income/expenses and can switch to the saved plan.
+- Other overlays/screens include menu, active goal, goal selection, character settings, and events.
+- Event action buttons use adaptive single-line text sizing.
+- Only one home overlay is active at a time.
+- There is no collar item or collar-purchase flow.
+
+### Budget lifecycle
+
+- Weekly planning classifies entries and records planned optional spending.
+- Income subcategories remain: recurring, irregular, savings.
+- Expense subcategories shown during classification are: recurring, optional, unplanned.
+- Actual optional expenses and additional income accumulate during the week.
+- Weekly review compares planned and actual values before the next plan begins.
+
+### Character settings
+
+- Name, fur colour, and fur style are editable.
+- Eye-colour controls must not be reintroduced.
+
+## Cycle and cooldown rules
+
+- The single source of truth is `GameDefaults.CYCLE_DURATION_SECONDS`.
+- One cycle lasts 13 minutes. Milliseconds must derive from that value through `CYCLE_DURATION_MILLIS`.
+- Do not hardcode cycle duration elsewhere in production code.
+- Cooldowns are expressed as fractions/counts of cycles via `Cooldown.Cycles`, then converted using the shared duration.
+- Active cycle deadlines persist across process death.
+- Duration migrations must preserve progress for existing active cycles. The legacy 20-minute constant exists only to migrate older saves.
+- The UI timer refresh interval (`delay(1_000)`) is not the cycle duration.
+
+## Persistence
+
+Persist the complete game snapshot needed to restore gameplay, including:
+
+- pet identity and appearance;
+- money and health/happiness/energy values;
+- current goal, level, purchases, and goal history;
+- current period and cycle deadline;
+- cooldowns and task usage;
+- weekly budget plan and actual totals;
+- event progress, flags, unlocked jobs, and usage limits.
+
+Reset must return these systems to coherent defaults without leaving stale cooldown, task, event, or job keys.
+
+## UI and assets
+
+- Build responsive layouts from Compose constraints; do not target one fixed phone size.
+- Visual references live under `src/main/res/references` and guide appearance, but current implemented behavior takes precedence over stale reference details.
+- Runtime raster assets live in `drawable-nodpi`; Android vector drawables live in `drawable`; source SVG files may live in `res/svg` but are not directly compiled as Android resources.
+- Launcher icons use `mipmap-*` plus adaptive icon definitions in `mipmap-anydpi`.
+- Preserve supplied artwork and transparency. Verify animation/image changes on an emulator when practical.
+
+## Constraints
+
+- Do not add XML layouts, `GlobalScope`, `collectAsState()`, or non-null assertions (`!!`).
+- Do not rewrite Gradle configuration from scratch.
+- Do not add network dependencies or unrelated features.
+- Preserve user changes and unrelated worktree files.
+- Keep compatibility with existing saves when changing persisted values or rules.
+
+## Definition of done
+
+For relevant changes:
+
+1. `./gradlew testDebugUnitTest` passes.
+2. `./gradlew :app:assembleDebug` passes when packaging/resources changed.
+3. Changed flows are inspected on an emulator when practical.
+4. No obsolete UI, action, string, or persistence path from the replaced behavior remains.
+5. The handoff briefly states what changed and how it was verified.
