@@ -33,6 +33,7 @@ Keep changes consistent with the existing product and remove obsolete behavior w
 - Greeting, character naming, story, goal selection, fur colour, and fur style.
 - Eye-colour customization is not part of the UI.
 - The naming step uses the animation derived from `assets/webm/talking_default.webm`, with the character positioned on the rug.
+- Fur-colour and fur-style steps use the selected static level-1 character image instead of animation so the choice is previewed immediately.
 - Existing eye-colour data remains internal only for save compatibility.
 
 ### Home
@@ -71,6 +72,7 @@ Keep changes consistent with the existing product and remove obsolete behavior w
 - Name, fur colour, and fur style are editable.
 - Eye-colour controls must not be reintroduced.
 - Character artwork is selected from the saved fur colour and style. Level 1 uses level-1 art, level 2 uses level-2 art, and level 3 or higher uses level-3 art.
+- Every static character appearance, including budget flows and character settings, must use the current profile instead of the legacy `pet_main` placeholder.
 
 ### Characteristics
 

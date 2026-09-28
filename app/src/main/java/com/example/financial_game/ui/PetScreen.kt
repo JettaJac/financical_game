@@ -225,6 +225,9 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
 
     if (needsBudgetReview(state.resources)) {
         BudgetPeriodResultScreen(
+            petImageRes = petImageResource(
+                state.resources.level, state.resources.hairColour, state.resources.hairStyle,
+            ),
             result = budgetPeriodResult(state.resources),
             plannedOptionalExpenses = state.resources.plannedOptionalExpenses,
             actualOptionalExpenses = state.resources.actualOptionalExpenses,
@@ -236,6 +239,9 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
 
     if (needsBudgetPlanning(state.resources)) {
         BudgetPlanningScreen(
+            petImageRes = petImageResource(
+                state.resources.level, state.resources.hairColour, state.resources.hairStyle,
+            ),
             firstPlanning = !state.resources.budgetTutorialCompleted,
             previousOptionalExpenses = state.resources.plannedOptionalExpenses,
             onComplete = { onAction(PetAction.CompleteBudgetPlanning(it)) },

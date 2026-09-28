@@ -1,5 +1,6 @@
 package com.example.financial_game.ui
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -48,6 +49,7 @@ private val ResultBackground = Color(0xFFF8EDFF)
 
 @Composable
 internal fun BudgetPeriodResultScreen(
+    @DrawableRes petImageRes: Int,
     result: BudgetPeriodResult,
     plannedOptionalExpenses: Int,
     actualOptionalExpenses: Int,
@@ -58,9 +60,14 @@ internal fun BudgetPeriodResultScreen(
     var showSuccess by rememberSaveable { mutableStateOf(false) }
 
     if (showSuccess) {
-        BudgetSuccessScreen(onCollect = onComplete, modifier = modifier)
+        BudgetSuccessScreen(
+            petImageRes = petImageRes,
+            onCollect = onComplete,
+            modifier = modifier,
+        )
     } else {
         BudgetComparisonScreen(
+            petImageRes = petImageRes,
             result = result,
             plannedOptionalExpenses = plannedOptionalExpenses,
             actualOptionalExpenses = actualOptionalExpenses,
@@ -75,6 +82,7 @@ internal fun BudgetPeriodResultScreen(
 
 @Composable
 private fun BudgetComparisonScreen(
+    @DrawableRes petImageRes: Int,
     result: BudgetPeriodResult,
     plannedOptionalExpenses: Int,
     actualOptionalExpenses: Int,
@@ -116,7 +124,7 @@ private fun BudgetComparisonScreen(
                     modifier = Modifier.weight(1f),
                 )
                 Image(
-                    painter = painterResource(R.drawable.pet_main),
+                    painter = painterResource(petImageRes),
                     contentDescription = stringResource(R.string.pet),
                     modifier = Modifier.size(112.dp),
                     contentScale = ContentScale.Crop,
@@ -255,7 +263,11 @@ private fun ResultSectionTitle(text: String) {
 }
 
 @Composable
-private fun BudgetSuccessScreen(onCollect: () -> Unit, modifier: Modifier) {
+private fun BudgetSuccessScreen(
+    @DrawableRes petImageRes: Int,
+    onCollect: () -> Unit,
+    modifier: Modifier,
+) {
     Box(modifier.fillMaxSize().background(ResultBackground)) {
         Image(
             painter = painterResource(R.drawable.home_background),
@@ -276,7 +288,7 @@ private fun BudgetSuccessScreen(onCollect: () -> Unit, modifier: Modifier) {
                     .padding(top = 96.dp, start = 32.dp, end = 32.dp),
             )
             Image(
-                painter = painterResource(R.drawable.pet_main),
+                painter = painterResource(petImageRes),
                 contentDescription = stringResource(R.string.pet),
                 modifier = Modifier
                     .align(Alignment.Center)

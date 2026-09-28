@@ -1,5 +1,6 @@
 package com.example.financial_game.ui
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -70,6 +71,7 @@ private val BudgetBackground = Color(0xFFF8EDFF)
 
 @Composable
 internal fun BudgetPlanningScreen(
+    @DrawableRes petImageRes: Int,
     firstPlanning: Boolean,
     previousOptionalExpenses: Int,
     onComplete: (Int) -> Unit,
@@ -89,6 +91,7 @@ internal fun BudgetPlanningScreen(
 
     when (screen) {
         BUDGET_INTRO -> BudgetIntroScreen(
+            petImageRes = petImageRes,
             onContinue = {
                 screen = if (firstPlanning) BUDGET_CLASSIFY else BUDGET_OPTIONAL
             },
@@ -97,6 +100,7 @@ internal fun BudgetPlanningScreen(
         BUDGET_CLASSIFY -> {
             val entry = MandatoryBudget.entries[entryIndex]
             BudgetClassificationScreen(
+                petImageRes = petImageRes,
                 entry = entry,
                 placedEntries = MandatoryBudget.entries.take(entryIndex),
                 step = classificationStep,
@@ -130,10 +134,12 @@ internal fun BudgetPlanningScreen(
             )
         }
         BUDGET_SUMMARY -> BudgetMandatorySummaryScreen(
+            petImageRes = petImageRes,
             onContinue = { screen = BUDGET_OPTIONAL },
             modifier = modifier,
         )
         BUDGET_OPTIONAL -> BudgetOptionalExpensesScreen(
+            petImageRes = petImageRes,
             value = optionalExpenses,
             onValueChange = { value -> optionalExpenses = value.filter(Char::isDigit).take(6) },
             maximumOptionalExpenses = MandatoryBudget.maximumOptionalExpense,
@@ -144,6 +150,7 @@ internal fun BudgetPlanningScreen(
             modifier = modifier,
         )
         BUDGET_REVIEW -> BudgetReviewScreen(
+            petImageRes = petImageRes,
             optionalExpenses = optionalExpenseAmount,
             onComplete = { onComplete(optionalExpenseAmount) },
             modifier = modifier,
@@ -152,7 +159,11 @@ internal fun BudgetPlanningScreen(
 }
 
 @Composable
-private fun BudgetIntroScreen(onContinue: () -> Unit, modifier: Modifier) {
+private fun BudgetIntroScreen(
+    @DrawableRes petImageRes: Int,
+    onContinue: () -> Unit,
+    modifier: Modifier,
+) {
     Box(
         modifier
             .fillMaxSize()
@@ -183,7 +194,7 @@ private fun BudgetIntroScreen(onContinue: () -> Unit, modifier: Modifier) {
                     .padding(top = 72.dp, start = 24.dp, end = 24.dp),
             )
             Image(
-                painter = painterResource(R.drawable.pet_main),
+                painter = painterResource(petImageRes),
                 contentDescription = stringResource(R.string.pet),
                 modifier = Modifier
                     .align(Alignment.Center)
@@ -201,6 +212,7 @@ private fun BudgetIntroScreen(onContinue: () -> Unit, modifier: Modifier) {
 
 @Composable
 private fun BudgetClassificationScreen(
+    @DrawableRes petImageRes: Int,
     entry: BudgetEntry,
     placedEntries: List<BudgetEntry>,
     step: ClassificationStep,
@@ -210,6 +222,7 @@ private fun BudgetClassificationScreen(
     modifier: Modifier,
 ) {
     BudgetPage(
+        petImageRes = petImageRes,
         guide = guideText ?: stringResource(
             if (step == ClassificationStep.Category) {
                 R.string.budget_choose_category_guide
@@ -266,8 +279,13 @@ private fun BudgetClassificationScreen(
 }
 
 @Composable
-private fun BudgetMandatorySummaryScreen(onContinue: () -> Unit, modifier: Modifier) {
+private fun BudgetMandatorySummaryScreen(
+    @DrawableRes petImageRes: Int,
+    onContinue: () -> Unit,
+    modifier: Modifier,
+) {
     BudgetPage(
+        petImageRes = petImageRes,
         guide = stringResource(R.string.budget_mandatory_success),
         modifier = modifier,
         bottom = {
@@ -283,6 +301,7 @@ private fun BudgetMandatorySummaryScreen(onContinue: () -> Unit, modifier: Modif
 
 @Composable
 private fun BudgetOptionalExpensesScreen(
+    @DrawableRes petImageRes: Int,
     value: String,
     onValueChange: (String) -> Unit,
     maximumOptionalExpenses: Int,
@@ -291,6 +310,7 @@ private fun BudgetOptionalExpensesScreen(
     modifier: Modifier,
 ) {
     BudgetPage(
+        petImageRes = petImageRes,
         guide = if (showBalanceError) {
             stringResource(R.string.budget_optional_too_high, maximumOptionalExpenses)
         } else {
@@ -348,6 +368,7 @@ private fun BudgetOptionalExpensesScreen(
 
 @Composable
 private fun BudgetReviewScreen(
+    @DrawableRes petImageRes: Int,
     optionalExpenses: Int,
     onComplete: () -> Unit,
     modifier: Modifier,
@@ -355,6 +376,7 @@ private fun BudgetReviewScreen(
     val totalExpenses = MandatoryBudget.expense + optionalExpenses
     val balance = MandatoryBudget.income - totalExpenses
     BudgetPage(
+        petImageRes = petImageRes,
         guide = stringResource(R.string.budget_review_guide),
         modifier = modifier,
         bottom = {
@@ -425,6 +447,7 @@ private fun BudgetReviewScreen(
 
 @Composable
 private fun BudgetPage(
+    @DrawableRes petImageRes: Int,
     guide: String,
     modifier: Modifier,
     bottom: @Composable ColumnScope.() -> Unit,
@@ -455,7 +478,7 @@ private fun BudgetPage(
             ) {
                 BudgetSpeechBubble(guide, Modifier.weight(1f))
                 Image(
-                    painter = painterResource(R.drawable.pet_main),
+                    painter = painterResource(petImageRes),
                     contentDescription = stringResource(R.string.pet),
                     modifier = Modifier.size(112.dp),
                     contentScale = ContentScale.Crop,

@@ -136,6 +136,7 @@ internal fun OnboardingScreen(
         )
         HAIR_COLOUR_STEP -> HairColourOnboardingStep(
             selected = hairColour,
+            hairStyle = hairStyle,
             onSelected = { hairColour = it },
             onContinue = { step = HAIR_STYLE_STEP },
             modifier = modifier,
@@ -274,12 +275,14 @@ private fun NameOnboardingStep(
 @Composable
 private fun HairColourOnboardingStep(
     selected: HairColour,
+    hairStyle: HairStyle,
     onSelected: (HairColour) -> Unit,
     onContinue: () -> Unit,
     modifier: Modifier,
 ) {
     ChoiceOnboardingStep(
         title = stringResource(R.string.onboarding_choose_hair_colour),
+        petImageRes = petImageResource(level = 1, colour = selected, style = hairStyle),
         modifier = modifier,
         onContinue = onContinue,
     ) {
@@ -311,6 +314,7 @@ private fun HairStyleOnboardingStep(
 ) {
     ChoiceOnboardingStep(
         title = stringResource(R.string.onboarding_choose_hair_style),
+        petImageRes = petImageResource(level = 1, colour = hairColour, style = selected),
         modifier = modifier,
         onContinue = onContinue,
     ) {
@@ -337,12 +341,13 @@ private fun HairStyleOnboardingStep(
 @Composable
 private fun ChoiceOnboardingStep(
     title: String,
+    @DrawableRes petImageRes: Int,
     onContinue: () -> Unit,
     modifier: Modifier,
     choices: @Composable RowScope.() -> Unit,
 ) {
     OnboardingStage(
-        animationAssetPath = TALKING_ANIMATION,
+        petImageRes = petImageRes,
         modifier = modifier,
     ) {
         Column(
@@ -576,7 +581,8 @@ private fun ChoiceTile(
 
 @Composable
 private fun OnboardingStage(
-    animationAssetPath: String,
+    animationAssetPath: String? = null,
+    @DrawableRes petImageRes: Int? = null,
     lowerFinnick: Boolean = false,
     modifier: Modifier = Modifier,
     content: @Composable BoxWithConstraintsScope.() -> Unit,
@@ -620,14 +626,21 @@ private fun OnboardingStage(
         )
         val finnTopPadding = (maxHeight * 0.24f).coerceIn(140.dp, 190.dp) +
             if (lowerFinnick) backgroundLift + 32.dp else 0.dp
-        FinnickAnimation(
-            assetPath = animationAssetPath,
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = finnTopPadding)
-                .width(finnWidth)
-                .height(finnWidth * (7f / 6f)),
-        )
+        val petModifier = Modifier
+            .align(Alignment.TopCenter)
+            .padding(top = finnTopPadding)
+            .width(finnWidth)
+            .height(finnWidth * (7f / 6f))
+        if (petImageRes != null) {
+            Image(
+                painter = painterResource(petImageRes),
+                contentDescription = stringResource(R.string.pet),
+                modifier = petModifier,
+                contentScale = ContentScale.Fit,
+            )
+        } else if (animationAssetPath != null) {
+            FinnickAnimation(assetPath = animationAssetPath, modifier = petModifier)
+        }
         content()
     }
 }
