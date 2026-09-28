@@ -1,6 +1,7 @@
 package com.example.financial_game.data
 
 import android.content.Context
+import com.example.financial_game.R
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
@@ -52,6 +53,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
+import org.json.JSONArray
+import org.json.JSONObject
 
 private val Context.gameDataStore by preferencesDataStore("game")
 
@@ -72,6 +75,44 @@ private const val JOB_PERIOD_LIMIT_PREFIX = "job_period_limit_"
 private const val NEXT_PURCHASE_DISCOUNT_FLAG = "nextPurchaseHalfPrice"
 private const val BRAIDED_BRACELETS_FLAG = "braidedBracelets"
 private const val LEGACY_CYCLE_DURATION_SECONDS = 20 * 60
+private const val MAX_ACTION_HISTORY_SIZE = 500
+
+private fun decodeActionHistory(raw: String?): List<GameActionRecord> = runCatching {
+    val array = JSONArray(raw ?: "[]")
+    List(array.length()) { index ->
+        val item = array.getJSONObject(index)
+        GameActionRecord(
+            timestamp = item.getLong("timestamp"),
+            cycle = item.getInt("cycle"),
+            description = item.getString("description"),
+            moneyDelta = item.optInt("moneyDelta"),
+        )
+    }
+}.getOrDefault(emptyList())
+
+private fun appendAction(
+    preferences: MutablePreferences,
+    description: String,
+    moneyDelta: Int = 0,
+) {
+    val entries = decodeActionHistory(preferences[stringPreferencesKey("action_history")])
+        .takeLast(MAX_ACTION_HISTORY_SIZE - 1) + GameActionRecord(
+        timestamp = System.currentTimeMillis(),
+        cycle = preferences[intPreferencesKey("current_period")] ?: 1,
+        description = description,
+        moneyDelta = moneyDelta,
+    )
+    preferences[stringPreferencesKey("action_history")] = JSONArray().apply {
+        entries.forEach { entry ->
+            put(JSONObject().apply {
+                put("timestamp", entry.timestamp)
+                put("cycle", entry.cycle)
+                put("description", entry.description)
+                put("moneyDelta", entry.moneyDelta)
+            })
+        }
+    }.toString()
+}
 
 private fun cooldownUnlockCycleKey(storageId: String) =
     doublePreferencesKey("$COOLDOWN_UNLOCK_CYCLE_PREFIX$storageId")
@@ -137,6 +178,10 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
     private val handledScenarioEntryIds = stringSetPreferencesKey("handled_scenario_entry_ids")
     private val eventPoolHandledCycles = stringSetPreferencesKey("event_pool_handled_cycles")
     private val activeJobIds = stringSetPreferencesKey("active_job_ids")
+    private val actionHistory = stringPreferencesKey("action_history")
+    private val customGoalTitle = stringPreferencesKey("custom_goal_title")
+    private val customGoalTarget = intPreferencesKey("custom_goal_target")
+    private val customGoalIllustration = intPreferencesKey("custom_goal_illustration")
 
     override val snapshot: Flow<GameSnapshot> = flow {
         emitAll(context.gameDataStore.data.map { preferences ->
@@ -192,6 +237,14 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 eventPoolHandledCycles = checkNotNull(preferences[eventPoolHandledCycles]),
                 activeJobIds = checkNotNull(preferences[activeJobIds]),
                 jobRemainingActions = jobRemainingActions,
+                actionHistory = decodeActionHistory(preferences[actionHistory]),
+                customGoal = preferences[customGoalTitle]?.let { title ->
+                    com.example.financial_game.data.CustomGoal(
+                        title = title,
+                        target = preferences[customGoalTarget] ?: 0,
+                        illustrationRes = preferences[customGoalIllustration] ?: R.drawable.goal_pillow,
+                    )
+                },
             )
         })
     }
@@ -273,6 +326,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 preferences[eventPoolHandledCycles] = emptySet()
             }
             if (preferences[activeJobIds] == null) preferences[activeJobIds] = emptySet()
+            if (preferences[actionHistory] == null) preferences[actionHistory] = "[]"
 
             if (preferences[goalTitle] == LEGACY_GOAL_TITLE &&
                 preferences[goalTarget] == LEGACY_GOAL_TARGET
@@ -348,11 +402,36 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 System.currentTimeMillis() + GameDefaults.CYCLE_DURATION_MILLIS
             preferences[cycleDurationSeconds] = GameDefaults.CYCLE_DURATION_SECONDS
             preferences[onboardingCompleted] = false
+            appendAction(preferences, "Игра начата заново")
         }
+    }
+
+    override suspend fun addCustomGoal(title: String, target: Int, illustrationRes: Int) {
+        context.gameDataStore.edit { preferences ->
+            preferences[customGoalTitle] = title.trim()
+            preferences[customGoalTarget] = target.coerceAtLeast(1)
+            preferences[customGoalIllustration] = illustrationRes
+            appendAction(preferences, "Родитель добавил цель «${title.trim()}»")
+        }
+    }
+
+    override suspend fun selectCustomGoal() {
+        context.gameDataStore.edit { preferences ->
+            val title = preferences[customGoalTitle] ?: return@edit
+            preferences[goalId] = "custom"
+            preferences[goalTitle] = title
+            preferences[goalTarget] = preferences[customGoalTarget] ?: return@edit
+            appendAction(preferences, "Выбрана цель «$title»")
+        }
+    }
+
+    override suspend fun recordAction(description: String, moneyDelta: Int) {
+        context.gameDataStore.edit { preferences -> appendAction(preferences, description, moneyDelta) }
     }
 
     override suspend fun completeTimerCycle() {
         context.gameDataStore.edit { preferences ->
+            appendAction(preferences, "Завершён цикл")
             applyCompletedCycles(preferences, count = 1)
             preferences[cycleEndsAtMillis] =
                 System.currentTimeMillis() + GameDefaults.CYCLE_DURATION_MILLIS
@@ -510,6 +589,15 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                     }
                 }
             }
+            val incomeChange = appliedEffects
+                .filter { it.resource == Resource.Money }
+                .sumOf(Effect::increase)
+            appendAction(
+                preferences,
+                if (item is TaskItem) "Выполнено задание: ${item.storageId}"
+                else "Использовано: ${item.storageId}",
+                incomeChange - effectivePrice,
+            )
         }
     }
 
@@ -540,6 +628,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             val currentLevel = checkNotNull(preferences[level])
             preferences[level] = levelAfterGoalPurchase(currentLevel, goal.level)
             preferences[purchasedGoalIds] = purchasedGoals + goal.name
+            appendAction(preferences, "Куплена цель «${context.getString(goal.titleRes)}»", -safePrice)
             purchased = true
         }
         return purchased
@@ -551,6 +640,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             preferences[goalId] = goal.name
             preferences[goalTitle] = context.getString(goal.titleRes)
             preferences[goalTarget] = goal.target
+            appendAction(preferences, "Выбрана цель «${context.getString(goal.titleRes)}»")
         }
     }
 
@@ -576,6 +666,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             }
             recordOptionalExpense(preferences, (-moneyChange).coerceAtLeast(0))
             recordAdditionalIncome(preferences, moneyChange.coerceAtLeast(0))
+            appendAction(preferences, "Применён результат события", moneyChange)
         }
     }
 
@@ -591,6 +682,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             preferences[cycleEndsAtMillis] =
                 System.currentTimeMillis() + GameDefaults.CYCLE_DURATION_MILLIS
             preferences[onboardingCompleted] = true
+            appendAction(preferences, "Завершён онбординг")
         }
     }
 
@@ -606,6 +698,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             preferences[hairColour] = appearance.hairColour.name
             preferences[eyeColour] = appearance.eyeColour.name
             preferences[hairStyle] = appearance.hairStyle.name
+            appendAction(preferences, "Изменён персонаж", -PET_APPEARANCE_CHANGE_PRICE)
             updated = true
         }
         return updated
@@ -624,6 +717,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             preferences[budgetTutorialCompleted] = true
             preferences[cycleEndsAtMillis] =
                 System.currentTimeMillis() + GameDefaults.CYCLE_DURATION_MILLIS
+            appendAction(preferences, "Составлен план бюджета")
         }
     }
 
@@ -647,6 +741,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 preferences[money] = checkNotNull(preferences[money]) + BUDGET_SUCCESS_REWARD
             }
             preferences[lastReviewedBudgetWeek] = completedWeek
+            appendAction(preferences, "Подведены итоги бюджета")
         }
     }
 
@@ -698,6 +793,11 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 EventFrequency.PerPeriod -> preferences[eventPeriodOccurrences] =
                     checkNotNull(preferences[eventPeriodOccurrences]) + occurrence
             }
+            appendAction(
+                preferences,
+                "Событие «${definition.title}»: ${if (accepted) "согласился" else "отказался"}",
+                if (accepted) event.appliedDeltas.money else 0,
+            )
         }
     }
 
@@ -706,6 +806,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
         if (!hasCycleExpired(currentCycleEnd, nowMillis)) return
 
         applyCompletedCycles(preferences, count = 1)
+        appendAction(preferences, "Завершён цикл")
         preferences[cycleEndsAtMillis] = nextCycleEnd(nowMillis)
     }
 

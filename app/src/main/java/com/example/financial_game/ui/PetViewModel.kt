@@ -61,7 +61,7 @@ internal fun goalPurchaseEvent(resources: GameSnapshot): GameEvent {
     )
 }
 
-enum class HomeOverlay { Menu, Budget, Goal, GoalSelection, PersonalAccount }
+enum class HomeOverlay { Menu, Budget, Goal, GoalSelection, PersonalAccount, Parent }
 
 enum class HomeSection { Food, Happiness, Energy, Shop, Tasks }
 
@@ -84,6 +84,7 @@ sealed interface PetAction {
     data object OpenBudget : PetAction
     data object OpenGoal : PetAction
     data object OpenPersonalAccount : PetAction
+    data object OpenParent : PetAction
     data object CloseOverlay : PetAction
     data class ShowEvent(val event: GameEvent) : PetAction
     data object AcceptEvent : PetAction
@@ -92,6 +93,8 @@ sealed interface PetAction {
     data class BuyCareItem(val item: CardItem) : PetAction
     data class BuyGoal(val goal: Goals, val price: Int) : PetAction
     data class SelectGoal(val goal: Goals) : PetAction
+    data object SelectCustomGoal : PetAction
+    data class AddCustomGoal(val title: String, val target: Int, val illustrationRes: Int) : PetAction
     data object ForceNextCycle : PetAction
     data class EnableTestMode(val password: String) : PetAction
     data object ClearDemoModePasswordError : PetAction
@@ -217,6 +220,7 @@ class PetViewModel @Inject constructor(
             PetAction.OpenPersonalAccount -> _state.update {
                 it.copy(overlay = HomeOverlay.PersonalAccount)
             }
+            PetAction.OpenParent -> _state.update { it.copy(overlay = HomeOverlay.Parent) }
             PetAction.CloseOverlay -> _state.update { it.copy(overlay = null) }
             is PetAction.ShowEvent -> _state.update {
                 it.copy(overlay = null, activeEvent = action.event)
@@ -233,7 +237,16 @@ class PetViewModel @Inject constructor(
                 repository.selectGoal(action.goal)
                 _state.update { it.copy(overlay = null) }
             }
-            PetAction.ForceNextCycle -> if (_state.value.isTestMode) nextCycle()
+            PetAction.SelectCustomGoal -> viewModelScope.launch {
+                repository.selectCustomGoal()
+                _state.update { it.copy(overlay = null) }
+            }
+            is PetAction.AddCustomGoal -> viewModelScope.launch {
+                repository.addCustomGoal(action.title, action.target, action.illustrationRes)
+            }
+            PetAction.ForceNextCycle -> if (_state.value.isTestMode) {
+                nextCycle()
+            }
             is PetAction.EnableTestMode -> _state.update {
                 if (action.password == DEMO_MODE_PASSWORD) {
                     it.copy(isTestMode = true, demoModePasswordError = false)

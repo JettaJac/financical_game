@@ -107,6 +107,16 @@
     <string name="cancel_action">Отмена</string>
     <string name="change_character_action">Изменить персонажа</string>
     <string name="parent_area_action">Родительская</string>
+    <string name="parent_goal_planning">Планирование цели с ребенком</string>
+    <string name="parent_game_history">История игры ребенка</string>
+    <string name="parent_history">История</string>
+    <string name="parent_cycle_history">История цикла %1$d</string>
+    <string name="parent_goal_name">Название цели</string>
+    <string name="parent_goal_amount">Сумма</string>
+    <string name="parent_plan_action">Запланировать</string>
+    <string name="parent_goal_added">Цель добавлена в список целей ребёнка</string>
+    <string name="parent_history_empty">История пока пуста</string>
+    <string name="parent_cycle_summary">Цикл %1$d · действий: %2$d</string>
     <string name="demo_mode_action">Демонстрационный режим</string>
     <string name="demo_mode_enabled">Демонстрационный режим включён</string>
     <string name="demo_mode_password_title">Демонстрационный режим</string>

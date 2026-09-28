@@ -47,4 +47,19 @@ data class GameSnapshot(
     val eventPoolHandledCycles: Set<String> = emptySet(),
     val activeJobIds: Set<String> = emptySet(),
     val jobRemainingActions: Map<String, Int> = emptyMap(),
+    val actionHistory: List<GameActionRecord> = emptyList(),
+    val customGoal: CustomGoal? = null,
+)
+
+data class GameActionRecord(
+    val timestamp: Long,
+    val cycle: Int,
+    val description: String,
+    val moneyDelta: Int = 0,
+)
+
+data class CustomGoal(
+    val title: String,
+    val target: Int,
+    val illustrationRes: Int,
 )

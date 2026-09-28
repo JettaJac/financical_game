@@ -74,6 +74,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.example.financial_game.R
 import com.example.financial_game.data.GameSnapshot
 import com.example.financial_game.domain.Goals
+import com.example.financial_game.data.CustomGoal
 import com.example.financial_game.domain.HairColour
 import com.example.financial_game.domain.HairStyle
 import com.example.financial_game.domain.PetSetup
@@ -373,9 +374,12 @@ private fun ChoiceOnboardingStep(
 internal fun GoalSelectionScreen(
     goals: List<Goals>,
     onGoalSelected: (Goals) -> Unit,
+    customGoal: CustomGoal? = null,
+    onCustomGoalSelected: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
-    val pagerState = rememberPagerState(pageCount = { goals.size })
+    val pageCount = goals.size + if (customGoal != null) 1 else 0
+    val pagerState = rememberPagerState(pageCount = { pageCount })
 
     OnboardingStage(
         animationAssetPath = TALKING_ANIMATION,
@@ -400,7 +404,8 @@ internal fun GoalSelectionScreen(
                 modifier = Modifier.fillMaxWidth().height(120.dp),
                 pageSpacing = 12.dp,
             ) { page ->
-                GoalChoiceCard(goals[page])
+                if (page < goals.size) GoalChoiceCard(goals[page])
+                else CustomGoalChoiceCard(checkNotNull(customGoal))
             }
             Spacer(Modifier.height(8.dp))
             GoalPageIndicator(
@@ -410,9 +415,27 @@ internal fun GoalSelectionScreen(
             Spacer(Modifier.height(18.dp))
             PrimaryButton(
                 text = stringResource(R.string.onboarding_select),
-                onClick = { onGoalSelected(goals[pagerState.currentPage]) },
+                onClick = {
+                    if (pagerState.currentPage < goals.size) {
+                        onGoalSelected(goals[pagerState.currentPage])
+                    } else {
+                        onCustomGoalSelected?.invoke()
+                    }
+                },
             )
         }
+    }
+}
+
+@Composable
+private fun CustomGoalChoiceCard(goal: CustomGoal) {
+    Box(
+        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(11.dp))
+            .background(Color.White).border(2.dp, OnboardingPurpleDark, RoundedCornerShape(11.dp)),
+    ) {
+        Image(painterResource(goal.illustrationRes), null, Modifier.align(Alignment.TopCenter).padding(top = 8.dp).size(84.dp), contentScale = ContentScale.Fit)
+        GoalValueBadge(goal.target.toString(), R.drawable.goal_target, null, false, Modifier.align(Alignment.TopStart).padding(8.dp))
+        Text(goal.title, Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(10.dp), color = OnboardingPurpleDark, fontFamily = NunitoFontFamily, fontSize = 18.sp, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, maxLines = 2)
     }
 }
 

@@ -274,12 +274,14 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
                     it.level <= state.resources.level &&
                         it.name !in state.resources.purchasedGoalIds
                 }
-            if (availableGoals.isEmpty()) {
+            if (availableGoals.isEmpty() && state.resources.customGoal == null) {
                 LaunchedEffect(Unit) { onAction(PetAction.CloseOverlay) }
             } else {
                 GoalSelectionScreen(
                     goals = availableGoals,
                     onGoalSelected = { onAction(PetAction.SelectGoal(it)) },
+                    customGoal = state.resources.customGoal,
+                    onCustomGoalSelected = { onAction(PetAction.SelectCustomGoal) },
                 )
             }
         }
@@ -287,6 +289,13 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
             initialState = state.resources,
             onBack = { onAction(PetAction.CloseOverlay) },
             onApply = { onAction(PetAction.ApplyPetAppearance(it)) },
+        )
+        HomeOverlay.Parent -> ParentScreen(
+            state = state.resources,
+            onBack = { onAction(PetAction.CloseOverlay) },
+            onAddGoal = { title, target, image ->
+                onAction(PetAction.AddCustomGoal(title, target, image))
+            },
         )
         null -> Unit
     }
@@ -1230,7 +1239,7 @@ private fun MenuOverlay(state: PetState, onAction: (PetAction) -> Unit) {
                     Text(stringResource(R.string.change_character_action))
                 }
                 TextButton(
-                    onClick = {},
+                    onClick = { onAction(PetAction.OpenParent) },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(stringResource(R.string.parent_area_action))

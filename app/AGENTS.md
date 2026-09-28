@@ -52,6 +52,7 @@ Keep changes consistent with the existing product and remove obsolete behavior w
 - The piggy-bank quick action opens the full-screen weekly budget overview, not a shop overlay.
 - Budget overview defaults to actual weekly income/expenses and can switch to the saved plan.
 - Other overlays/screens include menu, active goal, goal selection, character settings, and events.
+- The parent area contains a persistent action history grouped by cycle and allows a parent to add a custom goal with a title, target amount, and automatically selected illustration to the child's goal list.
 - Event action buttons use adaptive single-line text sizing.
 - Only one home overlay is active at a time.
 - There is no collar item or collar-purchase flow.

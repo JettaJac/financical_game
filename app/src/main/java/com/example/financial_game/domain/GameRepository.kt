@@ -30,6 +30,12 @@ interface GameRepository {
 
     suspend fun completeBudgetReview()
 
+    suspend fun addCustomGoal(title: String, target: Int, illustrationRes: Int)
+
+    suspend fun selectCustomGoal()
+
+    suspend fun recordAction(description: String, moneyDelta: Int = 0)
+
     suspend fun resolveScheduledEvent(
         event: ScheduledEvent,
         unlockedJob: JobDef?,
