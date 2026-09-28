@@ -362,7 +362,13 @@ private fun HomePage(state: PetState, onAction: (PetAction) -> Unit) {
         )
 
         Image(
-            painter = painterResource(R.drawable.pet_main),
+            painter = painterResource(
+                petImageResource(
+                    level = state.resources.level,
+                    colour = state.resources.hairColour,
+                    style = state.resources.hairStyle,
+                ),
+            ),
             contentDescription = stringResource(R.string.pet),
             contentScale = ContentScale.Fit,
             modifier = Modifier

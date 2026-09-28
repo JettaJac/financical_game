@@ -97,7 +97,9 @@ internal fun PersonalAccountScreen(
             contentAlignment = Alignment.BottomCenter,
         ) {
             Image(
-                painter = painterResource(R.drawable.pet_main),
+                painter = painterResource(
+                    petImageResource(initialState.level, hairColour, hairStyle),
+                ),
                 contentDescription = stringResource(R.string.pet),
                 modifier = Modifier.width(225.dp).height(294.dp),
                 contentScale = ContentScale.Fit,
@@ -292,7 +294,9 @@ private fun AppearanceChoices(
                     modifier = Modifier.weight(1f).aspectRatio(1f),
                 ) {
                     Image(
-                        painter = painterResource(R.drawable.pet_main),
+                        painter = painterResource(
+                            petImageResource(level = 1, colour = hairColour, style = style),
+                        ),
                         contentDescription = null,
                         modifier = Modifier.fillMaxSize().padding(style.previewPadding()),
                         contentScale = ContentScale.Fit,

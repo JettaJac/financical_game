@@ -18,6 +18,8 @@ import com.example.financial_game.domain.Resource
 import com.example.financial_game.domain.ShopItem
 import com.example.financial_game.domain.TaskItem
 import com.example.financial_game.domain.Goals
+import com.example.financial_game.domain.HairColour
+import com.example.financial_game.domain.HairStyle
 import com.example.financial_game.domain.canApplyEffects
 import com.example.financial_game.domain.canDeclineEvent
 import com.example.financial_game.domain.characteristicValue
@@ -45,6 +47,25 @@ import org.junit.Test
 import kotlin.math.roundToInt
 
 class PetViewModelTest {
+    @Test
+    fun pet_images_cover_every_appearance_and_use_level_three_above_level_three() {
+        val images = buildSet {
+            (1..3).forEach { level ->
+                HairColour.entries.forEach { colour ->
+                    HairStyle.entries.forEach { style ->
+                        add(petImageResource(level, colour, style))
+                    }
+                }
+            }
+        }
+
+        assertEquals(27, images.size)
+        assertEquals(
+            petImageResource(3, HairColour.Orange, HairStyle.Curly),
+            petImageResource(10, HairColour.Orange, HairStyle.Curly),
+        )
+    }
+
     @Test
     fun characteristics_decrease_by_fifty_smoothly_during_cycle() {
         val duration = GameDefaults.CYCLE_DURATION_SECONDS

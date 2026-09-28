@@ -70,6 +70,7 @@ Keep changes consistent with the existing product and remove obsolete behavior w
 
 - Name, fur colour, and fur style are editable.
 - Eye-colour controls must not be reintroduced.
+- Character artwork is selected from the saved fur colour and style. Level 1 uses level-1 art, level 2 uses level-2 art, and level 3 or higher uses level-3 art.
 
 ### Characteristics
 
@@ -105,8 +106,8 @@ Reset must return these systems to coherent defaults without leaving stale coold
 ## UI and assets
 
 - Build responsive layouts from Compose constraints; do not target one fixed phone size.
-- Visual references live under `src/main/res/references` and guide appearance, but current implemented behavior takes precedence over stale reference details.
-- Runtime raster assets live in `drawable-nodpi`; Android vector drawables live in `drawable`; source SVG files may live in `res/svg` but are not directly compiled as Android resources.
+- Visual references live under `app/references/ui` and guide appearance, but current implemented behavior takes precedence over stale reference details.
+- Runtime raster assets live in `drawable-nodpi`; Android vector drawables live in `drawable`; source SVG files live under `app/svg/source` and are not compiled as Android resources.
 - Launcher icons use `mipmap-*` plus adaptive icon definitions in `mipmap-anydpi`.
 - Preserve supplied artwork and transparency. Verify animation/image changes on an emulator when practical.
 

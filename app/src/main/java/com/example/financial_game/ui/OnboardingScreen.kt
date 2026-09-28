@@ -142,6 +142,7 @@ internal fun OnboardingScreen(
         )
         HAIR_STYLE_STEP -> HairStyleOnboardingStep(
             selected = hairStyle,
+            hairColour = hairColour,
             onSelected = { hairStyle = it },
             onContinue = {
                 onComplete(
@@ -303,6 +304,7 @@ private fun HairColourOnboardingStep(
 @Composable
 private fun HairStyleOnboardingStep(
     selected: HairStyle,
+    hairColour: HairColour,
     onSelected: (HairStyle) -> Unit,
     onContinue: () -> Unit,
     modifier: Modifier,
@@ -320,7 +322,9 @@ private fun HairStyleOnboardingStep(
                 modifier = Modifier.weight(1f).aspectRatio(1f),
             ) {
                 Image(
-                    painter = painterResource(R.drawable.pet_main),
+                    painter = painterResource(
+                        petImageResource(level = 1, colour = hairColour, style = style),
+                    ),
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize().padding(style.previewPadding()),
                     contentScale = ContentScale.Fit,
