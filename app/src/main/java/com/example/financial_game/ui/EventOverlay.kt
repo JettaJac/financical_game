@@ -5,6 +5,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.IconButton
@@ -256,14 +258,22 @@ private fun EventButton(
             containerColor = containerColor,
             contentColor = contentColor,
         ),
+        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
         shape = RoundedCornerShape(9.dp),
     ) {
         Text(
             text = text,
+            modifier = Modifier.fillMaxWidth(),
             maxLines = 1,
+            softWrap = false,
+            textAlign = TextAlign.Center,
             fontFamily = NunitoFontFamily,
             fontWeight = FontWeight.Bold,
-            fontSize = 15.sp,
+            autoSize = TextAutoSize.StepBased(
+                minFontSize = 9.sp,
+                maxFontSize = 15.sp,
+                stepSize = 0.5.sp,
+            ),
         )
     }
 }
