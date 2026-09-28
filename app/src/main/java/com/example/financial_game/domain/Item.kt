@@ -231,6 +231,8 @@ sealed interface TaskUsageLimit {
     data class Total(val count: Int) : TaskUsageLimit
 }
 
+private val OncePerCycleTaskCooldown = Cooldown.Cycles(1.0)
+
 enum class TaskItem(
     val earnings: Int,
     override val level: Int,
@@ -244,27 +246,27 @@ enum class TaskItem(
     GetReady(
         earnings = 0,
         level = 1,
-        cooldown = Cooldown.None,
+        cooldown = OncePerCycleTaskCooldown,
         careEffects = taskEffects(health = 0, happiness = -5, energy = -5),
     ),
     Lessons(
         earnings = 0,
         level = 1,
-        cooldown = Cooldown.None,
+        cooldown = OncePerCycleTaskCooldown,
         activeDays = 1..5,
         careEffects = taskEffects(health = 0, happiness = -5, energy = -5),
     ),
     Cleaning(
         earnings = 0,
         level = 1,
-        cooldown = Cooldown.None,
+        cooldown = OncePerCycleTaskCooldown,
         activeDays = 6..7,
         careEffects = taskEffects(health = 0, happiness = -5, energy = -10),
     ),
     BeadCrafts(
         earnings = 0,
         level = 2,
-        cooldown = Cooldown.None,
+        cooldown = OncePerCycleTaskCooldown,
         usageLimit = TaskUsageLimit.PerWeek(3),
         requiredTaskStorageId = "task_GetReady",
         careEffects = taskEffects(health = -3, happiness = 0, energy = -3),
@@ -272,7 +274,7 @@ enum class TaskItem(
     DeliverNewspapers(
         earnings = 25,
         level = 2,
-        cooldown = Cooldown.Cycles(5.0),
+        cooldown = OncePerCycleTaskCooldown,
         requiredTaskStorageId = "task_Lessons",
         requiresEvent = true,
         careEffects = taskEffects(health = -10, happiness = 0, energy = -10, money = 25),
@@ -280,7 +282,7 @@ enum class TaskItem(
     HandOutFlyers(
         earnings = 30,
         level = 2,
-        cooldown = Cooldown.Cycles(6.0),
+        cooldown = OncePerCycleTaskCooldown,
         usageLimit = TaskUsageLimit.Total(5),
         requiresEvent = true,
         careEffects = taskEffects(health = -8, happiness = 0, energy = -8, money = 30),
@@ -288,28 +290,28 @@ enum class TaskItem(
     RecyclePaper(
         earnings = 0,
         level = 2,
-        cooldown = Cooldown.Cycles(1.0),
+        cooldown = OncePerCycleTaskCooldown,
         requiresEvent = true,
         careEffects = taskEffects(health = -5, happiness = 0, energy = -5),
     ),
     FeedNeighboursCat(
         earnings = 40,
         level = 2,
-        cooldown = Cooldown.Cycles(7.0),
+        cooldown = OncePerCycleTaskCooldown,
         requiresEvent = true,
         careEffects = taskEffects(health = -5, happiness = 0, energy = -10, money = 40),
     ),
     WalkNeighboursDog(
         earnings = 55,
         level = 3,
-        cooldown = Cooldown.Cycles(5.0),
+        cooldown = OncePerCycleTaskCooldown,
         requiresEvent = true,
         careEffects = taskEffects(health = -15, happiness = 0, energy = -15, money = 55),
     ),
     HelpGrandfather(
         earnings = 20,
         level = 3,
-        cooldown = Cooldown.Cycles(1.0),
+        cooldown = OncePerCycleTaskCooldown,
         activeDays = 6..7,
         usageLimit = TaskUsageLimit.Total(5),
         requiresEvent = true,
@@ -318,7 +320,7 @@ enum class TaskItem(
     WaterPlants(
         earnings = 10,
         level = 3,
-        cooldown = Cooldown.Cycles(1.0),
+        cooldown = OncePerCycleTaskCooldown,
         requiresEvent = true,
         careEffects = taskEffects(health = -2, happiness = 0, energy = -2, money = 10),
     );

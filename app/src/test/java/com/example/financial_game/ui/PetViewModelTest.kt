@@ -290,6 +290,13 @@ class PetViewModelTest {
     }
 
     @Test
+    fun every_task_has_one_cycle_cooldown() {
+        TaskItem.entries.forEach { task ->
+            assertEquals(Cooldown.Cycles(1.0), task.cooldown)
+        }
+    }
+
+    @Test
     fun shop_items_match_prices_levels_and_effects() {
         assertEquals(15, ShopItem.FlowerPot.price)
         assertEquals(10, ShopItem.FavouriteMug.price)

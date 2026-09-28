@@ -275,6 +275,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 advanceExpiredCycles(preferences, nowMillis)
             }
             migrateLegacyCooldowns(preferences, nowMillis)
+            normalizeTaskCooldowns(preferences)
         }
     }
 
@@ -407,7 +408,10 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 if (periodLimit >= 0 && usesThisWeek >= periodLimit) return@edit
             }
 
-            if (instanceJobId == null) {
+            if (item is TaskItem) {
+                val unlockCycle = preferences[cooldownUnlockCycleKey(item)] ?: 0.0
+                if (unlockCycle > currentCyclePosition) return@edit
+            } else if (instanceJobId == null) {
                 when (item.cooldown) {
                     Cooldown.None -> Unit
                     is Cooldown.Cycles -> {
@@ -460,7 +464,10 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                     .coerceAtLeast(0),
             )
 
-            if (instanceJobId == null) {
+            if (item is TaskItem) {
+                // A task used at any point in this cycle unlocks exactly at the next cycle boundary.
+                preferences[cooldownUnlockCycleKey(item)] = currentCycle + 1.0
+            } else if (instanceJobId == null) {
                 when (val cooldown = item.cooldown) {
                     Cooldown.None -> Unit
                     is Cooldown.Cycles -> {
@@ -733,6 +740,15 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 preferences[newKey] = unlockCycle
             }
             preferences.remove(key)
+        }
+    }
+
+    private fun normalizeTaskCooldowns(preferences: MutablePreferences) {
+        val nextCycle = checkNotNull(preferences[currentPeriod]) + 1.0
+        TaskItem.entries.forEach { task ->
+            val key = cooldownUnlockCycleKey(task)
+            val savedUnlockCycle = preferences[key] ?: return@forEach
+            if (savedUnlockCycle > nextCycle) preferences[key] = nextCycle
         }
     }
 
