@@ -163,17 +163,17 @@ private val FoodItems = listOf(
 
 private val HappinessItems = listOf(
     CardItemUI(HappinessItem.BudgetMaster, R.drawable.budget_master, R.string.master_budget),
-    CardItemUI(HappinessItem.CatchMoney, R.drawable.food_item1, R.string.catch_money),
-    CardItemUI(HappinessItem.ChangeMoney, R.drawable.food_item1, R.string.change_money),
-    CardItemUI(HappinessItem.PlayWithBall, R.drawable.ball_game, R.string.ball_game),
+    CardItemUI(HappinessItem.CatchMoney, R.drawable.catch_money, R.string.catch_money),
+    CardItemUI(HappinessItem.ChangeMoney, R.drawable.change_money, R.string.change_money),
+    CardItemUI(HappinessItem.PlayWithBall, R.drawable.play_ball, R.string.ball_game),
     CardItemUI(HappinessItem.BoardGame, R.drawable.board_game, R.string.board_game),
-    CardItemUI(HappinessItem.MeetingWithFriends, R.drawable.food_item1, R.string.meeting_with_friends),
-    CardItemUI(HappinessItem.Trip, R.drawable.trip, R.string.trip),
+    CardItemUI(HappinessItem.MeetingWithFriends, R.drawable.meet_the_friends, R.string.meeting_with_friends),
+    CardItemUI(HappinessItem.Trip, R.drawable.trip_to_city, R.string.trip),
     CardItemUI(HappinessItem.Zoo, R.drawable.zoo, R.string.zoo),
 )
 
 private val EnergyItems = listOf(
-    CardItemUI(EnergyItem.TakeASeat, R.drawable.food_item1, R.string.seat),
+    CardItemUI(EnergyItem.TakeASeat, R.drawable.to_seat, R.string.seat),
     CardItemUI(EnergyItem.TakeANap, R.drawable.take_a_nap, R.string.take_a_nap),
     CardItemUI(EnergyItem.ListenMusic, R.drawable.listen_music, R.string.listen_music),
     CardItemUI(EnergyItem.TakeAMassage, R.drawable.massage_coach, R.string.take_a_massage),
@@ -184,27 +184,27 @@ private val EnergyItems = listOf(
 )
 
 private val ShopItems = listOf(
-    CardItemUI(ShopItem.FlowerPot, R.drawable.shop_flower_pot, R.string.shop_flower_pot),
-    CardItemUI(ShopItem.FavouriteMug, R.drawable.shop_mug, R.string.shop_favourite_mug),
-    CardItemUI(ShopItem.FloorLamp, R.drawable.shop_floor_lamp, R.string.shop_floor_lamp),
-    CardItemUI(ShopItem.SoftRug, R.drawable.shop_rug, R.string.shop_soft_rug),
-    CardItemUI(ShopItem.SoftArmchair, R.drawable.shop_armchair, R.string.shop_soft_armchair),
-    CardItemUI(ShopItem.StylishScarf, R.drawable.shop_scarf, R.string.shop_stylish_scarf),
-    CardItemUI(ShopItem.GlowingOrb, R.drawable.shop_glowing_orb, R.string.shop_glowing_orb),
+    CardItemUI(ShopItem.FlowerPot, R.drawable.flower, R.string.shop_flower_pot),
+    CardItemUI(ShopItem.FavouriteMug, R.drawable.cup, R.string.shop_favourite_mug),
+    CardItemUI(ShopItem.FloorLamp, R.drawable.lamp, R.string.shop_floor_lamp),
+    CardItemUI(ShopItem.SoftRug, R.drawable.soft_beaty, R.string.shop_soft_rug),
+    CardItemUI(ShopItem.SoftArmchair, R.drawable.soft_coach, R.string.shop_soft_armchair),
+    CardItemUI(ShopItem.StylishScarf, R.drawable.scarf, R.string.shop_stylish_scarf),
+    CardItemUI(ShopItem.GlowingOrb, R.drawable.lightning_ball, R.string.shop_glowing_orb),
 )
 
 private val TaskItems = listOf(
-    CardItemUI(TaskItem.GetReady, R.drawable.pet_main, R.string.task_get_ready),
-    CardItemUI(TaskItem.Lessons, R.drawable.budget_master, R.string.task_lessons),
-    CardItemUI(TaskItem.Cleaning, R.drawable.ic_tasks, R.string.task_cleaning),
-    CardItemUI(TaskItem.BeadCrafts, R.drawable.carbon_piggy_bank, R.string.task_bead_crafts),
-    CardItemUI(TaskItem.DeliverNewspapers, R.drawable.ic_tasks, R.string.task_deliver_newspapers),
-    CardItemUI(TaskItem.HandOutFlyers, R.drawable.ic_tasks, R.string.task_hand_out_flyers),
-    CardItemUI(TaskItem.RecyclePaper, R.drawable.carbon_piggy_bank, R.string.task_recycle_paper),
-    CardItemUI(TaskItem.FeedNeighboursCat, R.drawable.pet_main, R.string.task_feed_neighbours_cat),
-    CardItemUI(TaskItem.WalkNeighboursDog, R.drawable.trip, R.string.task_walk_neighbours_dog),
-    CardItemUI(TaskItem.HelpGrandfather, R.drawable.shop_armchair, R.string.task_help_grandfather),
-    CardItemUI(TaskItem.WaterPlants, R.drawable.shop_flower_pot, R.string.task_water_plants),
+    CardItemUI(TaskItem.GetReady, R.drawable.take_care_of_yourself, R.string.task_get_ready),
+    CardItemUI(TaskItem.Lessons, R.drawable.homework, R.string.task_lessons),
+    CardItemUI(TaskItem.Cleaning, R.drawable.mopping, R.string.task_cleaning),
+    CardItemUI(TaskItem.BeadCrafts, R.drawable.pearls, R.string.task_bead_crafts),
+    CardItemUI(TaskItem.DeliverNewspapers, R.drawable.newspapers, R.string.task_deliver_newspapers),
+    CardItemUI(TaskItem.HandOutFlyers, R.drawable.promote, R.string.task_hand_out_flyers),
+    CardItemUI(TaskItem.RecyclePaper, R.drawable.recycle, R.string.task_recycle_paper),
+    CardItemUI(TaskItem.FeedNeighboursCat, R.drawable.feed_cat, R.string.task_feed_neighbours_cat),
+    CardItemUI(TaskItem.WalkNeighboursDog, R.drawable.walking_dog, R.string.task_walk_neighbours_dog),
+    CardItemUI(TaskItem.HelpGrandfather, R.drawable.grandpa, R.string.task_help_grandfather),
+    CardItemUI(TaskItem.WaterPlants, R.drawable.feed_flower, R.string.task_water_plants),
 )
 
 

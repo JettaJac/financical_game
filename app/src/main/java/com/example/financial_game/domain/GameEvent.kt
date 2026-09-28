@@ -28,7 +28,7 @@ data class GoalPurchase(
 object GameEvents {
     val SportsSection = GameEvent(
         descriptionRes = R.string.event_sports_section_description,
-        illustrationRes = R.drawable.goal_pillow,
+        illustrationRes = R.drawable.gym,
         acceptEffects = listOf(
             Effect(Resource.Health, 10),
             Effect(Resource.Happiness, 5),

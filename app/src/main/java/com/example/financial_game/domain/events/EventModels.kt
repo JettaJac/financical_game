@@ -1,5 +1,7 @@
 package com.example.financial_game.domain.events
 
+import androidx.annotation.DrawableRes
+import com.example.financial_game.R
 import com.example.financial_game.data.GameSnapshot
 import com.example.financial_game.domain.Effect
 import com.example.financial_game.domain.Resource
@@ -42,6 +44,7 @@ data class EventDef(
     val moneyFromScript: Int?,
     val permanentExpenseDelta: Int = 0,
     val poolEligible: Boolean = false,
+    @param:DrawableRes val illustrationRes: Int = R.drawable.goal_pillow,
 ) {
     val scriptMoneyOverride: Int?
         get() = moneyFromScript

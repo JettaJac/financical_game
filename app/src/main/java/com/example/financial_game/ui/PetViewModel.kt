@@ -334,7 +334,7 @@ class PetViewModel @Inject constructor(
 private fun ScheduledEvent.asGameEvent(): GameEvent = GameEvent(
     descriptionRes = R.string.app_name,
     descriptionText = definition.title,
-    illustrationRes = R.drawable.goal_pillow,
+    illustrationRes = definition.illustrationRes,
     acceptEffects = acceptEffects,
     canDecline = definition.canDecline,
     hideRewardUntilAccept = definition.hideRewardUntilAccept,

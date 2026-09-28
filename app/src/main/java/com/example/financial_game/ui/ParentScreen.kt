@@ -1,5 +1,6 @@
 package com.example.financial_game.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -12,7 +13,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -23,6 +26,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -35,6 +39,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -70,13 +75,22 @@ internal fun ParentScreen(
             else -> ParentPage.Home
         }
     }
+    BackHandler(onBack = back)
 
     Column(
-        Modifier.fillMaxSize().background(ParentBackground).padding(horizontal = 20.dp),
+        Modifier
+            .fillMaxSize()
+            .background(ParentBackground)
+            .safeDrawingPadding()
+            .padding(horizontal = 20.dp),
     ) {
-        Spacer(Modifier.height(34.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = back) { Text("‹", color = ParentPurple, fontSize = 34.sp) }
+        Row(
+            modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconButton(onClick = back) {
+                Text("‹", color = ParentPurple, fontSize = 34.sp)
+            }
             Text(
                 text = when (page) {
                     ParentPage.History -> stringResource(R.string.parent_history)
@@ -87,6 +101,8 @@ internal fun ParentScreen(
                 fontFamily = NunitoFontFamily,
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
             )
         }
         Spacer(Modifier.height(12.dp))
@@ -133,10 +149,22 @@ private fun ParentHome(onGoal: () -> Unit, onHistory: () -> Unit) {
 @Composable
 private fun ParentCard(title: String, onClick: () -> Unit) {
     Box(
-        Modifier.fillMaxWidth().height(94.dp)
+        Modifier.fillMaxWidth().heightIn(min = 94.dp)
             .border(1.5.dp, ParentPurple, RoundedCornerShape(10.dp))
             .clickable(onClick = onClick).padding(12.dp),
-    ) { Text(title, color = ParentPurple, fontSize = 21.sp, fontWeight = FontWeight.Bold) }
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        Text(
+            text = title,
+            modifier = Modifier.fillMaxWidth(),
+            color = ParentPurple,
+            fontSize = 21.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis,
+            autoSize = TextAutoSize.StepBased(minFontSize = 14.sp, maxFontSize = 21.sp),
+        )
+    }
 }
 
 @Composable
