@@ -107,7 +107,6 @@
     <string name="personal_account_back">Назад</string>
     <string name="personal_account_name">Имя</string>
     <string name="personal_account_colour">Цвет</string>
-    <string name="personal_account_eyes">Глаза</string>
     <string name="personal_account_fur">Шерсть</string>
     <string name="apply_action">Применить</string>
 
@@ -171,7 +170,6 @@
     <string name="onboarding_next">Далее</string>
     <string name="onboarding_select">Выбрать</string>
     <string name="onboarding_choose_hair_colour">Выбери цвет</string>
-    <string name="onboarding_choose_eye_colour">Выбери цвет глаз</string>
     <string name="onboarding_choose_hair_style">Выбери шерсть питомцу</string>
     <string name="onboarding_choose_goal">Давай выберем цель</string>
     <string name="hair_colour_beige">Бежевая шерсть</string>

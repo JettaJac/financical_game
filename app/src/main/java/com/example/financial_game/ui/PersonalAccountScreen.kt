@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -51,7 +50,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.financial_game.R
 import com.example.financial_game.data.GameSnapshot
-import com.example.financial_game.domain.EyeColour
 import com.example.financial_game.domain.HairColour
 import com.example.financial_game.domain.HairStyle
 import com.example.financial_game.domain.PetAppearance
@@ -64,7 +62,7 @@ private val AccountLavender = Color(0xFFF3DEFC)
 private val AccountPageTop = Color(0xFFF8E9FF)
 private const val MAX_PET_NAME_LENGTH = 20
 
-private enum class AppearanceSection { Colour, Eyes, Fur }
+private enum class AppearanceSection { Colour, Fur }
 
 @Composable
 internal fun PersonalAccountScreen(
@@ -75,7 +73,6 @@ internal fun PersonalAccountScreen(
 ) {
     var name by rememberSaveable { mutableStateOf(initialState.name) }
     var hairColour by rememberSaveable { mutableStateOf(initialState.hairColour) }
-    var eyeColour by rememberSaveable { mutableStateOf(initialState.eyeColour) }
     var hairStyle by rememberSaveable { mutableStateOf(initialState.hairStyle) }
     var section by rememberSaveable { mutableStateOf(AppearanceSection.Fur) }
     val focusManager = LocalFocusManager.current
@@ -147,10 +144,8 @@ internal fun PersonalAccountScreen(
         AppearanceChoices(
             section = section,
             hairColour = hairColour,
-            eyeColour = eyeColour,
             hairStyle = hairStyle,
             onHairColourSelected = { hairColour = it },
-            onEyeColourSelected = { eyeColour = it },
             onHairStyleSelected = { hairStyle = it },
         )
 
@@ -158,7 +153,7 @@ internal fun PersonalAccountScreen(
         Button(
             onClick = {
                 focusManager.clearFocus()
-                onApply(PetAppearance(name, hairColour, eyeColour, hairStyle))
+                onApply(PetAppearance(name, hairColour, initialState.eyeColour, hairStyle))
             },
             enabled = name.isNotBlank() && initialState.money >= PET_APPEARANCE_CHANGE_PRICE,
             modifier = Modifier.fillMaxWidth().height(56.dp),
@@ -266,10 +261,8 @@ private fun AppearanceTabs(
 private fun AppearanceChoices(
     section: AppearanceSection,
     hairColour: HairColour,
-    eyeColour: EyeColour,
     hairStyle: HairStyle,
     onHairColourSelected: (HairColour) -> Unit,
-    onEyeColourSelected: (EyeColour) -> Unit,
     onHairStyleSelected: (HairStyle) -> Unit,
 ) {
     Row(
@@ -290,26 +283,6 @@ private fun AppearanceChoices(
                             .clip(RoundedCornerShape(8.dp))
                             .background(colour.displayColour()),
                     )
-                }
-            }
-            AppearanceSection.Eyes -> EyeColour.entries.forEach { colour ->
-                AppearanceTile(
-                    selected = colour == eyeColour,
-                    onClick = { onEyeColourSelected(colour) },
-                    modifier = Modifier.weight(1f).aspectRatio(1f),
-                ) {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Box(
-                            Modifier
-                                .size(52.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    Brush.linearGradient(
-                                        listOf(Color.White, colour.displayColour(), AccountPurpleDark),
-                                    ),
-                                ),
-                        )
-                    }
                 }
             }
             AppearanceSection.Fur -> HairStyle.entries.forEach { style ->
@@ -354,7 +327,6 @@ private fun AppearanceTile(
 
 private fun AppearanceSection.titleRes(): Int = when (this) {
     AppearanceSection.Colour -> R.string.personal_account_colour
-    AppearanceSection.Eyes -> R.string.personal_account_eyes
     AppearanceSection.Fur -> R.string.personal_account_fur
 }
 
@@ -362,12 +334,6 @@ private fun HairColour.displayColour(): Color = when (this) {
     HairColour.Beige -> Color(0xFFFFDFAE)
     HairColour.Violet -> Color(0xFFC8C1F7)
     HairColour.Orange -> Color(0xFFF4C4AA)
-}
-
-private fun EyeColour.displayColour(): Color = when (this) {
-    EyeColour.Violet -> Color(0xFF6554C4)
-    EyeColour.Green -> Color(0xFF00A79D)
-    EyeColour.Blue -> Color(0xFF398CCB)
 }
 
 private fun HairStyle.previewPadding() = when (this) {

@@ -53,7 +53,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
@@ -74,7 +73,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.example.financial_game.R
 import com.example.financial_game.data.GameSnapshot
-import com.example.financial_game.domain.EyeColour
 import com.example.financial_game.domain.Goals
 import com.example.financial_game.domain.HairColour
 import com.example.financial_game.domain.HairStyle
@@ -87,11 +85,11 @@ private const val NAME_STEP = 1
 private const val STORY_STEP = 2
 private const val GOAL_STEP = 3
 private const val HAIR_COLOUR_STEP = 4
-private const val EYE_COLOUR_STEP = 5
-private const val HAIR_STYLE_STEP = 6
+private const val HAIR_STYLE_STEP = 5
 private const val MAX_NAME_LENGTH = 20
 private const val HELLO_ANIMATION = "webm/hello_animated.webp"
 private const val TALKING_ANIMATION = "webm/talking_animated.webp"
+private const val NAME_ANIMATION = "webm/talking_default_animated.webp"
 
 private val OnboardingPurple = Color(0xFF8743D3)
 private val OnboardingPurpleDark = Color(0xFF4B2163)
@@ -106,7 +104,6 @@ internal fun OnboardingScreen(
     var step by rememberSaveable { mutableIntStateOf(INTRO_STEP) }
     var name by rememberSaveable { mutableStateOf(initialState.name) }
     var hairColour by rememberSaveable { mutableStateOf(initialState.hairColour) }
-    var eyeColour by rememberSaveable { mutableStateOf(initialState.eyeColour) }
     var hairStyle by rememberSaveable { mutableStateOf(initialState.hairStyle) }
     val availableGoals = remember(initialState.level) {
         Goals.entries.filter { it.level <= initialState.level }.ifEmpty { listOf(Goals.Pillow) }
@@ -139,12 +136,6 @@ internal fun OnboardingScreen(
         HAIR_COLOUR_STEP -> HairColourOnboardingStep(
             selected = hairColour,
             onSelected = { hairColour = it },
-            onContinue = { step = EYE_COLOUR_STEP },
-            modifier = modifier,
-        )
-        EYE_COLOUR_STEP -> EyeColourOnboardingStep(
-            selected = eyeColour,
-            onSelected = { eyeColour = it },
             onContinue = { step = HAIR_STYLE_STEP },
             modifier = modifier,
         )
@@ -156,7 +147,7 @@ internal fun OnboardingScreen(
                     PetSetup(
                         name = name.trim(),
                         hairColour = hairColour,
-                        eyeColour = eyeColour,
+                        eyeColour = initialState.eyeColour,
                         hairStyle = hairStyle,
                         goal = goal,
                     ),
@@ -230,7 +221,8 @@ private fun NameOnboardingStep(
     modifier: Modifier,
 ) {
     OnboardingStage(
-        animationAssetPath = TALKING_ANIMATION,
+        animationAssetPath = NAME_ANIMATION,
+        lowerFinnick = true,
         modifier = modifier,
     ) {
         PetSpeechBubble(
@@ -302,47 +294,6 @@ private fun HairColourOnboardingStep(
                         .clip(RoundedCornerShape(9.dp))
                         .background(colour.displayColor()),
                 )
-            }
-        }
-    }
-}
-
-@Composable
-private fun EyeColourOnboardingStep(
-    selected: EyeColour,
-    onSelected: (EyeColour) -> Unit,
-    onContinue: () -> Unit,
-    modifier: Modifier,
-) {
-    ChoiceOnboardingStep(
-        title = stringResource(R.string.onboarding_choose_eye_colour),
-        modifier = modifier,
-        onContinue = onContinue,
-    ) {
-        EyeColour.entries.forEach { colour ->
-            ChoiceTile(
-                selected = colour == selected,
-                contentDescription = stringResource(colour.labelRes()),
-                onClick = { onSelected(colour) },
-                modifier = Modifier.weight(1f).aspectRatio(1f),
-            ) {
-                Box(
-                    modifier = Modifier.fillMaxSize().background(OnboardingLavender),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Box(
-                        Modifier
-                            .size(54.dp)
-                            .clip(CircleShape)
-                            .background(
-                                Brush.linearGradient(
-                                    listOf(Color.White, colour.displayColor(), OnboardingPurpleDark),
-                                    start = Offset.Zero,
-                                    end = Offset.Infinite,
-                                ),
-                            ),
-                    )
-                }
             }
         }
     }
@@ -776,12 +727,6 @@ private fun HairColour.displayColor(): Color = when (this) {
     HairColour.Orange -> Color(0xFFF4C4AA)
 }
 
-private fun EyeColour.displayColor(): Color = when (this) {
-    EyeColour.Violet -> Color(0xFF6554C4)
-    EyeColour.Green -> Color(0xFF00A79D)
-    EyeColour.Blue -> Color(0xFF398CCB)
-}
-
 private fun HairStyle.previewPadding() = when (this) {
     HairStyle.Default -> 8.dp
     HairStyle.Hairy -> 3.dp
@@ -792,12 +737,6 @@ private fun HairColour.labelRes(): Int = when (this) {
     HairColour.Beige -> R.string.hair_colour_beige
     HairColour.Violet -> R.string.hair_colour_violet
     HairColour.Orange -> R.string.hair_colour_orange
-}
-
-private fun EyeColour.labelRes(): Int = when (this) {
-    EyeColour.Violet -> R.string.eye_colour_violet
-    EyeColour.Green -> R.string.eye_colour_green
-    EyeColour.Blue -> R.string.eye_colour_blue
 }
 
 private fun HairStyle.labelRes(): Int = when (this) {
