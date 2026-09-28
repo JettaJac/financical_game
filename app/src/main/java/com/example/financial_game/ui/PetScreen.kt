@@ -502,7 +502,7 @@ private fun HomeHeader(
                     .clickable(onClick = onGoalClick),
             )
             HeaderValue(
-                icon = R.drawable.coin_money,
+                icon = R.drawable.goal_target,
                 value = goalTarget.toString(),
                 width = metrics.headerValueWidth,
             )

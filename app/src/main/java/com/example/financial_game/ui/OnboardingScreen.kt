@@ -434,8 +434,8 @@ private fun GoalChoiceCard(goal: Goals) {
         )
         GoalValueBadge(
             text = goal.target.toString(),
-            iconRes = R.drawable.coin_money,
-            contentDescription = stringResource(R.string.coins),
+            iconRes = R.drawable.goal_target,
+            contentDescription = null,
             tintIcon = false,
             modifier = Modifier.align(Alignment.TopStart).padding(8.dp),
         )
@@ -468,7 +468,7 @@ private fun GoalChoiceCard(goal: Goals) {
 private fun GoalValueBadge(
     text: String,
     @DrawableRes iconRes: Int,
-    contentDescription: String,
+    contentDescription: String?,
     tintIcon: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
