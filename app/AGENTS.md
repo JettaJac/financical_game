@@ -71,10 +71,17 @@ Keep changes consistent with the existing product and remove obsolete behavior w
 - Name, fur colour, and fur style are editable.
 - Eye-colour controls must not be reintroduced.
 
+### Characteristics
+
+- Health, happiness, and energy start every cycle at `60 + permanent modifiers`.
+- Each characteristic decreases smoothly by 50 points over the full cycle duration, including while the app is closed.
+- Temporary item, task, and regular event effects apply only to the current cycle. Permanent shop purchases, goal rewards, and permanent-modifier events change the starting value of subsequent cycles.
+- Characteristic timing must derive from `GameDefaults.CYCLE_DURATION_SECONDS`.
+
 ## Cycle and cooldown rules
 
 - The single source of truth is `GameDefaults.CYCLE_DURATION_SECONDS`.
-- One cycle lasts 13 minutes. Milliseconds must derive from that value through `CYCLE_DURATION_MILLIS`.
+- One cycle lasts 12 minutes. Milliseconds must derive from that value through `CYCLE_DURATION_MILLIS`.
 - Do not hardcode cycle duration elsewhere in production code.
 - Cooldowns are expressed as fractions/counts of cycles via `Cooldown.Cycles`, then converted using the shared duration.
 - Active cycle deadlines persist across process death.

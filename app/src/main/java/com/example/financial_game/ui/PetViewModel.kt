@@ -19,6 +19,7 @@ import com.example.financial_game.domain.canApplyEffects
 import com.example.financial_game.domain.cycleSecondsRemaining
 import com.example.financial_game.domain.needsBudgetPlanning
 import com.example.financial_game.domain.needsBudgetReview
+import com.example.financial_game.domain.withCharacteristicsAt
 import com.example.financial_game.domain.events.EventScheduler
 import com.example.financial_game.domain.events.ScheduledEvent
 import com.example.financial_game.domain.events.canResolveScheduledEvent
@@ -189,6 +190,7 @@ class PetViewModel @Inject constructor(
                 it.copy(
                     nowMillis = nowMillis,
                     secondsRemaining = secondsRemaining,
+                    resources = it.resources.withCharacteristicsAt(secondsRemaining),
                 )
             }
 

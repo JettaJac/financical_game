@@ -20,6 +20,7 @@ import com.example.financial_game.domain.TaskItem
 import com.example.financial_game.domain.Goals
 import com.example.financial_game.domain.canApplyEffects
 import com.example.financial_game.domain.canDeclineEvent
+import com.example.financial_game.domain.characteristicValue
 import com.example.financial_game.domain.cycleSecondsRemaining
 import com.example.financial_game.domain.hasCycleExpired
 import com.example.financial_game.domain.nextCycleEnd
@@ -44,6 +45,23 @@ import org.junit.Test
 import kotlin.math.roundToInt
 
 class PetViewModelTest {
+    @Test
+    fun characteristics_decrease_by_fifty_smoothly_during_cycle() {
+        val duration = GameDefaults.CYCLE_DURATION_SECONDS
+
+        assertEquals(60, characteristicValue(60, 0, 0, duration, duration))
+        assertEquals(35, characteristicValue(60, 0, 0, duration / 2, duration))
+        assertEquals(10, characteristicValue(60, 0, 0, 0, duration))
+    }
+
+    @Test
+    fun permanent_modifier_changes_each_cycle_starting_value() {
+        val duration = GameDefaults.CYCLE_DURATION_SECONDS
+
+        assertEquals(70, characteristicValue(60, 10, 0, duration, duration))
+        assertEquals(20, characteristicValue(60, 10, 0, 0, duration))
+    }
+
     @Test
     fun three_cycle_events_are_distributed_by_cycle_fractions() {
         val duration = GameDefaults.CYCLE_DURATION_SECONDS
@@ -342,14 +360,14 @@ class PetViewModelTest {
 
     @Test
     fun countdown_is_formatted_as_minutes_and_seconds() {
-        assertEquals("13:00", formatCountdown(TIMER_SECONDS))
+        assertEquals("12:00", formatCountdown(TIMER_SECONDS))
         assertEquals("00:00", formatCountdown(0))
     }
 
     @Test
     fun cycle_time_is_rounded_up_to_minutes() {
-        assertEquals(13, roundedMinutesRemaining(780))
-        assertEquals(13, roundedMinutesRemaining(779))
+        assertEquals(12, roundedMinutesRemaining(TIMER_SECONDS))
+        assertEquals(12, roundedMinutesRemaining(TIMER_SECONDS - 1))
         assertEquals(1, roundedMinutesRemaining(60))
         assertEquals(1, roundedMinutesRemaining(1))
         assertEquals(0, roundedMinutesRemaining(0))
@@ -424,12 +442,12 @@ class PetViewModelTest {
     fun active_cycle_progress_is_preserved_when_duration_changes() {
         val now = 1_000L
         assertEquals(
-            now + 390_000L,
+            now + 360_000L,
             migratedCycleEnd(
                 cycleEndsAtMillis = now + 600_000L,
                 nowMillis = now,
                 previousDurationSeconds = 1_200,
-                currentDurationSeconds = 780,
+                currentDurationSeconds = 720,
             ),
         )
     }
@@ -481,7 +499,9 @@ class PetViewModelTest {
     @Test
     fun cooldown_remaining_is_shown_in_seconds() {
         assertEquals(
-            CooldownRemaining.Time(234),
+            CooldownRemaining.Time(
+                (GameDefaults.CYCLE_DURATION_SECONDS * 0.3).roundToInt(),
+            ),
             cooldownRemaining(
                 cooldown = Cooldown.Cycles(0.3),
                 unlockCycle = 1.3,
