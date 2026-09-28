@@ -351,19 +351,6 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
         }
     }
 
-    override suspend fun buyCollar() {
-        context.gameDataStore.edit { preferences ->
-            val currentMoney = checkNotNull(preferences[money])
-            val discounted = NEXT_PURCHASE_DISCOUNT_FLAG in checkNotNull(preferences[eventFlags])
-            val price = if (discounted) COLLAR_PRICE / 2 else COLLAR_PRICE
-            if (currentMoney >= price) {
-                preferences[money] = moneyAfterPurchase(currentMoney, price)
-                recordOptionalExpense(preferences, price)
-                if (discounted) consumeFlag(preferences, NEXT_PURCHASE_DISCOUNT_FLAG)
-            }
-        }
-    }
-
     override suspend fun buyCareItem(item: CardItem) {
         context.gameDataStore.edit { preferences ->
             val currentCycle = checkNotNull(preferences[currentPeriod])
@@ -829,7 +816,6 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
     }
 
     private companion object {
-        const val COLLAR_PRICE = 100
         const val BUDGET_SUCCESS_REWARD = 10
         const val LEGACY_GOAL_TITLE = "GOAL"
         const val LEGACY_GOAL_TARGET = 1

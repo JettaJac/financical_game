@@ -31,7 +31,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 internal const val TIMER_SECONDS = GameDefaults.CYCLE_DURATION_SECONDS
-internal const val COLLAR_PRICE = 100
 
 internal fun formatCountdown(totalSeconds: Int): String {
     val minutes = totalSeconds / 60
@@ -61,7 +60,7 @@ internal fun goalPurchaseEvent(resources: GameSnapshot): GameEvent {
     )
 }
 
-enum class HomeOverlay { Menu, Shop, Goal, GoalSelection, PersonalAccount }
+enum class HomeOverlay { Menu, Budget, Goal, GoalSelection, PersonalAccount }
 
 enum class HomeSection { Food, Happiness, Energy, Shop, Tasks }
 
@@ -79,7 +78,7 @@ data class PetState(
 sealed interface PetAction {
     data class SelectSection(val section: HomeSection) : PetAction
     data object OpenMenu : PetAction
-    data object OpenShop : PetAction
+    data object OpenBudget : PetAction
     data object OpenGoal : PetAction
     data object OpenPersonalAccount : PetAction
     data object CloseOverlay : PetAction
@@ -87,7 +86,6 @@ sealed interface PetAction {
     data object AcceptEvent : PetAction
     data object DeclineEvent : PetAction
     data object SkipEvent : PetAction
-    data object BuyCollar : PetAction
     data class BuyCareItem(val item: CardItem) : PetAction
     data class BuyGoal(val goal: Goals, val price: Int) : PetAction
     data class SelectGoal(val goal: Goals) : PetAction
@@ -207,7 +205,7 @@ class PetViewModel @Inject constructor(
         when (action) {
             is PetAction.SelectSection -> _state.update { it.copy(selectedSection = action.section) }
             PetAction.OpenMenu -> _state.update { it.copy(overlay = HomeOverlay.Menu) }
-            PetAction.OpenShop -> _state.update { it.copy(overlay = HomeOverlay.Shop) }
+            PetAction.OpenBudget -> _state.update { it.copy(overlay = HomeOverlay.Budget) }
             PetAction.OpenGoal -> _state.update { it.copy(overlay = HomeOverlay.Goal) }
             PetAction.OpenPersonalAccount -> _state.update {
                 it.copy(overlay = HomeOverlay.PersonalAccount)
@@ -222,7 +220,6 @@ class PetViewModel @Inject constructor(
                 if (it.activeEvent?.showCloseButton == true) it.copy(activeEvent = null) else it
             }
             PetAction.Exit -> _state.update { it.copy(exitRequested = true) }
-            PetAction.BuyCollar -> viewModelScope.launch { repository.buyCollar() }
             is PetAction.BuyCareItem -> viewModelScope.launch { repository.buyCareItem(action.item) }
             is PetAction.BuyGoal -> purchaseGoal(GoalPurchase(action.goal, action.price))
             is PetAction.SelectGoal -> viewModelScope.launch {

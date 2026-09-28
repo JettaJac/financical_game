@@ -327,11 +327,6 @@ class PetViewModelTest {
     }
 
     @Test
-    fun collar_price_matches_spec() {
-        assertEquals(100, COLLAR_PRICE)
-    }
-
-    @Test
     fun recurring_income_and_expenses_are_applied_only_at_week_end() {
         assertEquals(85, GameDefaults.POCKET_MONEY_INCOME)
         assertEquals(30, GameDefaults.SCHOOL_LUNCH_EXPENSE)

@@ -64,6 +64,15 @@
     <string name="budget_period_next">Далее</string>
     <string name="budget_success_message">Ты молодец! Твой бюджет точен, лови 10 монет!</string>
     <string name="budget_collect_reward">Забрать монеты</string>
+    <string name="budget_current">Текущий бюджет</string>
+    <string name="budget_planned_title">Запланированный бюджет</string>
+    <string name="budget_show_planned">Запланированный бюджет</string>
+    <string name="budget_show_current">Текущий бюджет</string>
+    <string name="budget_coins">монеты</string>
+    <string name="budget_mandatory">Обязательные</string>
+    <string name="budget_optional_short">Необязательные</string>
+    <string name="budget_unplanned">Непредвиденные</string>
+    <string name="budget_no_operations">Нет операций</string>
 
     <!-- Home: sections -->
     <string name="health">Здоровье</string>
@@ -113,8 +122,6 @@
     <!-- Store -->
     <string name="store">МАГАЗИН</string>
     <string name="close_store">Закрыть магазин</string>
-    <string name="collar">ошейник</string>
-    <string name="collar_price">100</string>
     <string name="buy">Купить</string>
     <string name="buy_price">Купить · %1$d ₽</string>
     <string name="cooldown_remaining">Через %1$s</string>

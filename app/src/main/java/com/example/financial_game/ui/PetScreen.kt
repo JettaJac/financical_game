@@ -247,15 +247,9 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
 
     when (state.overlay) {
         HomeOverlay.Menu -> MenuOverlay(onAction)
-        HomeOverlay.Shop -> ShopOverlay(
-            canBuy = state.resources.money >= if (
-                "nextPurchaseHalfPrice" in state.resources.eventFlags
-            ) {
-                COLLAR_PRICE / 2
-            } else {
-                COLLAR_PRICE
-            },
-            onAction = onAction,
+        HomeOverlay.Budget -> BudgetOverviewScreen(
+            state = state.resources,
+            onBack = { onAction(PetAction.CloseOverlay) },
         )
         HomeOverlay.Goal -> {
             val goal = Goals.fromStorageId(state.resources.goalId)
@@ -346,7 +340,7 @@ private fun HomePage(state: PetState, onAction: (PetAction) -> Unit) {
 
         QuickActions(
             secondsRemaining = state.secondsRemaining,
-            onShopClick = { onAction(PetAction.OpenShop) },
+            onShopClick = { onAction(PetAction.OpenBudget) },
             onSkipCycle = { onAction(PetAction.ForceNextCycle )},
             tileSize = metrics.quickActionSize,
             modifier = Modifier
@@ -1270,42 +1264,6 @@ private fun MenuOverlay(onAction: (PetAction) -> Unit) {
                 }
             },
         )
-    }
-}
-
-@Composable
-private fun ShopOverlay(canBuy: Boolean, onAction: (PetAction) -> Unit) {
-    Dialog(onDismissRequest = { onAction(PetAction.CloseOverlay) }) {
-        Surface(shape = RoundedCornerShape(24.dp), tonalElevation = 8.dp) {
-            Box(Modifier.fillMaxWidth().padding(20.dp)) {
-                IconButton(
-                    onClick = { onAction(PetAction.CloseOverlay) },
-                    modifier = Modifier.align(Alignment.TopEnd),
-                ) {
-                    Text("×", fontSize = 30.sp)
-                }
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Text(
-                        stringResource(R.string.store),
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    Box(Modifier.size(88.dp).background(Color.Black))
-                    Text(stringResource(R.string.collar), style = MaterialTheme.typography.titleMedium)
-                    Text(stringResource(R.string.collar_price))
-                    Button(
-                        onClick = { onAction(PetAction.BuyCollar) },
-                        enabled = canBuy,
-                    ) {
-                        Text(stringResource(R.string.buy))
-                    }
-                }
-            }
-        }
     }
 }
 

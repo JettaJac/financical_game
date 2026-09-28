@@ -14,8 +14,6 @@ interface GameRepository {
 
     suspend fun advanceExpiredCycles(nowMillis: Long)
 
-    suspend fun buyCollar()
-
     suspend fun buyCareItem(item: CardItem)
 
     suspend fun buyGoal(goal: Goals, price: Int): Boolean
