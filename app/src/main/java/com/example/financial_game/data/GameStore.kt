@@ -34,6 +34,7 @@ import com.example.financial_game.domain.nextCycleEnd
 import com.example.financial_game.domain.levelAfterGoalPurchase
 import com.example.financial_game.domain.moneyAfterPurchase
 import com.example.financial_game.domain.moneyAfterCompletedCycles
+import com.example.financial_game.domain.migratedCycleEnd
 import com.example.financial_game.domain.isAvailable
 import com.example.financial_game.domain.weekForPeriod
 import com.example.financial_game.domain.budgetWeekForPeriod
@@ -70,6 +71,7 @@ private const val JOB_ALLOWED_CYCLES_PREFIX = "job_allowed_cycles_"
 private const val JOB_PERIOD_LIMIT_PREFIX = "job_period_limit_"
 private const val NEXT_PURCHASE_DISCOUNT_FLAG = "nextPurchaseHalfPrice"
 private const val BRAIDED_BRACELETS_FLAG = "braidedBracelets"
+private const val LEGACY_CYCLE_DURATION_SECONDS = 20 * 60
 
 private fun cooldownUnlockCycleKey(storageId: String) =
     doublePreferencesKey("$COOLDOWN_UNLOCK_CYCLE_PREFIX$storageId")
@@ -120,6 +122,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
     private val level = intPreferencesKey("level")
     private val currentPeriod = intPreferencesKey("current_period")
     private val cycleEndsAtMillis = longPreferencesKey("cycle_ends_at_millis")
+    private val cycleDurationSeconds = intPreferencesKey("cycle_duration_seconds")
     private val onboardingCompleted = booleanPreferencesKey("onboarding_completed")
     private val eventUnlockedTaskIds = stringSetPreferencesKey("event_unlocked_task_ids")
     private val budgetPlanWeek = intPreferencesKey("budget_plan_week")
@@ -223,7 +226,18 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             if (preferences[currentPeriod] == null) preferences[currentPeriod] = GameDefaults.CURRENT_PERIOD
             if (preferences[cycleEndsAtMillis] == null) {
                 preferences[cycleEndsAtMillis] = nowMillis + GameDefaults.CYCLE_DURATION_MILLIS
+            } else {
+                val previousDuration =
+                    preferences[cycleDurationSeconds] ?: LEGACY_CYCLE_DURATION_SECONDS
+                if (previousDuration != GameDefaults.CYCLE_DURATION_SECONDS) {
+                    preferences[cycleEndsAtMillis] = migratedCycleEnd(
+                        cycleEndsAtMillis = checkNotNull(preferences[cycleEndsAtMillis]),
+                        nowMillis = nowMillis,
+                        previousDurationSeconds = previousDuration,
+                    )
+                }
             }
+            preferences[cycleDurationSeconds] = GameDefaults.CYCLE_DURATION_SECONDS
             if (preferences[onboardingCompleted] == null) preferences[onboardingCompleted] = false
             if (preferences[plannedOptionalExpenses] == null) preferences[plannedOptionalExpenses] = 0
             if (preferences[actualOptionalExpenses] == null) preferences[actualOptionalExpenses] = 0
@@ -332,6 +346,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             preferences[budgetTutorialCompleted] = false
             preferences[cycleEndsAtMillis] =
                 System.currentTimeMillis() + GameDefaults.CYCLE_DURATION_MILLIS
+            preferences[cycleDurationSeconds] = GameDefaults.CYCLE_DURATION_SECONDS
             preferences[onboardingCompleted] = false
         }
     }

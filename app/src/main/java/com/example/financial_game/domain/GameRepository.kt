@@ -59,6 +59,25 @@ internal fun hasCycleExpired(cycleEndsAtMillis: Long, nowMillis: Long): Boolean 
 internal fun nextCycleEnd(nowMillis: Long): Long =
     nowMillis + GameDefaults.CYCLE_DURATION_MILLIS
 
+internal fun migratedCycleEnd(
+    cycleEndsAtMillis: Long,
+    nowMillis: Long,
+    previousDurationSeconds: Int,
+    currentDurationSeconds: Int = GameDefaults.CYCLE_DURATION_SECONDS,
+): Long {
+    if (cycleEndsAtMillis <= nowMillis) return cycleEndsAtMillis
+    if (previousDurationSeconds <= 0 || currentDurationSeconds <= 0) {
+        return nowMillis + currentDurationSeconds.coerceAtLeast(0) * 1_000L
+    }
+    val previousDurationMillis = previousDurationSeconds * 1_000L
+    val currentDurationMillis = currentDurationSeconds * 1_000L
+    val remainingMillis = (cycleEndsAtMillis - nowMillis).coerceAtMost(previousDurationMillis)
+    val scaledRemainingMillis =
+        (remainingMillis * currentDurationMillis + previousDurationMillis - 1) /
+            previousDurationMillis
+    return nowMillis + scaledRemainingMillis
+}
+
 internal fun cycleSecondsRemaining(cycleEndsAtMillis: Long, nowMillis: Long): Int {
     val remainingMillis = (cycleEndsAtMillis - nowMillis).coerceAtLeast(0L)
     return ((remainingMillis + 999L) / 1_000L)

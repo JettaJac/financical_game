@@ -1,7 +1,7 @@
 package com.example.financial_game.domain
 
 object GameDefaults {
-    const val CYCLE_DURATION_SECONDS = 20 * 60
+    const val CYCLE_DURATION_SECONDS = 13 * 60
     const val CYCLE_DURATION_MILLIS = CYCLE_DURATION_SECONDS * 1_000L
     const val NAME = "Финник"
     const val MONEY = 30

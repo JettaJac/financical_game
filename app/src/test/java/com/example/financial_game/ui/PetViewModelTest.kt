@@ -23,6 +23,7 @@ import com.example.financial_game.domain.canDeclineEvent
 import com.example.financial_game.domain.cycleSecondsRemaining
 import com.example.financial_game.domain.hasCycleExpired
 import com.example.financial_game.domain.nextCycleEnd
+import com.example.financial_game.domain.migratedCycleEnd
 import com.example.financial_game.domain.isAvailable
 import com.example.financial_game.domain.MandatoryBudget
 import com.example.financial_game.domain.budgetPeriodResult
@@ -313,14 +314,14 @@ class PetViewModelTest {
 
     @Test
     fun countdown_is_formatted_as_minutes_and_seconds() {
-        assertEquals("20:00", formatCountdown(TIMER_SECONDS))
+        assertEquals("13:00", formatCountdown(TIMER_SECONDS))
         assertEquals("00:00", formatCountdown(0))
     }
 
     @Test
     fun cycle_time_is_rounded_up_to_minutes() {
-        assertEquals(20, roundedMinutesRemaining(1_200))
-        assertEquals(20, roundedMinutesRemaining(1_199))
+        assertEquals(13, roundedMinutesRemaining(780))
+        assertEquals(13, roundedMinutesRemaining(779))
         assertEquals(1, roundedMinutesRemaining(60))
         assertEquals(1, roundedMinutesRemaining(1))
         assertEquals(0, roundedMinutesRemaining(0))
@@ -386,8 +387,22 @@ class PetViewModelTest {
 
         assertEquals(true, hasCycleExpired(oldDeadline, muchLater))
         assertEquals(
-            muchLater + 1_200_000L,
+            muchLater + GameDefaults.CYCLE_DURATION_MILLIS,
             nextCycleEnd(muchLater),
+        )
+    }
+
+    @Test
+    fun active_cycle_progress_is_preserved_when_duration_changes() {
+        val now = 1_000L
+        assertEquals(
+            now + 390_000L,
+            migratedCycleEnd(
+                cycleEndsAtMillis = now + 600_000L,
+                nowMillis = now,
+                previousDurationSeconds = 1_200,
+                currentDurationSeconds = 780,
+            ),
         )
     }
 
@@ -438,12 +453,12 @@ class PetViewModelTest {
     @Test
     fun cooldown_remaining_is_shown_in_seconds() {
         assertEquals(
-            CooldownRemaining.Time(360),
+            CooldownRemaining.Time(234),
             cooldownRemaining(
                 cooldown = Cooldown.Cycles(0.3),
                 unlockCycle = 1.3,
                 currentPeriod = 1,
-                cycleSecondsRemaining = 1_200,
+                cycleSecondsRemaining = GameDefaults.CYCLE_DURATION_SECONDS,
             ),
         )
     }
