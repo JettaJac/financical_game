@@ -355,7 +355,10 @@ private fun HomePage(state: PetState, onAction: (PetAction) -> Unit) {
             text = stringResource(R.string.goal_level, state.resources.level),
             modifier = Modifier
                 .align(Alignment.TopCenter)
-                .padding(top = metrics.headerHeight + 2.dp),
+                .padding(top = metrics.headerHeight + 2.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .clickable { onAction(PetAction.OpenGoal) }
+                .padding(horizontal = 18.dp, vertical = 6.dp),
             color = HomePurpleDark,
             fontFamily = NunitoFontFamily,
             fontSize = 15.sp,
@@ -511,7 +514,11 @@ private fun HomeHeader(
         }
 
         Row(
-            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .clickable(onClick = onGoalClick),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             HeaderValue(
@@ -530,8 +537,7 @@ private fun HomeHeader(
                     .weight(1f)
                     .padding(horizontal = 9.dp)
                     .height(8.dp)
-                    .clip(CircleShape)
-                    .clickable(onClick = onGoalClick),
+                    .clip(CircleShape),
             )
             HeaderValue(
                 icon = R.drawable.goal_target,
@@ -738,6 +744,7 @@ private fun HomeBottomPanel(
                     taskWeeklyUseCounts = state.resources.taskWeeklyUseCounts,
                     taskUseWeeks = state.resources.taskUseWeeks,
                     eventUnlockedTaskIds = state.resources.eventUnlockedTaskIds,
+                    currentEnergy = state.resources.energy,
                 )
             }
         }
@@ -972,6 +979,7 @@ private fun CardRow(
     taskUseWeeks: Map<String, Int> = emptyMap(),
     eventUnlockedTaskIds: Set<String> = emptySet(),
     nextPurchaseHalfPrice: Boolean = false,
+    currentEnergy: Int = 100,
     modifier: Modifier = Modifier,
 ) {
     if (items.isEmpty()) return
@@ -1030,6 +1038,7 @@ private fun CardRow(
                                 (product.item is TaskItem &&
                                     product.item.storageId in eventUnlockedTaskIds)) &&
                             taskAvailable &&
+                            (product.item !is TaskItem || currentEnergy > 10) &&
                             !alreadyPurchased,
                         alreadyPurchased = alreadyPurchased,
                         remainingCooldown = remainingCooldown,

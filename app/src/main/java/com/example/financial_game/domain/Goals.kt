@@ -32,7 +32,7 @@ enum class Goals(
         titleRes = R.string.goal_treat_title,
         target = 100,
         descriptionRes = R.string.goal_treat_description,
-        illustrationRes = R.drawable.food_item4,
+        illustrationRes = R.drawable.treat,
         goalEffects = listOf(Effect(resource = Resource.Health, increase = 10)),
         level = 1,
     ),

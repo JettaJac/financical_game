@@ -29,6 +29,7 @@ import com.example.financial_game.domain.ShopItem
 import com.example.financial_game.domain.TaskItem
 import com.example.financial_game.domain.cooldownUnlockCycle
 import com.example.financial_game.domain.currentCyclePosition
+import com.example.financial_game.domain.characteristicValue
 import com.example.financial_game.domain.cycleSecondsRemaining
 import com.example.financial_game.domain.hasCycleExpired
 import com.example.financial_game.domain.nextCycleEnd
@@ -573,12 +574,13 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
     override suspend fun buyCareItem(item: CardItem) {
         context.gameDataStore.edit { preferences ->
             val currentCycle = checkNotNull(preferences[currentPeriod])
+            val secondsRemaining = cycleSecondsRemaining(
+                cycleEndsAtMillis = checkNotNull(preferences[cycleEndsAtMillis]),
+                nowMillis = System.currentTimeMillis(),
+            )
             val currentCyclePosition = currentCyclePosition(
                 currentPeriod = currentCycle,
-                cycleSecondsRemaining = cycleSecondsRemaining(
-                    cycleEndsAtMillis = checkNotNull(preferences[cycleEndsAtMillis]),
-                    nowMillis = System.currentTimeMillis(),
-                ),
+                cycleSecondsRemaining = secondsRemaining,
             )
             val purchasedShopItems = checkNotNull(preferences[purchasedShopItemIds])
             if (item is ShopItem && item.storageId in purchasedShopItems) return@edit
@@ -587,6 +589,13 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             } else {
                 null
             }
+            if (item is TaskItem && characteristicValue(
+                    baseValue = GameDefaults.ENERGY,
+                    permanentModifier = checkNotNull(preferences[energyModifier]),
+                    cycleAdjustment = checkNotNull(preferences[energyCycleAdjustment]),
+                    secondsRemaining = secondsRemaining,
+                ) <= 10
+            ) return@edit
             if (item is TaskItem && !item.isAvailable(
                     currentPeriod = currentCycle,
                     totalUses = preferences[taskUseCountKey(item)] ?: 0,

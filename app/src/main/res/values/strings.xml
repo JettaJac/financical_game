@@ -27,7 +27,7 @@
     <!-- Weekly budget planning -->
     <string name="budget_intro_message">Давай составим план бюджета, чтобы мне хватило на всё!</string>
     <string name="budget_make_plan">Составить план</string>
-    <string name="budget_choose_category_guide">Теперь давай выберем, к какой категории ты отнесёшь эту позицию</string>
+    <string name="budget_choose_category_guide">Куда отнесем это: к доходам или расходам?</string>
     <string name="budget_choose_frequency_guide">Отличный выбор! Теперь уточни, к какому виду она относится</string>
     <string name="budget_choose_category">Выбери категорию</string>
     <string name="budget_choose_subcategory">Выбери подкатегорию</string>
@@ -35,7 +35,7 @@
     <string name="budget_expenses">Расходы</string>
     <string name="budget_recurring">Постоянные</string>
     <string name="budget_irregular">Нерегулярные</string>
-    <string name="budget_savings">Накопления</string>
+    <string name="budget_savings">Накопления (вклад)</string>
     <string name="budget_mandatory_success">Отлично! Все обязательные доходы и расходы распределены правильно</string>
     <string name="budget_optional_guide">Теперь запланируем необязательные расходы на неделю. Предлагаю начать с 20 монет</string>
     <string name="budget_optional_too_high">Так расходов получится больше доходов. Запланируй не больше %1$d монет, чтобы итоговый баланс был не ниже нуля.</string>
@@ -207,7 +207,7 @@
 
     <!-- Onboarding -->
     <string name="onboarding_greeting">Привет!\nЯ Финник</string>
-    <string name="onboarding_explanation">Я помогу тебе разобраться,\nкуда деньги уходят\nи как накопить на мечту.\nНачнём?</string>
+    <string name="onboarding_explanation">Привет! Я помогу тебе узнать, откуда берутся деньги, как их лучше потратить и как копить на свою мечту. Начнем?</string>
     <string name="onboarding_start">Погнали!</string>
     <string name="onboarding_name_question">Как ты хочешь\nменя назвать?</string>
     <string name="onboarding_next">Далее</string>
@@ -233,7 +233,7 @@
 
     <string name="goal_pillow_title">Купить питомцу подушку</string>
     <string name="goal_pillow_description">Питомец устаёт. Если купить ему уютную подушку, он будет отдыхать лучше и реже грустить. Добавляется +10 к энергии на постоянной основе.</string>
-    <string name="goal_ball_title">Копить на мяч для игры</string>
+    <string name="goal_ball_title">Купить мяч для игры</string>
     <string name="goal_ball_description">Твоя цель — мячик для друга. Копи понемногу, и скоро питомец будет весело прыгать! +10 радости</string>
     <string name="goal_treat_title">Купить любимую вкусняшку</string>
     <string name="goal_treat_description">Твой питомец любит вкусняшки. Порадуй его!! +10 еда Потом цель ставиться при достижение каждого нового уровня</string>
