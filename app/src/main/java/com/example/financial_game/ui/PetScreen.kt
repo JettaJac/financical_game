@@ -1181,7 +1181,7 @@ private fun ProductCard(
                 }
                 else -> {
                     Text(
-                        text = stringResource(R.string.buy),
+                        text = stringResource(product.item.actionLabelRes()),
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
@@ -1203,6 +1203,32 @@ private fun ProductCard(
             }
         }
     }
+}
+
+@StringRes
+private fun CardItem.actionLabelRes(): Int = when (this) {
+    is FoodItem -> R.string.action_eat
+    HappinessItem.BudgetMaster,
+    HappinessItem.CatchMoney,
+    HappinessItem.ChangeMoney,
+    HappinessItem.PlayWithBall,
+    HappinessItem.BoardGame,
+    -> R.string.action_play
+    HappinessItem.MeetingWithFriends -> R.string.action_meet
+    HappinessItem.Trip -> R.string.action_go
+    HappinessItem.Zoo -> R.string.action_visit
+    EnergyItem.TakeASeat -> R.string.action_rest
+    EnergyItem.TakeANap -> R.string.action_sleep
+    EnergyItem.ListenMusic -> R.string.action_listen
+    EnergyItem.HotBath -> R.string.action_take
+    EnergyItem.TakeAMassage,
+    EnergyItem.SPA,
+    EnergyItem.BodyMassage,
+    EnergyItem.Yoga,
+    -> R.string.action_do
+    is ShopItem -> R.string.buy
+    is TaskItem -> R.string.task_do
+    else -> R.string.buy
 }
 
 @Composable

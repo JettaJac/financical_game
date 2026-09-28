@@ -205,17 +205,17 @@ enum class EnergyItem(
         Effect(resource = Resource.Happiness, increase = 3),
         Effect(resource = Resource.Energy, increase = 22),
     )),
-    SPA(price = 1000, cooldown = Cooldown.Cycles(0.5), level = 3, careEffects = listOf(
+    SPA(price = 55, cooldown = Cooldown.Cycles(0.5), level = 3, careEffects = listOf(
         Effect(resource = Resource.Health, increase = 0),
         Effect(resource = Resource.Happiness, increase = 5),
         Effect(resource = Resource.Energy, increase = 22),
     )),
-    BodyMassage(price = 1000, cooldown = Cooldown.Cycles(1.0), level = 3, careEffects = listOf(
+    BodyMassage(price = 55, cooldown = Cooldown.Cycles(1.0), level = 3, careEffects = listOf(
         Effect(resource = Resource.Health, increase = 0),
         Effect(resource = Resource.Happiness, increase = 5),
         Effect(resource = Resource.Energy, increase = 22),
     )),
-    Yoga(price = 1000, cooldown = Cooldown.Cycles(1.0), level = 3, careEffects = listOf(
+    Yoga(price = 55, cooldown = Cooldown.Cycles(1.0), level = 3, careEffects = listOf(
         Effect(resource = Resource.Health, increase = 0),
         Effect(resource = Resource.Happiness, increase = 5),
         Effect(resource = Resource.Energy, increase = 22),

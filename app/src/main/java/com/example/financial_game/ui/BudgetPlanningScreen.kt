@@ -262,7 +262,12 @@ private fun BudgetClassificationScreen(
                 }
             } else {
                 Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                    BudgetFrequency.entries.forEach { frequency ->
+                    val availableFrequencies = if (entry.category == BudgetCategory.Income) {
+                        BudgetFrequency.entries.filterNot { it == BudgetFrequency.Savings }
+                    } else {
+                        BudgetFrequency.entries
+                    }
+                    availableFrequencies.forEach { frequency ->
                         BudgetChoiceButton(
                             text = stringResource(frequency.labelRes(entry.category)),
                             onClick = { onFrequencySelected(frequency) },

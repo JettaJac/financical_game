@@ -29,7 +29,7 @@
     <string name="budget_make_plan">Составить план</string>
     <string name="budget_choose_category_guide">Куда отнесем это: к доходам или расходам?</string>
     <string name="budget_choose_frequency_guide">Отличный выбор! Теперь уточни, к какому виду она относится</string>
-    <string name="budget_choose_category">Выбери категорию</string>
+    <string name="budget_choose_category">К чему относится?</string>
     <string name="budget_choose_subcategory">Выбери подкатегорию</string>
     <string name="budget_income">Доходы</string>
     <string name="budget_expenses">Расходы</string>
@@ -160,6 +160,16 @@
     <string name="close_store">Закрыть магазин</string>
     <string name="buy">Купить</string>
     <string name="buy_price">Купить · %1$d ₽</string>
+    <string name="action_eat">Съесть</string>
+    <string name="action_play">Сыграть</string>
+    <string name="action_do">Сделать</string>
+    <string name="action_meet">Встретиться</string>
+    <string name="action_go">Поехать</string>
+    <string name="action_visit">Сходить</string>
+    <string name="action_rest">Отдохнуть</string>
+    <string name="action_sleep">Поспать</string>
+    <string name="action_listen">Послушать</string>
+    <string name="action_take">Принять</string>
     <string name="cooldown_remaining">Через %1$s</string>
     <string name="shop_flower_pot">Горшок с цветком</string>
     <string name="shop_favourite_mug">Любимая кружка</string>
@@ -188,7 +198,7 @@
     <!-- Happiness items -->
     <string name="master_budget">МастерБюджета</string>
     <string name="catch_money">Поймай деньги</string>
-    <string name="change_money">Игра разменяй купюре</string>
+    <string name="change_money">Игра «Разменяй купюры»</string>
     <string name="ball_game">Поиграть в мячик</string>
     <string name="board_game">Настольная игра</string>
     <string name="meeting_with_friends">Встреча с друзьями</string>
