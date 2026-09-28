@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -43,6 +44,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -249,8 +251,9 @@ private fun BudgetClassificationScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                     BudgetFrequency.entries.forEach { frequency ->
                         BudgetChoiceButton(
-                            text = stringResource(frequency.labelRes()),
+                            text = stringResource(frequency.labelRes(entry.category)),
                             onClick = { onFrequencySelected(frequency) },
+                            adaptiveText = entry.category == BudgetCategory.Expense,
                             modifier = Modifier.weight(1f),
                         )
                     }
@@ -558,15 +561,35 @@ private fun BudgetSpeechBubble(text: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun BudgetChoiceButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun BudgetChoiceButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    adaptiveText: Boolean = false,
+) {
     Button(
         onClick = onClick,
         modifier = modifier.height(46.dp),
         colors = ButtonDefaults.buttonColors(containerColor = BudgetPurple),
         shape = RoundedCornerShape(8.dp),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 4.dp),
+        contentPadding = PaddingValues(horizontal = 4.dp),
     ) {
-        Text(text = text, fontSize = 12.sp, maxLines = 1)
+        if (adaptiveText) {
+            Text(
+                text = text,
+                modifier = Modifier.fillMaxWidth(),
+                maxLines = 1,
+                softWrap = false,
+                textAlign = TextAlign.Center,
+                autoSize = TextAutoSize.StepBased(
+                    minFontSize = 8.sp,
+                    maxFontSize = 12.sp,
+                    stepSize = 0.5.sp,
+                ),
+            )
+        } else {
+            Text(text = text, fontSize = 12.sp, maxLines = 1)
+        }
     }
 }
 
@@ -582,8 +605,15 @@ private fun BudgetPrimaryButton(text: String, onClick: () -> Unit, modifier: Mod
     }
 }
 
-private fun BudgetFrequency.labelRes(): Int = when (this) {
-    BudgetFrequency.Recurring -> R.string.budget_recurring
-    BudgetFrequency.Irregular -> R.string.budget_irregular
-    BudgetFrequency.Savings -> R.string.budget_savings
+private fun BudgetFrequency.labelRes(category: BudgetCategory): Int = when (category) {
+    BudgetCategory.Income -> when (this) {
+        BudgetFrequency.Recurring -> R.string.budget_recurring
+        BudgetFrequency.Irregular -> R.string.budget_irregular
+        BudgetFrequency.Savings -> R.string.budget_savings
+    }
+    BudgetCategory.Expense -> when (this) {
+        BudgetFrequency.Recurring -> R.string.budget_recurring
+        BudgetFrequency.Irregular -> R.string.budget_optional_short
+        BudgetFrequency.Savings -> R.string.budget_unplanned
+    }
 }
