@@ -130,7 +130,16 @@ class PetViewModel @Inject constructor(
                     val scheduledEvent = if (
                         !needsBudgetReview(resources) && !needsBudgetPlanning(resources)
                     ) {
-                        eventScheduler.next(resources)?.asGameEvent()
+                        val remainingSeconds = cycleSecondsRemaining(
+                            resources.cycleEndsAtMillis,
+                            System.currentTimeMillis(),
+                        )
+                        eventScheduler.next(
+                            snapshot = resources,
+                            elapsedCycleSeconds =
+                                (GameDefaults.CYCLE_DURATION_SECONDS - remainingSeconds)
+                                    .coerceAtLeast(0),
+                        )?.asGameEvent()
                     } else {
                         null
                     }
@@ -181,6 +190,22 @@ class PetViewModel @Inject constructor(
                     nowMillis = nowMillis,
                     secondsRemaining = secondsRemaining,
                 )
+            }
+
+            val refreshedState = _state.value
+            val scheduledEvent = eventScheduler.next(
+                snapshot = refreshedState.resources,
+                elapsedCycleSeconds =
+                    (GameDefaults.CYCLE_DURATION_SECONDS - secondsRemaining).coerceAtLeast(0),
+            )?.asGameEvent()
+            if (scheduledEvent != null) {
+                _state.update {
+                    if (it.activeEvent == null) {
+                        it.copy(activeEvent = scheduledEvent, overlay = null)
+                    } else {
+                        it
+                    }
+                }
             }
 
             if (secondsRemaining == 0) repository.advanceExpiredCycles(nowMillis)

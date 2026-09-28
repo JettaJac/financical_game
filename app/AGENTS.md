@@ -54,6 +54,7 @@ Keep changes consistent with the existing product and remove obsolete behavior w
 - Other overlays/screens include menu, active goal, goal selection, character settings, and events.
 - The parent area contains a persistent action history grouped by cycle and allows a parent to add a custom goal with a title, target amount, and automatically selected illustration to the child's goal list.
 - Event action buttons use adaptive single-line text sizing.
+- Event timing is calculated only from `GameDefaults.CYCLE_DURATION_SECONDS`, never fixed minutes or a fixed cycle-size denominator. Events are spread evenly from 8% to 92% of the cycle duration.
 - Only one home overlay is active at a time.
 - There is no collar item or collar-purchase flow.
 

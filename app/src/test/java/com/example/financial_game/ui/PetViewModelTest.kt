@@ -38,10 +38,38 @@ import com.example.financial_game.domain.events.EventScheduler
 import com.example.financial_game.domain.events.ScenarioStep
 import com.example.financial_game.domain.events.ScheduledEvent
 import com.example.financial_game.domain.events.canResolveScheduledEvent
+import com.example.financial_game.domain.events.eventTriggerSecond
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import kotlin.math.roundToInt
 
 class PetViewModelTest {
+    @Test
+    fun three_cycle_events_are_distributed_by_cycle_fractions() {
+        val duration = GameDefaults.CYCLE_DURATION_SECONDS
+
+        assertEquals((duration * 0.08).roundToInt(), eventTriggerSecond(0, 3, duration))
+        assertEquals((duration * 0.50).roundToInt(), eventTriggerSecond(1, 3, duration))
+        assertEquals((duration * 0.92).roundToInt(), eventTriggerSecond(2, 3, duration))
+    }
+
+    @Test
+    fun one_cycle_event_is_scheduled_in_the_middle() {
+        assertEquals(
+            (GameDefaults.CYCLE_DURATION_SECONDS * 0.5).roundToInt(),
+            eventTriggerSecond(index = 0, eventCount = 1),
+        )
+    }
+
+    @Test
+    fun event_slots_scale_as_cycle_parts_when_duration_changes() {
+        val doubledCycle = 26 * 60
+
+        assertEquals((doubledCycle * 0.08).roundToInt(), eventTriggerSecond(0, 3, doubledCycle))
+        assertEquals((doubledCycle * 0.50).roundToInt(), eventTriggerSecond(1, 3, doubledCycle))
+        assertEquals((doubledCycle * 0.92).roundToInt(), eventTriggerSecond(2, 3, doubledCycle))
+    }
+
     @Test
     fun unaffordable_event_cannot_be_accepted_and_can_always_be_declined() {
         val forcedExpense = GameEvent(

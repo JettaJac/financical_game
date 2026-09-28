@@ -4,9 +4,11 @@ import androidx.annotation.DrawableRes
 import com.example.financial_game.R
 import com.example.financial_game.data.GameSnapshot
 import com.example.financial_game.domain.Effect
+import com.example.financial_game.domain.GameDefaults
 import com.example.financial_game.domain.Resource
 import com.example.financial_game.domain.dayForPeriod
 import com.example.financial_game.domain.weekForPeriod
+import kotlin.math.roundToInt
 
 enum class EventKind { Story, Positive, Negative, Training, JobOffer, Seasonal }
 
@@ -107,15 +109,24 @@ data class EventCatalogData(
 }
 
 class EventScheduler(private val catalog: EventCatalogData) {
-    fun next(snapshot: GameSnapshot): ScheduledEvent? {
+    fun next(
+        snapshot: GameSnapshot,
+        elapsedCycleSeconds: Int = GameDefaults.CYCLE_DURATION_SECONDS,
+    ): ScheduledEvent? {
         if (!snapshot.onboardingCompleted) return null
         val week = weekForPeriod(snapshot.currentPeriod) + 1
         val day = dayForPeriod(snapshot.currentPeriod)
 
-        catalog.scenario
-            .asSequence()
+        val cycleEvents = catalog.scenario
             .filter { it.week == week && it.day == day && it.eventId != null }
-            .filterNot { it.id in snapshot.handledScenarioEntryIds }
+        cycleEvents
+            .withIndex()
+            .asSequence()
+            .filter { (_, step) -> step.id !in snapshot.handledScenarioEntryIds }
+            .filter { (index, _) ->
+                elapsedCycleSeconds >= eventTriggerSecond(index, cycleEvents.size)
+            }
+            .map(IndexedValue<ScenarioStep>::value)
             .firstOrNull { step -> step.isEligible(snapshot) }
             ?.let { step ->
                 val definition = catalog.eventsById.getValue(checkNotNull(step.eventId))
@@ -128,9 +139,10 @@ class EventScheduler(private val catalog: EventCatalogData) {
                         scriptedMoney ?: definition.moneyFromCard,
                     ),
                 )
-            }
+        }
 
         if (week < 3 || (week == 3 && day == 1)) return null
+        if (elapsedCycleSeconds < eventTriggerSecond(index = 0, eventCount = 1)) return null
         if (snapshot.currentPeriod.toString() in snapshot.eventPoolHandledCycles) return null
 
         val eligible = catalog.events
@@ -173,3 +185,24 @@ class EventScheduler(private val catalog: EventCatalogData) {
             EventFrequency.PerPeriod -> "$id@$week" !in snapshot.eventPeriodOccurrences
         }
 }
+
+internal fun eventTriggerSecond(
+    index: Int,
+    eventCount: Int,
+    cycleDurationSeconds: Int = GameDefaults.CYCLE_DURATION_SECONDS,
+): Int {
+    require(eventCount > 0)
+    require(index in 0 until eventCount)
+    val triggerFraction = if (eventCount == 1) {
+        0.5
+    } else {
+        EVENT_START_FRACTION +
+            index * (EVENT_END_FRACTION - EVENT_START_FRACTION) / (eventCount - 1)
+    }
+    return (cycleDurationSeconds * triggerFraction)
+        .roundToInt()
+        .coerceIn(0, cycleDurationSeconds)
+}
+
+private const val EVENT_START_FRACTION = 0.08
+private const val EVENT_END_FRACTION = 0.92
