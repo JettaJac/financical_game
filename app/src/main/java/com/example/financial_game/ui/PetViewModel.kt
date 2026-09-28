@@ -31,6 +31,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 internal const val TIMER_SECONDS = GameDefaults.CYCLE_DURATION_SECONDS
+internal const val DEMO_MODE_PASSWORD = "1234"
 
 internal fun formatCountdown(totalSeconds: Int): String {
     val minutes = totalSeconds / 60
@@ -72,6 +73,8 @@ data class PetState(
     val activeEvent: GameEvent? = null,
     val exitRequested: Boolean = false,
     val isInitialized: Boolean = false,
+    val isTestMode: Boolean = false,
+    val demoModePasswordError: Boolean = false,
     val nowMillis: Long = System.currentTimeMillis(),
 )
 
@@ -90,6 +93,8 @@ sealed interface PetAction {
     data class BuyGoal(val goal: Goals, val price: Int) : PetAction
     data class SelectGoal(val goal: Goals) : PetAction
     data object ForceNextCycle : PetAction
+    data class EnableTestMode(val password: String) : PetAction
+    data object ClearDemoModePasswordError : PetAction
     data object Restart : PetAction
     data class CompleteOnboarding(val setup: PetSetup) : PetAction
     data class ApplyPetAppearance(val appearance: PetAppearance) : PetAction
@@ -190,6 +195,8 @@ class PetViewModel @Inject constructor(
                     overlay = null,
                     activeEvent = null,
                     exitRequested = false,
+                    isTestMode = false,
+                    demoModePasswordError = false,
                 )
             }
         }
@@ -226,7 +233,17 @@ class PetViewModel @Inject constructor(
                 repository.selectGoal(action.goal)
                 _state.update { it.copy(overlay = null) }
             }
-            PetAction.ForceNextCycle -> nextCycle()
+            PetAction.ForceNextCycle -> if (_state.value.isTestMode) nextCycle()
+            is PetAction.EnableTestMode -> _state.update {
+                if (action.password == DEMO_MODE_PASSWORD) {
+                    it.copy(isTestMode = true, demoModePasswordError = false)
+                } else {
+                    it.copy(demoModePasswordError = true)
+                }
+            }
+            PetAction.ClearDemoModePasswordError -> _state.update {
+                it.copy(demoModePasswordError = false)
+            }
             PetAction.Restart -> restart()
             is PetAction.CompleteOnboarding -> viewModelScope.launch {
                 repository.completeOnboarding(action.setup)

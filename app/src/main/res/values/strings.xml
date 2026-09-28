@@ -108,6 +108,11 @@
     <string name="change_character_action">Изменить персонажа</string>
     <string name="parent_area_action">Родительская</string>
     <string name="demo_mode_action">Демонстрационный режим</string>
+    <string name="demo_mode_enabled">Демонстрационный режим включён</string>
+    <string name="demo_mode_password_title">Демонстрационный режим</string>
+    <string name="demo_mode_password_label">Пароль</string>
+    <string name="demo_mode_password_error">Неверный пароль</string>
+    <string name="demo_mode_enable">Включить</string>
     <string name="support_action">Поддержка</string>
     <string name="exit_action">Выход</string>
 

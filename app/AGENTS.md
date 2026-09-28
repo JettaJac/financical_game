@@ -47,7 +47,8 @@ Keep changes consistent with the existing product and remove obsolete behavior w
 
 ### Quick actions and overlays
 
-- Left quick action advances the cycle in the current demo flow.
+- The cycle quick action advances the cycle only while test mode is enabled.
+- Test mode is off on every app start and can be enabled from the menu with a password.
 - The piggy-bank quick action opens the full-screen weekly budget overview, not a shop overlay.
 - Budget overview defaults to actual weekly income/expenses and can switch to the saved plan.
 - Other overlays/screens include menu, active goal, goal selection, character settings, and events.

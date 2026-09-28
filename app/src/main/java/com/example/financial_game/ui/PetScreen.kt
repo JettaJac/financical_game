@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.text.TextAutoSize
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -41,6 +42,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -64,6 +66,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
@@ -246,7 +250,7 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
 //    EventOverlay(GameEvents.SportsSection, acceptButtonText = "Принять")
 
     when (state.overlay) {
-        HomeOverlay.Menu -> MenuOverlay(onAction)
+        HomeOverlay.Menu -> MenuOverlay(state, onAction)
         HomeOverlay.Budget -> BudgetOverviewScreen(
             state = state.resources,
             onBack = { onAction(PetAction.CloseOverlay) },
@@ -1181,8 +1185,17 @@ private fun PageDots(isVisible: Boolean) {
 }
 
 @Composable
-private fun MenuOverlay(onAction: (PetAction) -> Unit) {
+private fun MenuOverlay(state: PetState, onAction: (PetAction) -> Unit) {
     var showRestartConfirmation by rememberSaveable { mutableStateOf(false) }
+    var showDemoModePassword by rememberSaveable { mutableStateOf(false) }
+    var demoModePassword by rememberSaveable { mutableStateOf("") }
+
+    LaunchedEffect(state.isTestMode) {
+        if (state.isTestMode) {
+            showDemoModePassword = false
+            demoModePassword = ""
+        }
+    }
 
     Dialog(onDismissRequest = { onAction(PetAction.CloseOverlay) }) {
         Surface(shape = RoundedCornerShape(24.dp), tonalElevation = 8.dp) {
@@ -1223,10 +1236,22 @@ private fun MenuOverlay(onAction: (PetAction) -> Unit) {
                     Text(stringResource(R.string.parent_area_action))
                 }
                 TextButton(
-                    onClick = {},
+                    onClick = {
+                        onAction(PetAction.ClearDemoModePasswordError)
+                        showDemoModePassword = true
+                    },
                     modifier = Modifier.fillMaxWidth(),
+                    enabled = !state.isTestMode,
                 ) {
-                    Text(stringResource(R.string.demo_mode_action))
+                    Text(
+                        stringResource(
+                            if (state.isTestMode) {
+                                R.string.demo_mode_enabled
+                            } else {
+                                R.string.demo_mode_action
+                            },
+                        ),
+                    )
                 }
                 TextButton(
                     onClick = {},
@@ -1260,6 +1285,57 @@ private fun MenuOverlay(onAction: (PetAction) -> Unit) {
             },
             dismissButton = {
                 TextButton(onClick = { showRestartConfirmation = false }) {
+                    Text(stringResource(R.string.cancel_action))
+                }
+            },
+        )
+    }
+
+    if (showDemoModePassword) {
+        AlertDialog(
+            onDismissRequest = {
+                showDemoModePassword = false
+                demoModePassword = ""
+                onAction(PetAction.ClearDemoModePasswordError)
+            },
+            title = { Text(stringResource(R.string.demo_mode_password_title)) },
+            text = {
+                OutlinedTextField(
+                    value = demoModePassword,
+                    onValueChange = {
+                        demoModePassword = it
+                        if (state.demoModePasswordError) {
+                            onAction(PetAction.ClearDemoModePasswordError)
+                        }
+                    },
+                    label = { Text(stringResource(R.string.demo_mode_password_label)) },
+                    isError = state.demoModePasswordError,
+                    supportingText = if (state.demoModePasswordError) {
+                        { Text(stringResource(R.string.demo_mode_password_error)) }
+                    } else {
+                        null
+                    },
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                    singleLine = true,
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = { onAction(PetAction.EnableTestMode(demoModePassword)) },
+                    enabled = demoModePassword.isNotEmpty(),
+                ) {
+                    Text(stringResource(R.string.demo_mode_enable))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showDemoModePassword = false
+                        demoModePassword = ""
+                        onAction(PetAction.ClearDemoModePasswordError)
+                    },
+                ) {
                     Text(stringResource(R.string.cancel_action))
                 }
             },
