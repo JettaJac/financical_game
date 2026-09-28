@@ -5,6 +5,7 @@ import com.example.financial_game.domain.EyeColour
 import com.example.financial_game.domain.Goals
 import com.example.financial_game.domain.HairColour
 import com.example.financial_game.domain.HairStyle
+import com.example.financial_game.domain.ActiveDeposit
 
 data class GameSnapshot(
     val name: String = GameDefaults.NAME,
@@ -55,6 +56,7 @@ data class GameSnapshot(
     val jobRemainingActions: Map<String, Int> = emptyMap(),
     val actionHistory: List<GameActionRecord> = emptyList(),
     val customGoal: CustomGoal? = null,
+    val activeDeposit: ActiveDeposit? = null,
 )
 
 data class GameActionRecord(

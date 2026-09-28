@@ -45,6 +45,7 @@ Keep changes consistent with the existing product and remove obsolete behavior w
 - Shop items are permanent purchases where applicable.
 - Every task/job can be performed at most once per game cycle. Day, week, total-use, prerequisite, and event restrictions may additionally apply.
 - Changes to money and pet characteristics pulse the corresponding indicator icon.
+- The active health, happiness, or energy tab shows its current numeric value in a badge above the tab, matching the main-screen reference. Shop and task tabs do not show this badge.
 
 ### Quick actions and overlays
 

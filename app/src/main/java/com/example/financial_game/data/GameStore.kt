@@ -43,6 +43,8 @@ import com.example.financial_game.domain.budgetWeekForPeriod
 import com.example.financial_game.domain.dayForPeriod
 import com.example.financial_game.domain.MandatoryBudget
 import com.example.financial_game.domain.BudgetPeriodResult
+import com.example.financial_game.domain.ActiveDeposit
+import com.example.financial_game.domain.DepositTerm
 import com.example.financial_game.domain.events.EventFrequency
 import com.example.financial_game.domain.events.JobDef
 import com.example.financial_game.domain.events.ScheduledEvent
@@ -203,6 +205,11 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
     private val customGoalTitle = stringPreferencesKey("custom_goal_title")
     private val customGoalTarget = intPreferencesKey("custom_goal_target")
     private val customGoalIllustration = intPreferencesKey("custom_goal_illustration")
+    private val depositAmount = intPreferencesKey("deposit_amount")
+    private val depositOpenedAtPeriod = intPreferencesKey("deposit_opened_at_period")
+    private val depositDurationCycles = intPreferencesKey("deposit_duration_cycles")
+    private val depositInterestPercent = intPreferencesKey("deposit_interest_percent")
+    private val depositPenaltyPercent = intPreferencesKey("deposit_penalty_percent")
 
     override val snapshot: Flow<GameSnapshot> = flow {
         emitAll(context.gameDataStore.data.map { preferences ->
@@ -273,6 +280,17 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                         illustrationRes = preferences[customGoalIllustration] ?: R.drawable.goal_pillow,
                     )
                 },
+                activeDeposit = (preferences[depositAmount] ?: 0)
+                    .takeIf { it > 0 }
+                    ?.let { amount ->
+                        ActiveDeposit(
+                            amount = amount,
+                            openedAtPeriod = preferences[depositOpenedAtPeriod] ?: 1,
+                            durationCycles = preferences[depositDurationCycles] ?: 3,
+                            interestPercent = preferences[depositInterestPercent] ?: 7,
+                            earlyClosePenaltyPercent = preferences[depositPenaltyPercent] ?: 4,
+                        )
+                    },
             ).withCharacteristicsAt(secondsRemaining)
         })
     }
@@ -373,6 +391,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             }
             if (preferences[activeJobIds] == null) preferences[activeJobIds] = emptySet()
             if (preferences[actionHistory] == null) preferences[actionHistory] = "[]"
+            if (preferences[depositAmount] == null) preferences[depositAmount] = 0
 
             if (preferences[goalTitle] == LEGACY_GOAL_TITLE &&
                 preferences[goalTarget] == LEGACY_GOAL_TARGET
@@ -452,6 +471,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 System.currentTimeMillis() + GameDefaults.CYCLE_DURATION_MILLIS
             preferences[cycleDurationSeconds] = GameDefaults.CYCLE_DURATION_SECONDS
             preferences[onboardingCompleted] = false
+            clearDeposit(preferences)
             appendAction(preferences, "Игра начата заново")
         }
     }
@@ -477,6 +497,61 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
 
     override suspend fun recordAction(description: String, moneyDelta: Int) {
         context.gameDataStore.edit { preferences -> appendAction(preferences, description, moneyDelta) }
+    }
+
+    override suspend fun openDeposit(term: DepositTerm, amount: Int): Boolean {
+        val safeAmount = amount.coerceAtLeast(0)
+        var opened = false
+        context.gameDataStore.edit { preferences ->
+            if ((preferences[depositAmount] ?: 0) > 0) return@edit
+            val currentMoney = checkNotNull(preferences[money])
+            if (safeAmount <= 0 || safeAmount > currentMoney) return@edit
+
+            preferences[money] = currentMoney - safeAmount
+            preferences[depositAmount] = safeAmount
+            preferences[depositOpenedAtPeriod] = checkNotNull(preferences[currentPeriod])
+            preferences[depositDurationCycles] = term.durationCycles
+            preferences[depositInterestPercent] = term.interestPercent
+            preferences[depositPenaltyPercent] = term.earlyClosePenaltyPercent
+            appendAction(preferences, "Открыт вклад на $safeAmount монет", -safeAmount)
+            opened = true
+        }
+        return opened
+    }
+
+    override suspend fun closeDeposit(): Boolean {
+        var closed = false
+        context.gameDataStore.edit { preferences ->
+            val amount = preferences[depositAmount] ?: 0
+            if (amount <= 0) return@edit
+            val deposit = ActiveDeposit(
+                amount = amount,
+                openedAtPeriod = preferences[depositOpenedAtPeriod] ?: 1,
+                durationCycles = preferences[depositDurationCycles] ?: 3,
+                interestPercent = preferences[depositInterestPercent] ?: 7,
+                earlyClosePenaltyPercent = preferences[depositPenaltyPercent] ?: 4,
+            )
+            val mature = deposit.isMature(checkNotNull(preferences[currentPeriod]))
+            val payout = if (mature) deposit.maturityPayout else deposit.earlyClosePayout
+            preferences[money] = checkNotNull(preferences[money]) + payout
+            recordAdditionalIncome(preferences, (payout - amount).coerceAtLeast(0))
+            appendAction(
+                preferences,
+                if (mature) "Получен доход по вкладу" else "Вклад закрыт досрочно",
+                payout,
+            )
+            clearDeposit(preferences)
+            closed = true
+        }
+        return closed
+    }
+
+    private fun clearDeposit(preferences: MutablePreferences) {
+        preferences[depositAmount] = 0
+        preferences.remove(depositOpenedAtPeriod)
+        preferences.remove(depositDurationCycles)
+        preferences.remove(depositInterestPercent)
+        preferences.remove(depositPenaltyPercent)
     }
 
     override suspend fun completeTimerCycle() {

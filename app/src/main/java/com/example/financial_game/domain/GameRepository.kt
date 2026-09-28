@@ -36,6 +36,10 @@ interface GameRepository {
 
     suspend fun recordAction(description: String, moneyDelta: Int = 0)
 
+    suspend fun openDeposit(term: DepositTerm, amount: Int): Boolean
+
+    suspend fun closeDeposit(): Boolean
+
     suspend fun resolveScheduledEvent(
         event: ScheduledEvent,
         unlockedJob: JobDef?,

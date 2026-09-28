@@ -74,6 +74,27 @@
     <string name="budget_unplanned">Непредвиденные</string>
     <string name="budget_no_operations">Нет операций</string>
 
+    <!-- Deposits -->
+    <string name="deposit_title">Вклад</string>
+    <string name="deposit_intro">Ты можешь открыть вклад, и в конце срока получишь приятную надбавку! Но если закроешь его раньше срока, тогда будет штраф</string>
+    <string name="deposit_terms">Условия</string>
+    <string name="deposit_term_format">на %1$d дней (ставка %2$d%%, штраф %3$d%%)</string>
+    <string name="deposit_enter_amount">Введи сумму</string>
+    <string name="deposit_not_enough_money">На балансе доступно %1$d монет</string>
+    <string name="deposit_income">Доход</string>
+    <string name="deposit_maturity_caption">Сумма, которую ты получишь после %1$d дней игры</string>
+    <string name="deposit_early_caption">Сумма, которую ты получишь, если закроешь вклад раньше %1$d дней</string>
+    <string name="deposit_open">Открыть</string>
+    <string name="deposit_open_deposits">Открытые вклады</string>
+    <string name="deposit_rate_for_days">%1$d%% на %2$d дней</string>
+    <string name="deposit_until_end">До окончания срока:</string>
+    <string name="deposit_game_days">%1$d игровых дней</string>
+    <string name="deposit_maturity_caption_short">По истечению времени ты получишь:</string>
+    <string name="deposit_close">Закрыть</string>
+    <string name="deposit_close_confirmation">Ты уверен, что хочешь закрыть вклад?</string>
+    <string name="deposit_success">Молодец! Ты заработал %1$d монет!</string>
+    <string name="deposit_collect">Забрать</string>
+
     <!-- Home: sections -->
     <string name="health">Здоровье</string>
     <string name="food">Еда</string>

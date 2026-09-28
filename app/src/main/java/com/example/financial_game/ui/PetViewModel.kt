@@ -7,6 +7,7 @@ import com.example.financial_game.data.GameSnapshot
 import com.example.financial_game.data.EventCatalog
 import com.example.financial_game.domain.CardItem
 import com.example.financial_game.domain.Effect
+import com.example.financial_game.domain.DepositTerm
 import com.example.financial_game.domain.GameEvent
 import com.example.financial_game.domain.GameDefaults
 import com.example.financial_game.domain.GameRepository
@@ -62,7 +63,7 @@ internal fun goalPurchaseEvent(resources: GameSnapshot): GameEvent {
     )
 }
 
-enum class HomeOverlay { Menu, Budget, Goal, GoalSelection, PersonalAccount, Parent }
+enum class HomeOverlay { Menu, Budget, Deposit, Goal, GoalSelection, PersonalAccount, Parent }
 
 enum class HomeSection { Food, Happiness, Energy, Shop, Tasks }
 
@@ -83,6 +84,7 @@ sealed interface PetAction {
     data class SelectSection(val section: HomeSection) : PetAction
     data object OpenMenu : PetAction
     data object OpenBudget : PetAction
+    data object OpenDeposit : PetAction
     data object OpenGoal : PetAction
     data object OpenPersonalAccount : PetAction
     data object OpenParent : PetAction
@@ -104,6 +106,8 @@ sealed interface PetAction {
     data class ApplyPetAppearance(val appearance: PetAppearance) : PetAction
     data class CompleteBudgetPlanning(val optionalExpenses: Int) : PetAction
     data object CompleteBudgetReview : PetAction
+    data class OpenDepositAccount(val term: DepositTerm, val amount: Int) : PetAction
+    data object CloseDepositAccount : PetAction
 
     data object Exit : PetAction
 }
@@ -243,6 +247,7 @@ class PetViewModel @Inject constructor(
             is PetAction.SelectSection -> _state.update { it.copy(selectedSection = action.section) }
             PetAction.OpenMenu -> _state.update { it.copy(overlay = HomeOverlay.Menu) }
             PetAction.OpenBudget -> _state.update { it.copy(overlay = HomeOverlay.Budget) }
+            PetAction.OpenDeposit -> _state.update { it.copy(overlay = HomeOverlay.Deposit) }
             PetAction.OpenGoal -> _state.update { it.copy(overlay = HomeOverlay.Goal) }
             PetAction.OpenPersonalAccount -> _state.update {
                 it.copy(overlay = HomeOverlay.PersonalAccount)
@@ -294,6 +299,14 @@ class PetViewModel @Inject constructor(
             }
             PetAction.CompleteBudgetReview -> viewModelScope.launch {
                 repository.completeBudgetReview()
+            }
+            is PetAction.OpenDepositAccount -> viewModelScope.launch {
+                repository.openDeposit(action.term, action.amount)
+            }
+            PetAction.CloseDepositAccount -> viewModelScope.launch {
+                if (repository.closeDeposit()) {
+                    _state.update { it.copy(overlay = null) }
+                }
             }
         }
     }

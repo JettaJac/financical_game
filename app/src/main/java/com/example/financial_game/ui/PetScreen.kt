@@ -261,6 +261,12 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
             state = state.resources,
             onBack = { onAction(PetAction.CloseOverlay) },
         )
+        HomeOverlay.Deposit -> DepositScreen(
+            state = state.resources,
+            onBack = { onAction(PetAction.CloseOverlay) },
+            onOpen = { term, amount -> onAction(PetAction.OpenDepositAccount(term, amount)) },
+            onClose = { onAction(PetAction.CloseDepositAccount) },
+        )
         HomeOverlay.Goal -> {
             val goal = Goals.fromStorageId(state.resources.goalId)
             GoalOverlay(
@@ -359,7 +365,8 @@ private fun HomePage(state: PetState, onAction: (PetAction) -> Unit) {
 
         QuickActions(
             secondsRemaining = state.secondsRemaining,
-            onShopClick = { onAction(PetAction.OpenBudget) },
+            onBudgetClick = { onAction(PetAction.OpenBudget) },
+            onDepositClick = { onAction(PetAction.OpenDeposit) },
             onSkipCycle = { onAction(PetAction.ForceNextCycle )},
             tileSize = metrics.quickActionSize,
             modifier = Modifier
@@ -577,7 +584,8 @@ private fun HeaderValue(
 @Composable
 private fun QuickActions(
     secondsRemaining: Int,
-    onShopClick: () -> Unit,
+    onBudgetClick: () -> Unit,
+    onDepositClick: () -> Unit,
     onSkipCycle: () -> Unit,
     tileSize: Dp,
     modifier: Modifier = Modifier,
@@ -609,12 +617,21 @@ private fun QuickActions(
             )
         }
 
-        ActionTile(size = tileSize, onClick = onShopClick) {
-            Image(
-                painter = painterResource(R.drawable.carbon_piggy_bank),
-                contentDescription = stringResource(R.string.shop),
-                modifier = Modifier.align(Alignment.Center).size(33.dp),
-            )
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            ActionTile(size = tileSize, onClick = onBudgetClick) {
+                Image(
+                    painter = painterResource(R.drawable.carbon_piggy_bank),
+                    contentDescription = stringResource(R.string.budget_current),
+                    modifier = Modifier.align(Alignment.Center).size(33.dp),
+                )
+            }
+            ActionTile(size = tileSize, onClick = onDepositClick) {
+                Image(
+                    painter = painterResource(R.drawable.ic_deposit_wallet),
+                    contentDescription = stringResource(R.string.deposit_title),
+                    modifier = Modifier.align(Alignment.Center).size(33.dp),
+                )
+            }
         }
     }
 }
@@ -800,42 +817,78 @@ private fun HomeTab(
 ) {
     val background = if (selected) HomeSurface else HomePurple
     val iconScale = rememberChangePulseScale(observedValue)
-    Column(
+    Box(
         modifier = modifier
             .fillMaxHeight()
-            .clip(RoundedCornerShape(topStart = 11.dp, topEnd = 11.dp))
-            .background(background)
             .selectable(
                 selected = selected,
                 onClick = onClick,
                 role = Role.Tab,
-            )
-            .padding(top = 13.dp, bottom = 8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceBetween,
+            ),
+        contentAlignment = Alignment.TopCenter,
     ) {
-        Image(
-            painter = painterResource(icon),
-            contentDescription = label,
-            colorFilter = ColorFilter.tint(if (selected) HomePurple else Color.White),
+        Column(
             modifier = Modifier
-                .size(27.dp)
-                .graphicsLayer {
-                    scaleX = iconScale
-                    scaleY = iconScale
-                },
-        )
-        if (progress != null) {
-            LinearProgressIndicator(
-                progress = { progress.coerceIn(0f, 1f) },
-                color = if (selected) HomePurple else Color.White,
-                trackColor = if (selected) HomeTrack else Color(0xFFBB82EF),
-                modifier = Modifier.width(38.dp).height(4.dp).clip(CircleShape),
-                gapSize = 0.dp,
-                drawStopIndicator = {},
+                .fillMaxSize()
+                .padding(top = 8.dp)
+                .clip(RoundedCornerShape(topStart = 11.dp, topEnd = 11.dp))
+                .background(background)
+                .padding(top = 13.dp, bottom = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Image(
+                painter = painterResource(icon),
+                contentDescription = label,
+                colorFilter = ColorFilter.tint(if (selected) HomePurple else Color.White),
+                modifier = Modifier
+                    .size(27.dp)
+                    .graphicsLayer {
+                        scaleX = iconScale
+                        scaleY = iconScale
+                    },
             )
-        } else {
-            Spacer(Modifier.height(4.dp))
+            if (progress != null) {
+                LinearProgressIndicator(
+                    progress = { progress.coerceIn(0f, 1f) },
+                    color = if (selected) HomePurple else Color.White,
+                    trackColor = if (selected) HomeTrack else Color(0xFFBB82EF),
+                    modifier = Modifier.width(38.dp).height(4.dp).clip(CircleShape),
+                    gapSize = 0.dp,
+                    drawStopIndicator = {},
+                )
+            } else {
+                Spacer(Modifier.height(4.dp))
+            }
+        }
+        if (selected && observedValue != null) {
+            Surface(
+                color = Color(0xFFE8C5FA),
+                shape = RoundedCornerShape(6.dp),
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .offset(x = (-4).dp)
+                    .height(18.dp)
+                    .graphicsLayer {
+                        scaleX = iconScale
+                        scaleY = iconScale
+                    },
+            ) {
+                Box(
+                    modifier = Modifier.padding(horizontal = 7.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = observedValue.toString(),
+                        color = HomePurple,
+                        fontFamily = NunitoFontFamily,
+                        fontSize = 10.sp,
+                        lineHeight = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                    )
+                }
+            }
         }
     }
 }
