@@ -2,6 +2,9 @@ package com.example.financial_game.ui
 
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -45,11 +48,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
@@ -486,6 +491,7 @@ private fun HomeHeader(
             HeaderValue(
                 icon = R.drawable.coin_money,
                 value = state.resources.money.toString(),
+                observedValue = state.resources.money,
                 width = metrics.headerValueWidth,
             )
             LinearProgressIndicator(
@@ -514,8 +520,10 @@ private fun HomeHeader(
 private fun HeaderValue(
     @DrawableRes icon: Int,
     value: String,
+    observedValue: Int? = null,
     width: Dp,
 ) {
+    val iconScale = rememberChangePulseScale(observedValue)
     Column(
         modifier = Modifier.width(width),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -523,7 +531,12 @@ private fun HeaderValue(
         Image(
             painter = painterResource(icon),
             contentDescription = null,
-            modifier = Modifier.size(24.dp),
+            modifier = Modifier
+                .size(24.dp)
+                .graphicsLayer {
+                    scaleX = iconScale
+                    scaleY = iconScale
+                },
         )
         Text(
             text = value,
@@ -713,6 +726,7 @@ private fun HomeTabs(
             label = stringResource(R.string.food),
             selected = state.selectedSection == HomeSection.Food,
             progress = state.resources.health / 100f,
+            observedValue = state.resources.health,
             modifier = Modifier.weight(1f),
             onClick = { onSectionClick(HomeSection.Food) },
         )
@@ -721,6 +735,7 @@ private fun HomeTabs(
             label = stringResource(R.string.happiness),
             selected = state.selectedSection == HomeSection.Happiness,
             progress = state.resources.happiness / 100f,
+            observedValue = state.resources.happiness,
             modifier = Modifier.weight(1f),
             onClick = { onSectionClick(HomeSection.Happiness) },
         )
@@ -729,6 +744,7 @@ private fun HomeTabs(
             label = stringResource(R.string.energy),
             selected = state.selectedSection == HomeSection.Energy,
             progress = state.resources.energy / 100f,
+            observedValue = state.resources.energy,
             modifier = Modifier.weight(1f),
             onClick = { onSectionClick(HomeSection.Energy) },
         )
@@ -737,6 +753,7 @@ private fun HomeTabs(
             label = stringResource(R.string.shop),
             selected = state.selectedSection == HomeSection.Shop,
             progress = null,
+            observedValue = null,
             modifier = Modifier.weight(1f),
             onClick = { onSectionClick(HomeSection.Shop) },
         )
@@ -745,6 +762,7 @@ private fun HomeTabs(
             label = stringResource(R.string.tasks),
             selected = state.selectedSection == HomeSection.Tasks,
             progress = null,
+            observedValue = null,
             modifier = Modifier.weight(1f),
             onClick = { onSectionClick(HomeSection.Tasks) },
         )
@@ -757,10 +775,12 @@ private fun HomeTab(
     label: String,
     selected: Boolean,
     progress: Float?,
+    observedValue: Int?,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
     val background = if (selected) HomeSurface else HomePurple
+    val iconScale = rememberChangePulseScale(observedValue)
     Column(
         modifier = modifier
             .fillMaxHeight()
@@ -779,7 +799,12 @@ private fun HomeTab(
             painter = painterResource(icon),
             contentDescription = label,
             colorFilter = ColorFilter.tint(if (selected) HomePurple else Color.White),
-            modifier = Modifier.size(27.dp),
+            modifier = Modifier
+                .size(27.dp)
+                .graphicsLayer {
+                    scaleX = iconScale
+                    scaleY = iconScale
+                },
         )
         if (progress != null) {
             LinearProgressIndicator(
@@ -794,6 +819,28 @@ private fun HomeTab(
             Spacer(Modifier.height(4.dp))
         }
     }
+}
+
+@Composable
+private fun rememberChangePulseScale(value: Int?): Float {
+    val scale = remember { Animatable(1f) }
+    var previousValue by remember { mutableStateOf(value) }
+
+    LaunchedEffect(value) {
+        if (value != null && previousValue != null && value != previousValue) {
+            previousValue = value
+            scale.snapTo(1f)
+            scale.animateTo(1.28f, animationSpec = tween(durationMillis = 120))
+            scale.animateTo(
+                targetValue = 1f,
+                animationSpec = spring(dampingRatio = 0.45f, stiffness = 650f),
+            )
+        } else {
+            previousValue = value
+        }
+    }
+
+    return scale.value
 }
 
 @Composable
