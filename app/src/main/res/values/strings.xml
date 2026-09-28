@@ -128,6 +128,8 @@
     <string name="cancel_action">Отмена</string>
     <string name="change_character_action">Изменить персонажа</string>
     <string name="parent_area_action">Родительская</string>
+    <string name="parent_mode_password_title">Родительская</string>
+    <string name="parent_mode_enter">Войти</string>
     <string name="parent_goal_planning">Планирование цели с ребенком</string>
     <string name="parent_game_history">История игры ребенка</string>
     <string name="parent_history">История</string>

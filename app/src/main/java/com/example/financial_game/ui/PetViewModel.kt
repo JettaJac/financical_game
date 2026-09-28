@@ -34,6 +34,7 @@ import kotlinx.coroutines.launch
 
 internal const val TIMER_SECONDS = GameDefaults.CYCLE_DURATION_SECONDS
 internal const val DEMO_MODE_PASSWORD = "1234"
+internal const val PARENT_MODE_PASSWORD = "1234"
 
 internal fun formatCountdown(totalSeconds: Int): String {
     val minutes = totalSeconds / 60
@@ -77,6 +78,7 @@ data class PetState(
     val isInitialized: Boolean = false,
     val isTestMode: Boolean = false,
     val demoModePasswordError: Boolean = false,
+    val parentModePasswordError: Boolean = false,
     val nowMillis: Long = System.currentTimeMillis(),
 )
 
@@ -87,7 +89,8 @@ sealed interface PetAction {
     data object OpenDeposit : PetAction
     data object OpenGoal : PetAction
     data object OpenPersonalAccount : PetAction
-    data object OpenParent : PetAction
+    data class OpenParent(val password: String) : PetAction
+    data object ClearParentModePasswordError : PetAction
     data object CloseOverlay : PetAction
     data class ShowEvent(val event: GameEvent) : PetAction
     data object AcceptEvent : PetAction
@@ -231,6 +234,7 @@ class PetViewModel @Inject constructor(
                     exitRequested = false,
                     isTestMode = false,
                     demoModePasswordError = false,
+                    parentModePasswordError = false,
                 )
             }
         }
@@ -252,7 +256,16 @@ class PetViewModel @Inject constructor(
             PetAction.OpenPersonalAccount -> _state.update {
                 it.copy(overlay = HomeOverlay.PersonalAccount)
             }
-            PetAction.OpenParent -> _state.update { it.copy(overlay = HomeOverlay.Parent) }
+            is PetAction.OpenParent -> _state.update {
+                if (action.password == PARENT_MODE_PASSWORD) {
+                    it.copy(overlay = HomeOverlay.Parent, parentModePasswordError = false)
+                } else {
+                    it.copy(parentModePasswordError = true)
+                }
+            }
+            PetAction.ClearParentModePasswordError -> _state.update {
+                it.copy(parentModePasswordError = false)
+            }
             PetAction.CloseOverlay -> _state.update { it.copy(overlay = null) }
             is PetAction.ShowEvent -> _state.update {
                 it.copy(overlay = null, activeEvent = action.event)

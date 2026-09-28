@@ -1298,6 +1298,8 @@ private fun MenuOverlay(state: PetState, onAction: (PetAction) -> Unit) {
     var showRestartConfirmation by rememberSaveable { mutableStateOf(false) }
     var showDemoModePassword by rememberSaveable { mutableStateOf(false) }
     var demoModePassword by rememberSaveable { mutableStateOf("") }
+    var showParentModePassword by rememberSaveable { mutableStateOf(false) }
+    var parentModePassword by rememberSaveable { mutableStateOf("") }
 
     LaunchedEffect(state.isTestMode) {
         if (state.isTestMode) {
@@ -1339,7 +1341,10 @@ private fun MenuOverlay(state: PetState, onAction: (PetAction) -> Unit) {
                     Text(stringResource(R.string.change_character_action))
                 }
                 TextButton(
-                    onClick = { onAction(PetAction.OpenParent) },
+                    onClick = {
+                        onAction(PetAction.ClearParentModePasswordError)
+                        showParentModePassword = true
+                    },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(stringResource(R.string.parent_area_action))
@@ -1443,6 +1448,57 @@ private fun MenuOverlay(state: PetState, onAction: (PetAction) -> Unit) {
                         showDemoModePassword = false
                         demoModePassword = ""
                         onAction(PetAction.ClearDemoModePasswordError)
+                    },
+                ) {
+                    Text(stringResource(R.string.cancel_action))
+                }
+            },
+        )
+    }
+
+    if (showParentModePassword) {
+        AlertDialog(
+            onDismissRequest = {
+                showParentModePassword = false
+                parentModePassword = ""
+                onAction(PetAction.ClearParentModePasswordError)
+            },
+            title = { Text(stringResource(R.string.parent_mode_password_title)) },
+            text = {
+                OutlinedTextField(
+                    value = parentModePassword,
+                    onValueChange = {
+                        parentModePassword = it
+                        if (state.parentModePasswordError) {
+                            onAction(PetAction.ClearParentModePasswordError)
+                        }
+                    },
+                    label = { Text(stringResource(R.string.demo_mode_password_label)) },
+                    isError = state.parentModePasswordError,
+                    supportingText = if (state.parentModePasswordError) {
+                        { Text(stringResource(R.string.demo_mode_password_error)) }
+                    } else {
+                        null
+                    },
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                    singleLine = true,
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = { onAction(PetAction.OpenParent(parentModePassword)) },
+                    enabled = parentModePassword.isNotEmpty(),
+                ) {
+                    Text(stringResource(R.string.parent_mode_enter))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showParentModePassword = false
+                        parentModePassword = ""
+                        onAction(PetAction.ClearParentModePasswordError)
                     },
                 ) {
                     Text(stringResource(R.string.cancel_action))
