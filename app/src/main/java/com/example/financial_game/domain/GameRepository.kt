@@ -30,6 +30,8 @@ interface GameRepository {
 
     suspend fun completeBudgetReview()
 
+    suspend fun completeHomeTutorial()
+
     suspend fun addCustomGoal(title: String, target: Int, illustrationRes: Int)
 
     suspend fun selectCustomGoal()

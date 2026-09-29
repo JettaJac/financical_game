@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.text.TextAutoSize
@@ -395,12 +396,57 @@ private fun HomePage(state: PetState, onAction: (PetAction) -> Unit) {
 
         HomeBottomPanel(
             state = state,
+            tutorialHighlightedSections = tutorialHighlightedSections(state.homeTutorialStep),
             onSectionClick = { onAction(PetAction.SelectSection(it)) },
             onBuyClick = { onAction(PetAction.BuyCareItem(it)) },
             metrics = metrics,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .height(metrics.bottomPanelHeight),
+        )
+    }
+
+    state.homeTutorialStep?.let { step ->
+        HomeTutorialOverlay(
+            step = step,
+            onNext = { onAction(PetAction.AdvanceHomeTutorial) },
+        )
+    }
+}
+
+private fun tutorialHighlightedSections(step: Int?): Set<HomeSection> = when (step) {
+    0, 1 -> setOf(HomeSection.Food)
+    2 -> setOf(HomeSection.Happiness, HomeSection.Energy)
+    3 -> setOf(HomeSection.Food, HomeSection.Happiness, HomeSection.Energy)
+    4 -> setOf(HomeSection.Shop)
+    5, 6 -> setOf(HomeSection.Tasks)
+    else -> emptySet()
+}
+
+@Composable
+private fun HomeTutorialOverlay(step: Int, onNext: () -> Unit) {
+    val text = stringResource(
+        when (step) {
+            0 -> R.string.home_tutorial_food
+            1 -> R.string.home_tutorial_food_options
+            2 -> R.string.home_tutorial_play_rest
+            3 -> R.string.home_tutorial_stats
+            4 -> R.string.home_tutorial_shop
+            5 -> R.string.home_tutorial_tasks
+            else -> R.string.home_tutorial_earnings
+        },
+    )
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .clickable(onClick = onNext),
+    ) {
+        PetSpeechBubble(
+            text = text,
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 170.dp, start = 24.dp, end = 24.dp)
+                .widthIn(max = 320.dp),
         )
     }
 }
@@ -663,6 +709,7 @@ private fun ActionTile(
 @Composable
 private fun HomeBottomPanel(
     state: PetState,
+    tutorialHighlightedSections: Set<HomeSection>,
     onSectionClick: (HomeSection) -> Unit,
     onBuyClick: (CardItem) -> Unit,
     metrics: HomeLayoutMetrics,
@@ -671,6 +718,7 @@ private fun HomeBottomPanel(
     Column(modifier.fillMaxWidth()) {
         HomeTabs(
             state = state,
+            tutorialHighlightedSections = tutorialHighlightedSections,
             onSectionClick = onSectionClick,
             horizontalPadding = metrics.horizontalPadding,
             itemGap = metrics.itemGap,
@@ -754,6 +802,7 @@ private fun HomeBottomPanel(
 @Composable
 private fun HomeTabs(
     state: PetState,
+    tutorialHighlightedSections: Set<HomeSection>,
     onSectionClick: (HomeSection) -> Unit,
     horizontalPadding: Dp,
     itemGap: Dp,
@@ -770,6 +819,7 @@ private fun HomeTabs(
             selected = state.selectedSection == HomeSection.Food,
             progress = state.resources.health / 100f,
             observedValue = state.resources.health,
+            tutorialHighlighted = HomeSection.Food in tutorialHighlightedSections,
             modifier = Modifier.weight(1f),
             onClick = { onSectionClick(HomeSection.Food) },
         )
@@ -779,6 +829,7 @@ private fun HomeTabs(
             selected = state.selectedSection == HomeSection.Happiness,
             progress = state.resources.happiness / 100f,
             observedValue = state.resources.happiness,
+            tutorialHighlighted = HomeSection.Happiness in tutorialHighlightedSections,
             modifier = Modifier.weight(1f),
             onClick = { onSectionClick(HomeSection.Happiness) },
         )
@@ -788,6 +839,7 @@ private fun HomeTabs(
             selected = state.selectedSection == HomeSection.Energy,
             progress = state.resources.energy / 100f,
             observedValue = state.resources.energy,
+            tutorialHighlighted = HomeSection.Energy in tutorialHighlightedSections,
             modifier = Modifier.weight(1f),
             onClick = { onSectionClick(HomeSection.Energy) },
         )
@@ -797,6 +849,7 @@ private fun HomeTabs(
             selected = state.selectedSection == HomeSection.Shop,
             progress = null,
             observedValue = null,
+            tutorialHighlighted = HomeSection.Shop in tutorialHighlightedSections,
             modifier = Modifier.weight(1f),
             onClick = { onSectionClick(HomeSection.Shop) },
         )
@@ -806,6 +859,7 @@ private fun HomeTabs(
             selected = state.selectedSection == HomeSection.Tasks,
             progress = null,
             observedValue = null,
+            tutorialHighlighted = HomeSection.Tasks in tutorialHighlightedSections,
             modifier = Modifier.weight(1f),
             onClick = { onSectionClick(HomeSection.Tasks) },
         )
@@ -819,10 +873,11 @@ private fun HomeTab(
     selected: Boolean,
     progress: Float?,
     observedValue: Int?,
+    tutorialHighlighted: Boolean,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
-    val background = if (selected) HomeSurface else HomePurple
+    val background = if (selected || tutorialHighlighted) HomeSurface else HomePurple
     val iconScale = rememberChangePulseScale(observedValue)
     Box(
         modifier = modifier
@@ -840,6 +895,13 @@ private fun HomeTab(
                 .padding(top = 8.dp)
                 .clip(RoundedCornerShape(topStart = 11.dp, topEnd = 11.dp))
                 .background(background)
+                .then(
+                    if (tutorialHighlighted) {
+                        Modifier.border(3.dp, Color(0xFFFFC928), RoundedCornerShape(11.dp))
+                    } else {
+                        Modifier
+                    },
+                )
                 .padding(top = 13.dp, bottom = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween,
@@ -847,9 +909,11 @@ private fun HomeTab(
             Image(
                 painter = painterResource(icon),
                 contentDescription = label,
-                colorFilter = ColorFilter.tint(if (selected) HomePurple else Color.White),
+                colorFilter = ColorFilter.tint(
+                    if (selected || tutorialHighlighted) HomePurple else Color.White,
+                ),
                 modifier = Modifier
-                    .size(27.dp)
+                    .size(if (tutorialHighlighted) 36.dp else 27.dp)
                     .graphicsLayer {
                         scaleX = iconScale
                         scaleY = iconScale

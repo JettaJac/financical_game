@@ -78,6 +78,7 @@ data class ScenarioStep(
     val moneyOverride: Int?,
     val requiresFlags: Set<String>,
     val minBalanceExclusive: Int?,
+    val triggerImmediately: Boolean = false,
 )
 
 data class ScheduledEvent(
@@ -123,8 +124,9 @@ class EventScheduler(private val catalog: EventCatalogData) {
             .withIndex()
             .asSequence()
             .filter { (_, step) -> step.id !in snapshot.handledScenarioEntryIds }
-            .filter { (index, _) ->
-                elapsedCycleSeconds >= eventTriggerSecond(index, cycleEvents.size)
+            .filter { (index, step) ->
+                step.triggerImmediately ||
+                    elapsedCycleSeconds >= eventTriggerSecond(index, cycleEvents.size)
             }
             .map(IndexedValue<ScenarioStep>::value)
             .firstOrNull { step -> step.isEligible(snapshot) }

@@ -224,6 +224,52 @@ class PetViewModelTest {
     }
 
     @Test
+    fun immediate_tutorial_event_is_available_at_cycle_start() {
+        val event = EventDef(
+            id = "login_bonus",
+            title = "Login bonus",
+            kind = EventKind.Training,
+            deltas = EventDeltas(money = 10),
+            canDecline = false,
+            frequency = EventFrequency.Once,
+            minLevel = 1,
+            requiresFlags = emptySet(),
+            setsFlags = emptySet(),
+            unlocksJobId = null,
+            hideRewardUntilAccept = false,
+            moneyFromCard = 10,
+            moneyFromScript = null,
+        )
+        val scheduler = EventScheduler(
+            EventCatalogData(
+                events = listOf(event),
+                jobs = emptyList(),
+                scenario = listOf(
+                    ScenarioStep(
+                        id = "w1d1_login_bonus",
+                        week = 1,
+                        day = 1,
+                        eventId = event.id,
+                        jobActionId = null,
+                        moneyOverride = null,
+                        requiresFlags = emptySet(),
+                        minBalanceExclusive = null,
+                        triggerImmediately = true,
+                    ),
+                ),
+            ),
+        )
+
+        val scheduled = scheduler.next(
+            snapshot = GameSnapshot(onboardingCompleted = true, currentPeriod = 1),
+            elapsedCycleSeconds = 0,
+        )
+
+        assertEquals("w1d1_login_bonus", scheduled?.scenarioStepId)
+        assertEquals(10, scheduled?.appliedDeltas?.money)
+    }
+
+    @Test
     fun scheduler_restarts_script_after_game_event_progress_is_reset() {
         val event = EventDef(
             id = "story",

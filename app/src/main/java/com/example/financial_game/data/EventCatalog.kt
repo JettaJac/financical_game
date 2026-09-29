@@ -64,10 +64,12 @@ class EventCatalog @Inject constructor(@ApplicationContext context: Context) {
         moneyOverride = json.optIntOrNull("moneyOverride"),
         requiresFlags = json.optJSONArray("requiresFlags").strings(),
         minBalanceExclusive = json.optIntOrNull("minBalanceExclusive"),
+        triggerImmediately = json.optBoolean("triggerImmediately", false),
     )
 }
 
 private fun eventIllustration(id: String): Int = when (id) {
+    "login_bonus", "budget_difference" -> R.drawable.coin_money
     "help_mom_dinner" -> R.drawable.soup_cooked
     "marketplace_training", "income_training" -> R.drawable.phone
     "newspaper_offer", "newspaper_permanent_offer" -> R.drawable.newspapers

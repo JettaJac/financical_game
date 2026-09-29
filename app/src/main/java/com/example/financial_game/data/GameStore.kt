@@ -196,6 +196,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
     private val actualAdditionalIncome = intPreferencesKey("actual_additional_income")
     private val lastReviewedBudgetWeek = intPreferencesKey("last_reviewed_budget_week")
     private val budgetTutorialCompleted = booleanPreferencesKey("budget_tutorial_completed")
+    private val homeTutorialCompleted = booleanPreferencesKey("home_tutorial_completed")
     private val eventFlags = stringSetPreferencesKey("event_flags")
     private val completedEventIds = stringSetPreferencesKey("completed_event_ids")
     private val eventPeriodOccurrences = stringSetPreferencesKey("event_period_occurrences")
@@ -261,6 +262,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 actualAdditionalIncome = checkNotNull(preferences[actualAdditionalIncome]),
                 lastReviewedBudgetWeek = checkNotNull(preferences[lastReviewedBudgetWeek]),
                 budgetTutorialCompleted = checkNotNull(preferences[budgetTutorialCompleted]),
+                homeTutorialCompleted = checkNotNull(preferences[homeTutorialCompleted]),
                 cooldownUnlockCycles = cooldownUnlockCycles,
                 taskUseCounts = taskUseCounts,
                 taskWeeklyUseCounts = taskWeeklyUseCounts,
@@ -366,6 +368,9 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             if (preferences[budgetTutorialCompleted] == null) {
                 preferences[budgetTutorialCompleted] = false
             }
+            if (preferences[homeTutorialCompleted] == null) {
+                preferences[homeTutorialCompleted] = false
+            }
             if (preferences[budgetPlanWeek] == null) {
                 val period = checkNotNull(preferences[currentPeriod])
                 preferences[budgetPlanWeek] = if (
@@ -461,6 +466,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             preferences[handledScenarioEntryIds] = emptySet()
             preferences[eventPoolHandledCycles] = emptySet()
             preferences[activeJobIds] = emptySet()
+            preferences[actionHistory] = "[]"
             preferences[currentPeriod] = GameDefaults.CURRENT_PERIOD
             preferences[budgetPlanWeek] = 0
             preferences[plannedOptionalExpenses] = 0
@@ -468,12 +474,12 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             preferences[actualAdditionalIncome] = 0
             preferences[lastReviewedBudgetWeek] = 0
             preferences[budgetTutorialCompleted] = false
+            preferences[homeTutorialCompleted] = false
             preferences[cycleEndsAtMillis] =
                 System.currentTimeMillis() + GameDefaults.CYCLE_DURATION_MILLIS
             preferences[cycleDurationSeconds] = GameDefaults.CYCLE_DURATION_SECONDS
             preferences[onboardingCompleted] = false
             clearDeposit(preferences)
-            appendAction(preferences, "Игра начата заново")
         }
     }
 
@@ -879,6 +885,13 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             }
             preferences[lastReviewedBudgetWeek] = completedWeek
             appendAction(preferences, "Подведены итоги бюджета")
+        }
+    }
+
+    override suspend fun completeHomeTutorial() {
+        context.gameDataStore.edit { preferences ->
+            preferences[homeTutorialCompleted] = true
+            appendAction(preferences, "Завершено обучение главного экрана")
         }
     }
 

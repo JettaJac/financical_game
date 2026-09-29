@@ -123,6 +123,13 @@
     <!-- Menu -->
     <string name="menu">МЕНЮ</string>
     <string name="continue_action">Продолжить</string>
+    <string name="home_tutorial_food">Я хочу кушать. Покормить меня можно во вкладке «Еда».</string>
+    <string name="home_tutorial_food_options">Пока нам доступна одна позиция, но по мере прохождения ты сможешь угощать меня другими лакомствами.</string>
+    <string name="home_tutorial_play_rest">Отлично! Ещё я люблю играть, и мне иногда хочется немного отдохнуть — это вкладки рядом.</string>
+    <string name="home_tutorial_stats">Следи за моими показателями, а то в ответственный момент у меня не будет настроения или сил.</string>
+    <string name="home_tutorial_shop">Ещё одна вкладка — «Магазин», где ты можешь покупать различные аксессуары для меня и дома.</string>
+    <string name="home_tutorial_tasks">И последнее — это наши с тобой дела. Не забывай утром приводить себя в порядок и делать уроки, это обязательно.</string>
+    <string name="home_tutorial_earnings">А также подглядывай сюда: именно тут мы сможем заработать денег на наши хотелки.</string>
     <string name="restart_action">Рестарт</string>
     <string name="restart_confirmation">Вы уверены?</string>
     <string name="cancel_action">Отмена</string>

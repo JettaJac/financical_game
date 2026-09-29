@@ -1,4 +1,6 @@
 [
+  {"id":"w1d1_login_bonus","week":1,"day":1,"eventId":"login_bonus","triggerImmediately":true},
+  {"id":"w1d1_budget_difference","week":1,"day":1,"eventId":"budget_difference","triggerImmediately":true},
   {"id":"w1d1_help_mom","week":1,"day":1,"eventId":"help_mom_dinner"},
 
   {"id":"w1d2_marketplace_training","week":1,"day":2,"eventId":"marketplace_training"},

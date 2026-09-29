@@ -35,6 +35,11 @@ import kotlinx.coroutines.launch
 internal const val TIMER_SECONDS = GameDefaults.CYCLE_DURATION_SECONDS
 internal const val DEMO_MODE_PASSWORD = "1234"
 internal const val PARENT_MODE_PASSWORD = "1234"
+internal const val HOME_TUTORIAL_STEP_COUNT = 7
+private val HOME_TUTORIAL_EVENT_STEPS = setOf(
+    "w1d1_login_bonus",
+    "w1d1_budget_difference",
+)
 
 internal fun formatCountdown(totalSeconds: Int): String {
     val minutes = totalSeconds / 60
@@ -89,6 +94,7 @@ data class PetState(
     val isTestMode: Boolean = false,
     val demoModePasswordError: Boolean = false,
     val parentModePasswordError: Boolean = false,
+    val homeTutorialStep: Int? = null,
     val nowMillis: Long = System.currentTimeMillis(),
 )
 
@@ -119,6 +125,7 @@ sealed interface PetAction {
     data class ApplyPetAppearance(val appearance: PetAppearance) : PetAction
     data class CompleteBudgetPlanning(val optionalExpenses: Int) : PetAction
     data object CompleteBudgetReview : PetAction
+    data object AdvanceHomeTutorial : PetAction
     data class OpenDepositAccount(val term: DepositTerm, val amount: Int) : PetAction
     data object CloseDepositAccount : PetAction
 
@@ -185,6 +192,14 @@ class PetViewModel @Inject constructor(
                                 it.overlay
                             },
                             activeEvent = it.activeEvent ?: scheduledEvent ?: reachedGoalEvent,
+                            homeTutorialStep = when {
+                                resources.homeTutorialCompleted -> null
+                                it.homeTutorialStep != null -> it.homeTutorialStep
+                                HOME_TUTORIAL_EVENT_STEPS.all(
+                                    resources.handledScenarioEntryIds::contains,
+                                ) -> 0
+                                else -> null
+                            },
                         )
                     }
                 }
@@ -250,6 +265,7 @@ class PetViewModel @Inject constructor(
                     isTestMode = false,
                     demoModePasswordError = false,
                     parentModePasswordError = false,
+                    homeTutorialStep = null,
                 )
             }
         }
@@ -346,6 +362,7 @@ class PetViewModel @Inject constructor(
             PetAction.CompleteBudgetReview -> viewModelScope.launch {
                 repository.completeBudgetReview()
             }
+            PetAction.AdvanceHomeTutorial -> advanceHomeTutorial()
             is PetAction.OpenDepositAccount -> viewModelScope.launch {
                 repository.openDeposit(action.term, action.amount)
             }
@@ -353,6 +370,18 @@ class PetViewModel @Inject constructor(
                 if (repository.closeDeposit()) {
                     _state.update { it.copy(overlay = null) }
                 }
+            }
+        }
+    }
+
+    private fun advanceHomeTutorial() {
+        _state.update { current ->
+            val step = current.homeTutorialStep ?: return@update current
+            if (step + 1 < HOME_TUTORIAL_STEP_COUNT) {
+                current.copy(homeTutorialStep = step + 1)
+            } else {
+                viewModelScope.launch { repository.completeHomeTutorial() }
+                current.copy(homeTutorialStep = null)
             }
         }
     }
