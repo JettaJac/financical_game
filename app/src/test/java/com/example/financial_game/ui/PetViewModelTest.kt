@@ -101,6 +101,24 @@ class PetViewModelTest {
     }
 
     @Test
+    fun demo_mode_makes_all_events_in_the_current_cycle_due_immediately() {
+        assertEquals(
+            GameDefaults.CYCLE_DURATION_SECONDS,
+            eventElapsedCycleSeconds(
+                remainingSeconds = GameDefaults.CYCLE_DURATION_SECONDS,
+                isTestMode = true,
+            ),
+        )
+        assertEquals(
+            0,
+            eventElapsedCycleSeconds(
+                remainingSeconds = GameDefaults.CYCLE_DURATION_SECONDS,
+                isTestMode = false,
+            ),
+        )
+    }
+
+    @Test
     fun event_slots_scale_as_cycle_parts_when_duration_changes() {
         val doubledCycle = 26 * 60
 
@@ -203,6 +221,57 @@ class PetViewModelTest {
         assertEquals("w1d2_training", scheduled?.scenarioStepId)
         assertEquals(-20, scheduled?.appliedDeltas?.money)
         assertEquals(true, scheduled?.isScripted)
+    }
+
+    @Test
+    fun scheduler_restarts_script_after_game_event_progress_is_reset() {
+        val event = EventDef(
+            id = "story",
+            title = "Story",
+            kind = EventKind.Story,
+            deltas = EventDeltas(),
+            canDecline = true,
+            frequency = EventFrequency.Once,
+            minLevel = 1,
+            requiresFlags = emptySet(),
+            setsFlags = emptySet(),
+            unlocksJobId = null,
+            hideRewardUntilAccept = false,
+            moneyFromCard = 0,
+            moneyFromScript = null,
+            poolEligible = false,
+        )
+        val step = ScenarioStep(
+            id = "w1d1_story",
+            week = 1,
+            day = 1,
+            eventId = event.id,
+            jobActionId = null,
+            moneyOverride = null,
+            requiresFlags = emptySet(),
+            minBalanceExclusive = null,
+        )
+        val scheduler = EventScheduler(
+            EventCatalogData(listOf(event), emptyList(), listOf(step)),
+        )
+        val completedGame = GameSnapshot(
+            onboardingCompleted = true,
+            currentPeriod = 1,
+            budgetPlanWeek = 1,
+            completedEventIds = setOf(event.id),
+            handledScenarioEntryIds = setOf(step.id),
+        )
+
+        assertEquals(null, scheduler.next(completedGame))
+
+        val restartedGame = completedGame.copy(
+            completedEventIds = emptySet(),
+            eventPeriodOccurrences = emptySet(),
+            handledScenarioEntryIds = emptySet(),
+            eventPoolHandledCycles = emptySet(),
+        )
+
+        assertEquals(step.id, scheduler.next(restartedGame)?.scenarioStepId)
     }
 
     @Test

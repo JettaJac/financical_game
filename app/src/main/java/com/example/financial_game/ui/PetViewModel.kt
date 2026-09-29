@@ -42,6 +42,13 @@ internal fun formatCountdown(totalSeconds: Int): String {
     return "%02d:%02d".format(minutes, seconds)
 }
 
+internal fun eventElapsedCycleSeconds(remainingSeconds: Int, isTestMode: Boolean): Int =
+    if (isTestMode) {
+        GameDefaults.CYCLE_DURATION_SECONDS
+    } else {
+        (GameDefaults.CYCLE_DURATION_SECONDS - remainingSeconds).coerceAtLeast(0)
+    }
+
 internal fun hasJustReachedGoal(previous: GameSnapshot?, current: GameSnapshot): Boolean {
     if (!current.onboardingCompleted || current.goalTarget <= 0) return false
     if (current.goalId in current.purchasedGoalIds) return false
@@ -144,9 +151,10 @@ class PetViewModel @Inject constructor(
                         )
                         eventScheduler.next(
                             snapshot = resources,
-                            elapsedCycleSeconds =
-                                (GameDefaults.CYCLE_DURATION_SECONDS - remainingSeconds)
-                                    .coerceAtLeast(0),
+                            elapsedCycleSeconds = eventElapsedCycleSeconds(
+                                remainingSeconds = remainingSeconds,
+                                isTestMode = _state.value.isTestMode,
+                            ),
                         )?.asGameEvent()
                     } else {
                         null
@@ -204,8 +212,10 @@ class PetViewModel @Inject constructor(
             val refreshedState = _state.value
             val scheduledEvent = eventScheduler.next(
                 snapshot = refreshedState.resources,
-                elapsedCycleSeconds =
-                    (GameDefaults.CYCLE_DURATION_SECONDS - secondsRemaining).coerceAtLeast(0),
+                elapsedCycleSeconds = eventElapsedCycleSeconds(
+                    remainingSeconds = secondsRemaining,
+                    isTestMode = refreshedState.isTestMode,
+                ),
             )?.asGameEvent()
             if (scheduledEvent != null) {
                 _state.update {
@@ -241,6 +251,16 @@ class PetViewModel @Inject constructor(
     }
 
     private fun nextCycle() {
+        val currentState = _state.value
+        val pendingEvent = eventScheduler.next(
+            snapshot = currentState.resources,
+            elapsedCycleSeconds = GameDefaults.CYCLE_DURATION_SECONDS,
+        )?.asGameEvent()
+        if (pendingEvent != null) {
+            _state.update { it.copy(activeEvent = pendingEvent, overlay = null) }
+            return
+        }
+
         viewModelScope.launch {
             repository.completeTimerCycle()
         }
