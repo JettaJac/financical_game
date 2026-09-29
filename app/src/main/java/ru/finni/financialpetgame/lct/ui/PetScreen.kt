@@ -1,5 +1,8 @@
 package ru.finni.financialpetgame.lct.ui
 
+import android.os.SystemClock
+import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.animation.core.Animatable
@@ -50,6 +53,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -63,6 +67,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
@@ -82,6 +87,7 @@ import ru.finni.financialpetgame.lct.domain.FoodItem
 import ru.finni.financialpetgame.lct.domain.Resource
 import ru.finni.financialpetgame.lct.domain.ShopItem
 import ru.finni.financialpetgame.lct.domain.TaskItem
+import ru.finni.financialpetgame.lct.domain.TaskUsageLimit
 import ru.finni.financialpetgame.lct.domain.EnergyItem
 import ru.finni.financialpetgame.lct.domain.GameEvent
 import ru.finni.financialpetgame.lct.domain.GameEvents
@@ -211,6 +217,26 @@ private val TaskItems = listOf(
 
 @Composable
 fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
+    val context = LocalContext.current
+    val backMessage = stringResource(R.string.press_back_again_to_exit)
+    var lastBackPressAt by remember { mutableLongStateOf(0L) }
+    val handleSystemBack = {
+        val now = SystemClock.elapsedRealtime()
+        if (isSecondBackPress(lastBackPressAt, now)) {
+            lastBackPressAt = 0L
+            onAction(PetAction.Exit)
+        } else {
+            lastBackPressAt = now
+            when {
+                state.demoModeHintVisible -> onAction(PetAction.DismissDemoModeHint)
+                state.activeEvent?.showCloseButton == true -> onAction(PetAction.SkipEvent)
+                state.overlay != null -> onAction(PetAction.CloseOverlay)
+            }
+            Toast.makeText(context, backMessage, Toast.LENGTH_SHORT).show()
+        }
+    }
+    BackHandler(onBack = handleSystemBack)
+
     if (!state.isInitialized) {
         Box(Modifier.fillMaxSize().background(HomeSurface))
         return
@@ -257,7 +283,7 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
 //    EventOverlay(GameEvents.SportsSection, acceptButtonText = "Принять")
 
     when (state.overlay) {
-        HomeOverlay.Menu -> MenuOverlay(state, onAction)
+        HomeOverlay.Menu -> MenuOverlay(state, onAction, handleSystemBack)
         HomeOverlay.Budget -> BudgetOverviewScreen(
             state = state.resources,
             onBack = { onAction(PetAction.CloseOverlay) },
@@ -278,7 +304,7 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
                 onBuy = {
                     onAction(PetAction.BuyGoal(goal, state.resources.goalTarget))
                 },
-                onDismiss = { onAction(PetAction.CloseOverlay) },
+                onDismiss = handleSystemBack,
             )
         }
         HomeOverlay.GoalSelection -> {
@@ -306,6 +332,7 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
         HomeOverlay.Parent -> ParentScreen(
             state = state.resources,
             onBack = { onAction(PetAction.CloseOverlay) },
+            onSystemBack = handleSystemBack,
             onAddGoal = { title, target, image ->
                 onAction(PetAction.AddCustomGoal(title, target, image))
             },
@@ -332,6 +359,13 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
     }
 }
 
+private const val BACK_EXIT_INTERVAL_MILLIS = 2_000L
+
+internal fun isSecondBackPress(previousPressAt: Long, currentPressAt: Long): Boolean =
+    previousPressAt > 0L &&
+        currentPressAt >= previousPressAt &&
+        currentPressAt - previousPressAt <= BACK_EXIT_INTERVAL_MILLIS
+
 @Composable
 private fun HomePage(state: PetState, onAction: (PetAction) -> Unit) {
     BoxWithConstraints(
@@ -342,7 +376,7 @@ private fun HomePage(state: PetState, onAction: (PetAction) -> Unit) {
     ) {
         val metrics = homeLayoutMetrics(maxWidth, maxHeight)
 
-        HomeBackground(metrics)
+        HomeBackground(metrics, state.resources.roomDirtLevel)
 
         HomeHeader(
             state = state,
@@ -468,10 +502,10 @@ private fun HomeTutorialOverlay(step: Int, onNext: () -> Unit) {
 }
 
 @Composable
-private fun HomeBackground(metrics: HomeLayoutMetrics) {
+private fun HomeBackground(metrics: HomeLayoutMetrics, roomDirtLevel: Int) {
     Box(Modifier.fillMaxWidth().height(metrics.backdropHeight)) {
         Image(
-            painter = painterResource(R.drawable.home_background),
+            painter = painterResource(roomBackgroundResource(roomDirtLevel)),
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize().padding(top = metrics.backdropTopInset),
@@ -500,6 +534,17 @@ private fun HomeBackground(metrics: HomeLayoutMetrics) {
                 ),
         )
     }
+}
+
+@DrawableRes
+internal fun roomBackgroundResource(roomDirtLevel: Int): Int = when (
+    roomDirtLevel.coerceIn(1, 5)
+) {
+    1 -> R.drawable.background_1
+    2 -> R.drawable.background_2
+    3 -> R.drawable.background_3
+    4 -> R.drawable.background_4
+    else -> R.drawable.background_5
 }
 
 @Composable
@@ -1131,6 +1176,13 @@ private fun CardRow(
                             eventUnlocked = task.storageId in eventUnlockedTaskIds,
                         )
                     } ?: true
+                    val weeklyTaskLimitReached = (product.item as? TaskItem)?.let { task ->
+                        val weeklyLimit = task.usageLimit as? TaskUsageLimit.PerWeek
+                        val currentWeek = weekForPeriod(currentPeriod)
+                        weeklyLimit != null &&
+                            taskUseWeeks[task.storageId] == currentWeek &&
+                            (taskWeeklyUseCounts[task.storageId] ?: 0) >= weeklyLimit.count
+                    } ?: false
                     val remainingCooldown = cooldownRemaining(
                         cooldown = product.item.cooldown,
                         unlockCycle = cooldownUnlockCycles[product.item.storageId] ?: 0.0,
@@ -1156,6 +1208,7 @@ private fun CardRow(
                             !alreadyPurchased,
                         alreadyPurchased = alreadyPurchased,
                         remainingCooldown = remainingCooldown,
+                        weeklyTaskLimitReached = weeklyTaskLimitReached,
                         onBuyClick = { onBuyClick(product.item) },
                         modifier = Modifier.weight(1f),
                     )
@@ -1203,6 +1256,7 @@ private fun ProductCard(
     canBuy: Boolean,
     alreadyPurchased: Boolean,
     remainingCooldown: CooldownRemaining?,
+    weeklyTaskLimitReached: Boolean,
     onBuyClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -1270,7 +1324,13 @@ private fun ProductCard(
                     maxLines = 1,
                 )
                 product.item is TaskItem && !canBuy -> Text(
-                    text = stringResource(R.string.task_unavailable),
+                    text = stringResource(
+                        if (weeklyTaskLimitReached) {
+                            R.string.task_available_next_week
+                        } else {
+                            R.string.task_unavailable
+                        },
+                    ),
                     autoSize = TextAutoSize.StepBased(
                         minFontSize = 7.sp,
                         maxFontSize = 10.sp,
@@ -1408,7 +1468,11 @@ private fun PageDots(isVisible: Boolean) {
 }
 
 @Composable
-private fun MenuOverlay(state: PetState, onAction: (PetAction) -> Unit) {
+private fun MenuOverlay(
+    state: PetState,
+    onAction: (PetAction) -> Unit,
+    onSystemBack: () -> Unit,
+) {
     var showRestartConfirmation by rememberSaveable { mutableStateOf(false) }
     var showDemoModePassword by rememberSaveable { mutableStateOf(false) }
     var demoModePassword by rememberSaveable { mutableStateOf("") }
@@ -1422,7 +1486,7 @@ private fun MenuOverlay(state: PetState, onAction: (PetAction) -> Unit) {
         }
     }
 
-    Dialog(onDismissRequest = { onAction(PetAction.CloseOverlay) }) {
+    Dialog(onDismissRequest = onSystemBack) {
         Surface(shape = RoundedCornerShape(24.dp), tonalElevation = 8.dp) {
             Column(
                 modifier = Modifier.fillMaxWidth().padding(24.dp),

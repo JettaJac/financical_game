@@ -44,6 +44,7 @@ data class GameSnapshot(
     val budgetTutorialCompleted: Boolean = false,
     val homeTutorialCompleted: Boolean = false,
     val demoModeEnabled: Boolean = false,
+    val roomDirtLevel: Int = 1,
     val cooldownUnlockCycles: Map<String, Double> = emptyMap(),
     val taskUseCounts: Map<String, Int> = emptyMap(),
     val taskWeeklyUseCounts: Map<String, Int> = emptyMap(),

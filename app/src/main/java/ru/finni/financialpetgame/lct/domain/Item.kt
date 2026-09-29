@@ -283,7 +283,7 @@ enum class TaskItem(
         earnings = 30,
         level = 2,
         cooldown = OncePerCycleTaskCooldown,
-        usageLimit = TaskUsageLimit.Total(5),
+        usageLimit = TaskUsageLimit.PerWeek(1),
         requiresEvent = true,
         careEffects = taskEffects(health = -8, happiness = 0, energy = -8, money = 30),
     ),

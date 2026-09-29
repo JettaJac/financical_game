@@ -67,6 +67,9 @@ internal fun moneyAfterCompletedCycles(
     completedCycles: Int,
 ): Int = money + (income - expense) * completedWeeks(currentPeriod, completedCycles)
 
+internal fun roomDirtAfterCompletedCycles(currentLevel: Int, completedCycles: Int): Int =
+    (currentLevel.coerceIn(1, 5) + completedCycles.coerceAtLeast(0)).coerceAtMost(5)
+
 internal fun hasCycleExpired(cycleEndsAtMillis: Long, nowMillis: Long): Boolean =
     cycleEndsAtMillis > 0L && nowMillis >= cycleEndsAtMillis
 

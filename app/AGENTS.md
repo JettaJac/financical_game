@@ -85,7 +85,7 @@ Keep changes consistent with the existing product and remove obsolete behavior w
 ## Cycle and cooldown rules
 
 - The single source of truth is `GameDefaults.CYCLE_DURATION_SECONDS`.
-- One cycle lasts 12 minutes. Milliseconds must derive from that value through `CYCLE_DURATION_MILLIS`.
+- One cycle lasts 7 minutes. Milliseconds must derive from that value through `CYCLE_DURATION_MILLIS`.
 - Do not hardcode cycle duration elsewhere in production code.
 - Cooldowns are expressed as fractions/counts of cycles via `Cooldown.Cycles`, then converted using the shared duration.
 - Active cycle deadlines persist across process death.

@@ -1,7 +1,7 @@
 package ru.finni.financialpetgame.lct.domain
 
 object GameDefaults {
-    const val CYCLE_DURATION_SECONDS = 12 * 60
+    const val CYCLE_DURATION_SECONDS = 7 * 60
     const val CYCLE_DURATION_MILLIS = CYCLE_DURATION_SECONDS * 1_000L
     const val NAME = "Финник"
     const val MONEY = 30

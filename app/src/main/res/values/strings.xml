@@ -1,6 +1,6 @@
 <resources>
     <!-- App -->
-    <string name="app_name">financial_game</string>
+    <string name="app_name">Питомец Финни</string>
 
     <!-- Common -->
     <string name="pet">Кот</string>
@@ -119,10 +119,12 @@
     <string name="task_do">Выполнить</string>
     <string name="task_do_with_reward">Выполнить · +%1$d</string>
     <string name="task_unavailable">Недоступно</string>
+    <string name="task_available_next_week">На следующей неделе</string>
 
     <!-- Menu -->
     <string name="menu">МЕНЮ</string>
     <string name="continue_action">Продолжить</string>
+    <string name="press_back_again_to_exit">Нажмите «Назад» ещё раз, чтобы выйти</string>
     <string name="home_tutorial_food">Я хочу кушать. Покормить меня можно во вкладке «Еда».</string>
     <string name="home_tutorial_food_options">Пока нам доступна одна позиция, но по мере прохождения ты сможешь угощать меня другими лакомствами.</string>
     <string name="home_tutorial_play_rest">Отлично! Ещё я люблю играть, и мне иногда хочется немного отдохнуть — это вкладки рядом.</string>

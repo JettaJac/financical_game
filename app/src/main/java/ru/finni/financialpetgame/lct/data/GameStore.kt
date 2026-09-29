@@ -36,6 +36,7 @@ import ru.finni.financialpetgame.lct.domain.nextCycleEnd
 import ru.finni.financialpetgame.lct.domain.levelAfterGoalPurchase
 import ru.finni.financialpetgame.lct.domain.moneyAfterPurchase
 import ru.finni.financialpetgame.lct.domain.moneyAfterCompletedCycles
+import ru.finni.financialpetgame.lct.domain.roomDirtAfterCompletedCycles
 import ru.finni.financialpetgame.lct.domain.migratedCycleEnd
 import ru.finni.financialpetgame.lct.domain.isAvailable
 import ru.finni.financialpetgame.lct.domain.weekForPeriod
@@ -198,6 +199,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
     private val budgetTutorialCompleted = booleanPreferencesKey("budget_tutorial_completed")
     private val homeTutorialCompleted = booleanPreferencesKey("home_tutorial_completed")
     private val demoModeEnabled = booleanPreferencesKey("demo_mode_enabled")
+    private val roomDirtLevel = intPreferencesKey("room_dirt_level")
     private val eventFlags = stringSetPreferencesKey("event_flags")
     private val completedEventIds = stringSetPreferencesKey("completed_event_ids")
     private val eventPeriodOccurrences = stringSetPreferencesKey("event_period_occurrences")
@@ -265,6 +267,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 budgetTutorialCompleted = checkNotNull(preferences[budgetTutorialCompleted]),
                 homeTutorialCompleted = checkNotNull(preferences[homeTutorialCompleted]),
                 demoModeEnabled = checkNotNull(preferences[demoModeEnabled]),
+                roomDirtLevel = checkNotNull(preferences[roomDirtLevel]),
                 cooldownUnlockCycles = cooldownUnlockCycles,
                 taskUseCounts = taskUseCounts,
                 taskWeeklyUseCounts = taskWeeklyUseCounts,
@@ -374,6 +377,10 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 preferences[homeTutorialCompleted] = false
             }
             if (preferences[demoModeEnabled] == null) preferences[demoModeEnabled] = false
+            if (preferences[roomDirtLevel] == null) {
+                preferences[roomDirtLevel] =
+                    checkNotNull(preferences[currentPeriod]).coerceIn(1, 5)
+            }
             if (preferences[budgetPlanWeek] == null) {
                 val period = checkNotNull(preferences[currentPeriod])
                 preferences[budgetPlanWeek] = if (
@@ -479,6 +486,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             preferences[budgetTutorialCompleted] = false
             preferences[homeTutorialCompleted] = false
             preferences[demoModeEnabled] = false
+            preferences[roomDirtLevel] = 1
             preferences[cycleEndsAtMillis] =
                 System.currentTimeMillis() + GameDefaults.CYCLE_DURATION_MILLIS
             preferences[cycleDurationSeconds] = GameDefaults.CYCLE_DURATION_SECONDS
@@ -722,6 +730,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                     (preferences[taskUseCountKey(item)] ?: 0) + 1
                 preferences[taskWeeklyUseCountKey(item)] = weeklyUses + 1
                 preferences[taskUseWeekKey(item)] = currentWeek
+                if (item == TaskItem.Cleaning) preferences[roomDirtLevel] = 1
                 if (item == TaskItem.BeadCrafts) addFlag(preferences, BRAIDED_BRACELETS_FLAG)
                 if (instanceJobId != null) {
                     val remaining = preferences[jobRemainingActionsKey(instanceJobId)] ?: -1
@@ -1057,6 +1066,10 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             completedCycles = count,
         )
         preferences[currentPeriod] = periodBeforeCompletion + count
+        preferences[roomDirtLevel] = roomDirtAfterCompletedCycles(
+            currentLevel = checkNotNull(preferences[roomDirtLevel]),
+            completedCycles = count,
+        )
         resetCycleAdjustments(preferences)
     }
 

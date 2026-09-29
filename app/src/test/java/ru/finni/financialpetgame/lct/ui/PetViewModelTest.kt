@@ -3,6 +3,7 @@ package ru.finni.financialpetgame.lct.ui
 import ru.finni.financialpetgame.lct.R
 import ru.finni.financialpetgame.lct.data.GameSnapshot
 import ru.finni.financialpetgame.lct.domain.moneyAfterCompletedCycles
+import ru.finni.financialpetgame.lct.domain.roomDirtAfterCompletedCycles
 import ru.finni.financialpetgame.lct.domain.moneyAfterPurchase
 import ru.finni.financialpetgame.lct.domain.levelAfterGoalPurchase
 import ru.finni.financialpetgame.lct.domain.cooldownUnlockCycle
@@ -47,6 +48,29 @@ import org.junit.Test
 import kotlin.math.roundToInt
 
 class PetViewModelTest {
+    @Test
+    fun second_back_press_exits_only_inside_two_second_window() {
+        assertEquals(true, isSecondBackPress(previousPressAt = 1_000, currentPressAt = 3_000))
+        assertEquals(false, isSecondBackPress(previousPressAt = 1_000, currentPressAt = 3_001))
+        assertEquals(false, isSecondBackPress(previousPressAt = 0, currentPressAt = 1_000))
+    }
+
+    @Test
+    fun room_gets_dirtier_each_cycle_until_level_five() {
+        assertEquals(2, roomDirtAfterCompletedCycles(currentLevel = 1, completedCycles = 1))
+        assertEquals(5, roomDirtAfterCompletedCycles(currentLevel = 4, completedCycles = 2))
+        assertEquals(5, roomDirtAfterCompletedCycles(currentLevel = 5, completedCycles = 1))
+    }
+
+    @Test
+    fun every_room_dirt_level_has_its_own_background() {
+        assertEquals(R.drawable.background_1, roomBackgroundResource(1))
+        assertEquals(R.drawable.background_2, roomBackgroundResource(2))
+        assertEquals(R.drawable.background_3, roomBackgroundResource(3))
+        assertEquals(R.drawable.background_4, roomBackgroundResource(4))
+        assertEquals(R.drawable.background_5, roomBackgroundResource(5))
+    }
+
     @Test
     fun pet_images_cover_every_appearance_and_use_level_three_above_level_three() {
         val images = buildSet {
@@ -470,6 +494,14 @@ class PetViewModelTest {
             true,
             TaskItem.DeliverNewspapers.isAvailable(2, 0, 0, -1, emptyMap(), true),
         )
+        assertEquals(
+            false,
+            TaskItem.HandOutFlyers.isAvailable(3, 1, 1, 0, emptyMap(), true),
+        )
+        assertEquals(
+            true,
+            TaskItem.HandOutFlyers.isAvailable(8, 1, 1, 0, emptyMap(), true),
+        )
     }
 
     @Test
@@ -496,14 +528,14 @@ class PetViewModelTest {
 
     @Test
     fun countdown_is_formatted_as_minutes_and_seconds() {
-        assertEquals("12:00", formatCountdown(TIMER_SECONDS))
+        assertEquals("07:00", formatCountdown(TIMER_SECONDS))
         assertEquals("00:00", formatCountdown(0))
     }
 
     @Test
     fun cycle_time_is_rounded_up_to_minutes() {
-        assertEquals(12, roundedMinutesRemaining(TIMER_SECONDS))
-        assertEquals(12, roundedMinutesRemaining(TIMER_SECONDS - 1))
+        assertEquals(7, roundedMinutesRemaining(TIMER_SECONDS))
+        assertEquals(7, roundedMinutesRemaining(TIMER_SECONDS - 1))
         assertEquals(1, roundedMinutesRemaining(60))
         assertEquals(1, roundedMinutesRemaining(1))
         assertEquals(0, roundedMinutesRemaining(0))
