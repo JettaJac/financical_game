@@ -369,6 +369,7 @@ private fun HomePage(state: PetState, onAction: (PetAction) -> Unit) {
 
         QuickActions(
             secondsRemaining = state.secondsRemaining,
+            highlightCycle = state.demoModeHintVisible,
             onBudgetClick = { onAction(PetAction.OpenBudget) },
             onDepositClick = { onAction(PetAction.OpenDeposit) },
             onSkipCycle = { onAction(PetAction.ForceNextCycle )},
@@ -411,6 +412,21 @@ private fun HomePage(state: PetState, onAction: (PetAction) -> Unit) {
             step = step,
             onNext = { onAction(PetAction.AdvanceHomeTutorial) },
         )
+    }
+    if (state.demoModeHintVisible) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable { onAction(PetAction.DismissDemoModeHint) },
+        ) {
+            PetSpeechBubble(
+                text = stringResource(R.string.demo_mode_hint),
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 170.dp, start = 24.dp, end = 24.dp)
+                    .widthIn(max = 320.dp),
+            )
+        }
     }
 }
 
@@ -515,6 +531,16 @@ private fun HomeHeader(
         ) {
             val day = dayForPeriod(state.resources.currentPeriod)
             val weekday = stringArrayResource(R.array.weekdays_short)[day - 1]
+            if (state.isTestMode) {
+                Text(
+                    text = stringResource(R.string.demo_mode_label),
+                    color = HomePurpleDark.copy(alpha = 0.72f),
+                    fontSize = 9.sp,
+                    lineHeight = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = NunitoFontFamily,
+                )
+            }
             Text(
                 text = stringResource(
                     R.string.period_value,
@@ -636,6 +662,7 @@ private fun HeaderValue(
 @Composable
 private fun QuickActions(
     secondsRemaining: Int,
+    highlightCycle: Boolean,
     onBudgetClick: () -> Unit,
     onDepositClick: () -> Unit,
     onSkipCycle: () -> Unit,
@@ -651,7 +678,7 @@ private fun QuickActions(
             .padding(horizontal = tileSize * (17f / 53f)),
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        ActionTile(size = tileSize, onClick = onSkipCycle) {
+        ActionTile(size = tileSize, onClick = onSkipCycle, highlighted = highlightCycle) {
             CircularProgressIndicator(
                 progress = { timerProgress },
                 modifier = Modifier.size(38.dp),
@@ -692,6 +719,7 @@ private fun QuickActions(
 private fun ActionTile(
     size: Dp,
     onClick: (() -> Unit)? = null,
+    highlighted: Boolean = false,
     content: @Composable BoxScope.() -> Unit,
 ) {
     val interactionModifier = if (onClick == null) Modifier else Modifier.clickable(onClick = onClick)
@@ -700,6 +728,18 @@ private fun ActionTile(
             .size(size)
             .clip(RoundedCornerShape(10.dp))
             .background(HomePurple)
+            .then(
+                if (highlighted) {
+                    Modifier.border(3.dp, Color(0xFFFFC928), RoundedCornerShape(10.dp))
+                } else {
+                    Modifier
+                },
+            )
+            .graphicsLayer {
+                val scale = if (highlighted) 1.12f else 1f
+                scaleX = scale
+                scaleY = scale
+            }
             .then(interactionModifier),
         contentAlignment = Alignment.Center,
         content = content,
@@ -1415,16 +1455,19 @@ private fun MenuOverlay(state: PetState, onAction: (PetAction) -> Unit) {
                 }
                 TextButton(
                     onClick = {
-                        onAction(PetAction.ClearDemoModePasswordError)
-                        showDemoModePassword = true
+                        if (state.isTestMode) {
+                            onAction(PetAction.DisableTestMode)
+                        } else {
+                            onAction(PetAction.ClearDemoModePasswordError)
+                            showDemoModePassword = true
+                        }
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = !state.isTestMode,
                 ) {
                     Text(
                         stringResource(
                             if (state.isTestMode) {
-                                R.string.demo_mode_enabled
+                                R.string.demo_mode_disable
                             } else {
                                 R.string.demo_mode_action
                             },

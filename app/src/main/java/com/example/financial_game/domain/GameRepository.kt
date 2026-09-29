@@ -32,6 +32,8 @@ interface GameRepository {
 
     suspend fun completeHomeTutorial()
 
+    suspend fun setDemoMode(enabled: Boolean)
+
     suspend fun addCustomGoal(title: String, target: Int, illustrationRes: Int)
 
     suspend fun selectCustomGoal()

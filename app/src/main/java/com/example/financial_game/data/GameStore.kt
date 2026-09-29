@@ -197,6 +197,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
     private val lastReviewedBudgetWeek = intPreferencesKey("last_reviewed_budget_week")
     private val budgetTutorialCompleted = booleanPreferencesKey("budget_tutorial_completed")
     private val homeTutorialCompleted = booleanPreferencesKey("home_tutorial_completed")
+    private val demoModeEnabled = booleanPreferencesKey("demo_mode_enabled")
     private val eventFlags = stringSetPreferencesKey("event_flags")
     private val completedEventIds = stringSetPreferencesKey("completed_event_ids")
     private val eventPeriodOccurrences = stringSetPreferencesKey("event_period_occurrences")
@@ -263,6 +264,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 lastReviewedBudgetWeek = checkNotNull(preferences[lastReviewedBudgetWeek]),
                 budgetTutorialCompleted = checkNotNull(preferences[budgetTutorialCompleted]),
                 homeTutorialCompleted = checkNotNull(preferences[homeTutorialCompleted]),
+                demoModeEnabled = checkNotNull(preferences[demoModeEnabled]),
                 cooldownUnlockCycles = cooldownUnlockCycles,
                 taskUseCounts = taskUseCounts,
                 taskWeeklyUseCounts = taskWeeklyUseCounts,
@@ -371,6 +373,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             if (preferences[homeTutorialCompleted] == null) {
                 preferences[homeTutorialCompleted] = false
             }
+            if (preferences[demoModeEnabled] == null) preferences[demoModeEnabled] = false
             if (preferences[budgetPlanWeek] == null) {
                 val period = checkNotNull(preferences[currentPeriod])
                 preferences[budgetPlanWeek] = if (
@@ -475,6 +478,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             preferences[lastReviewedBudgetWeek] = 0
             preferences[budgetTutorialCompleted] = false
             preferences[homeTutorialCompleted] = false
+            preferences[demoModeEnabled] = false
             preferences[cycleEndsAtMillis] =
                 System.currentTimeMillis() + GameDefaults.CYCLE_DURATION_MILLIS
             preferences[cycleDurationSeconds] = GameDefaults.CYCLE_DURATION_SECONDS
@@ -892,6 +896,17 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
         context.gameDataStore.edit { preferences ->
             preferences[homeTutorialCompleted] = true
             appendAction(preferences, "Завершено обучение главного экрана")
+        }
+    }
+
+    override suspend fun setDemoMode(enabled: Boolean) {
+        context.gameDataStore.edit { preferences ->
+            preferences[demoModeEnabled] = enabled
+            appendAction(
+                preferences,
+                if (enabled) "Включён демонстрационный режим"
+                else "Выключен демонстрационный режим",
+            )
         }
     }
 

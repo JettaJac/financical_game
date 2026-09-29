@@ -149,6 +149,9 @@
     <string name="parent_cycle_summary">Цикл %1$d · действий: %2$d</string>
     <string name="demo_mode_action">Демонстрационный режим</string>
     <string name="demo_mode_enabled">Демонстрационный режим включён</string>
+    <string name="demo_mode_disable">Выключить демонстрационный режим</string>
+    <string name="demo_mode_label">Демонстрационный режим</string>
+    <string name="demo_mode_hint">Демонстрационный режим позволяет пропускать циклы при тапе на кнопку цикла.</string>
     <string name="demo_mode_password_title">Демонстрационный режим</string>
     <string name="demo_mode_password_label">Пароль</string>
     <string name="demo_mode_password_error">Неверный пароль</string>

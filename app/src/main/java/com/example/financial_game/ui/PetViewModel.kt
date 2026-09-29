@@ -95,6 +95,7 @@ data class PetState(
     val demoModePasswordError: Boolean = false,
     val parentModePasswordError: Boolean = false,
     val homeTutorialStep: Int? = null,
+    val demoModeHintVisible: Boolean = false,
     val nowMillis: Long = System.currentTimeMillis(),
 )
 
@@ -120,6 +121,8 @@ sealed interface PetAction {
     data object ForceNextCycle : PetAction
     data class EnableTestMode(val password: String) : PetAction
     data object ClearDemoModePasswordError : PetAction
+    data object DisableTestMode : PetAction
+    data object DismissDemoModeHint : PetAction
     data object Restart : PetAction
     data class CompleteOnboarding(val setup: PetSetup) : PetAction
     data class ApplyPetAppearance(val appearance: PetAppearance) : PetAction
@@ -183,6 +186,7 @@ class PetViewModel @Inject constructor(
                                 nowMillis,
                             ),
                             isInitialized = true,
+                            isTestMode = resources.demoModeEnabled,
                             nowMillis = nowMillis,
                             overlay = if (scheduledEvent != null || reachedGoalEvent != null) {
                                 null
@@ -266,6 +270,7 @@ class PetViewModel @Inject constructor(
                     demoModePasswordError = false,
                     parentModePasswordError = false,
                     homeTutorialStep = null,
+                    demoModeHintVisible = false,
                 )
             }
         }
@@ -341,12 +346,34 @@ class PetViewModel @Inject constructor(
             PetAction.ForceNextCycle -> if (_state.value.isTestMode) {
                 nextCycle()
             }
-            is PetAction.EnableTestMode -> _state.update {
+            is PetAction.EnableTestMode -> {
                 if (action.password == DEMO_MODE_PASSWORD) {
-                    it.copy(isTestMode = true, demoModePasswordError = false)
+                    viewModelScope.launch {
+                        repository.setDemoMode(true)
+                        _state.update {
+                            it.copy(
+                                demoModePasswordError = false,
+                                demoModeHintVisible = true,
+                                overlay = null,
+                            )
+                        }
+                    }
                 } else {
-                    it.copy(demoModePasswordError = true)
+                    _state.update { it.copy(demoModePasswordError = true) }
                 }
+            }
+            PetAction.DisableTestMode -> viewModelScope.launch {
+                repository.setDemoMode(false)
+                _state.update {
+                    it.copy(
+                        isTestMode = false,
+                        demoModeHintVisible = false,
+                        overlay = null,
+                    )
+                }
+            }
+            PetAction.DismissDemoModeHint -> _state.update {
+                it.copy(demoModeHintVisible = false)
             }
             PetAction.ClearDemoModePasswordError -> _state.update {
                 it.copy(demoModePasswordError = false)
