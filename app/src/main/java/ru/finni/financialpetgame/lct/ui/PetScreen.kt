@@ -382,6 +382,7 @@ private fun HomePage(state: PetState, onAction: (PetAction) -> Unit) {
             state = state,
             onMenuClick = { onAction(PetAction.OpenMenu) },
             onGoalClick = { onAction(PetAction.OpenGoal) },
+            tutorialHighlighted = state.homeTutorialStep == 0,
             metrics = metrics,
             modifier = Modifier.align(Alignment.TopCenter),
         )
@@ -403,7 +404,9 @@ private fun HomePage(state: PetState, onAction: (PetAction) -> Unit) {
 
         QuickActions(
             secondsRemaining = state.secondsRemaining,
-            highlightCycle = state.demoModeHintVisible,
+            highlightCycle = state.demoModeHintVisible || state.homeTutorialStep == 1,
+            highlightBudget = state.homeTutorialStep == 2,
+            highlightDeposit = state.homeTutorialStep == 3,
             onBudgetClick = { onAction(PetAction.OpenBudget) },
             onDepositClick = { onAction(PetAction.OpenDeposit) },
             onSkipCycle = { onAction(PetAction.ForceNextCycle )},
@@ -465,11 +468,11 @@ private fun HomePage(state: PetState, onAction: (PetAction) -> Unit) {
 }
 
 private fun tutorialHighlightedSections(step: Int?): Set<HomeSection> = when (step) {
-    0, 1 -> setOf(HomeSection.Food)
-    2 -> setOf(HomeSection.Happiness, HomeSection.Energy)
-    3 -> setOf(HomeSection.Food, HomeSection.Happiness, HomeSection.Energy)
-    4 -> setOf(HomeSection.Shop)
-    5, 6 -> setOf(HomeSection.Tasks)
+    4, 5 -> setOf(HomeSection.Food)
+    6 -> setOf(HomeSection.Happiness, HomeSection.Energy)
+    7 -> setOf(HomeSection.Food, HomeSection.Happiness, HomeSection.Energy)
+    8 -> setOf(HomeSection.Shop)
+    9, 10 -> setOf(HomeSection.Tasks)
     else -> emptySet()
 }
 
@@ -477,25 +480,36 @@ private fun tutorialHighlightedSections(step: Int?): Set<HomeSection> = when (st
 private fun HomeTutorialOverlay(step: Int, onNext: () -> Unit) {
     val text = stringResource(
         when (step) {
-            0 -> R.string.home_tutorial_food
-            1 -> R.string.home_tutorial_food_options
-            2 -> R.string.home_tutorial_play_rest
-            3 -> R.string.home_tutorial_stats
-            4 -> R.string.home_tutorial_shop
-            5 -> R.string.home_tutorial_tasks
+            0 -> R.string.home_tutorial_goal
+            1 -> R.string.home_tutorial_cycle
+            2 -> R.string.home_tutorial_budget
+            3 -> R.string.home_tutorial_deposit
+            4 -> R.string.home_tutorial_food
+            5 -> R.string.home_tutorial_food_options
+            6 -> R.string.home_tutorial_play_rest
+            7 -> R.string.home_tutorial_stats
+            8 -> R.string.home_tutorial_shop
+            9 -> R.string.home_tutorial_tasks
             else -> R.string.home_tutorial_earnings
         },
     )
-    Box(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
             .clickable(onClick = onNext),
     ) {
+        val bottomPanelHeight = (maxHeight * 0.28f).coerceIn(200.dp, 255.dp)
         PetSpeechBubble(
             text = text,
+            smallerText = true,
+            tailAtTopCenter = true,
             modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = 170.dp, start = 24.dp, end = 24.dp)
+                .align(Alignment.BottomCenter)
+                .padding(
+                    start = 24.dp,
+                    end = 24.dp,
+                    bottom = bottomPanelHeight + 12.dp,
+                )
                 .widthIn(max = 320.dp),
         )
     }
@@ -552,6 +566,7 @@ private fun HomeHeader(
     state: PetState,
     onMenuClick: () -> Unit,
     onGoalClick: () -> Unit,
+    tutorialHighlighted: Boolean,
     metrics: HomeLayoutMetrics,
     modifier: Modifier = Modifier,
 ) {
@@ -562,7 +577,19 @@ private fun HomeHeader(
         modifier
             .fillMaxWidth()
             .height(metrics.headerHeight)
-            .padding(horizontal = metrics.horizontalPadding),
+            .padding(horizontal = metrics.horizontalPadding)
+            .then(
+                if (tutorialHighlighted) {
+                    Modifier
+                        .border(3.dp, Color(0xFFFFC928), RoundedCornerShape(12.dp))
+                        .graphicsLayer {
+                            scaleX = 1.03f
+                            scaleY = 1.03f
+                        }
+                } else {
+                    Modifier
+                },
+            ),
     ) {
         if (state.isTestMode) {
             Surface(
@@ -718,6 +745,8 @@ private fun HeaderValue(
 private fun QuickActions(
     secondsRemaining: Int,
     highlightCycle: Boolean,
+    highlightBudget: Boolean,
+    highlightDeposit: Boolean,
     onBudgetClick: () -> Unit,
     onDepositClick: () -> Unit,
     onSkipCycle: () -> Unit,
@@ -752,14 +781,22 @@ private fun QuickActions(
         }
 
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            ActionTile(size = tileSize, onClick = onBudgetClick) {
+            ActionTile(
+                size = tileSize,
+                onClick = onBudgetClick,
+                highlighted = highlightBudget,
+            ) {
                 Image(
                     painter = painterResource(R.drawable.carbon_piggy_bank),
                     contentDescription = stringResource(R.string.budget_current),
                     modifier = Modifier.align(Alignment.Center).size(33.dp),
                 )
             }
-            ActionTile(size = tileSize, onClick = onDepositClick) {
+            ActionTile(
+                size = tileSize,
+                onClick = onDepositClick,
+                highlighted = highlightDeposit,
+            ) {
                 Image(
                     painter = painterResource(R.drawable.ic_deposit_wallet),
                     contentDescription = stringResource(R.string.deposit_title),

@@ -35,7 +35,7 @@ import kotlinx.coroutines.launch
 internal const val TIMER_SECONDS = GameDefaults.CYCLE_DURATION_SECONDS
 internal const val DEMO_MODE_PASSWORD = "1234"
 internal const val PARENT_MODE_PASSWORD = "1234"
-internal const val HOME_TUTORIAL_STEP_COUNT = 7
+internal const val HOME_TUTORIAL_STEP_COUNT = 11
 private val HOME_TUTORIAL_EVENT_STEPS = setOf(
     "w1d1_login_bonus",
     "w1d1_budget_difference",
@@ -144,6 +144,7 @@ class PetViewModel @Inject constructor(
     val state = _state.asStateFlow()
     private var goalPurchaseInProgress = false
     private var appearanceUpdateInProgress = false
+    private var eventResolutionInProgress = false
     private val eventScheduler = EventScheduler(eventCatalog.data)
 
     init {
@@ -179,6 +180,17 @@ class PetViewModel @Inject constructor(
                     }
                     _state.update {
                         val nowMillis = System.currentTimeMillis()
+                        val unresolvedActiveEvent = it.activeEvent?.takeUnless { active ->
+                            val activeScheduled = active.scheduledEvent
+                                ?: return@takeUnless false
+                            activeScheduled.scenarioStepId?.let(
+                                resources.handledScenarioEntryIds::contains,
+                            ) ?: (
+                                !activeScheduled.isScripted &&
+                                    resources.currentPeriod.toString() in
+                                    resources.eventPoolHandledCycles
+                                )
+                        }
                         it.copy(
                             resources = resources,
                             secondsRemaining = cycleSecondsRemaining(
@@ -195,7 +207,7 @@ class PetViewModel @Inject constructor(
                             } else {
                                 it.overlay
                             },
-                            activeEvent = it.activeEvent ?: scheduledEvent ?: reachedGoalEvent,
+                            activeEvent = unresolvedActiveEvent ?: scheduledEvent ?: reachedGoalEvent,
                             homeTutorialStep = when {
                                 resources.homeTutorialCompleted -> null
                                 it.homeTutorialStep != null -> it.homeTutorialStep
@@ -414,19 +426,24 @@ class PetViewModel @Inject constructor(
     }
 
     private fun resolveEvent(accept: Boolean) {
+        if (eventResolutionInProgress) return
         val currentState = _state.value
         val event = currentState.activeEvent ?: return
         event.scheduledEvent?.let { scheduled ->
             if (!canResolveScheduledEvent(scheduled, accept, currentState.resources.money)) return
-            _state.update { it.copy(activeEvent = null) }
+            eventResolutionInProgress = true
             viewModelScope.launch {
-                repository.resolveScheduledEvent(
-                    event = scheduled,
-                    unlockedJob = eventScheduler.jobFor(scheduled),
-                    accepted = accept,
-                )
-                if (opensDepositAfterEvent(scheduled.definition.id, accept)) {
-                    _state.update { it.copy(overlay = HomeOverlay.Deposit) }
+                try {
+                    repository.resolveScheduledEvent(
+                        event = scheduled,
+                        unlockedJob = eventScheduler.jobFor(scheduled),
+                        accepted = accept,
+                    )
+                    if (opensDepositAfterEvent(scheduled.definition.id, accept)) {
+                        _state.update { it.copy(overlay = HomeOverlay.Deposit) }
+                    }
+                } finally {
+                    eventResolutionInProgress = false
                 }
             }
             return

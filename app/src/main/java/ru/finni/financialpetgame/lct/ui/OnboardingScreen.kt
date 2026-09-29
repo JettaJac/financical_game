@@ -691,18 +691,31 @@ private fun PrimaryButton(
 internal fun PetSpeechBubble(
     text: String,
     modifier: Modifier = Modifier,
+    smallerText: Boolean = false,
+    tailAtTopCenter: Boolean = false,
 ) {
     Box(modifier = modifier.padding(bottom = 12.dp)) {
         Canvas(
             Modifier
-                .align(Alignment.BottomStart)
-                .offset(x = 28.dp, y = 10.dp)
+                .align(
+                    if (tailAtTopCenter) Alignment.TopCenter else Alignment.BottomStart,
+                )
+                .offset(
+                    x = if (tailAtTopCenter) 0.dp else 28.dp,
+                    y = if (tailAtTopCenter) (-10).dp else 10.dp,
+                )
                 .size(width = 34.dp, height = 22.dp),
         ) {
             val tail = Path().apply {
-                moveTo(0f, 0f)
-                lineTo(size.width * 0.52f, size.height)
-                lineTo(size.width, 0f)
+                if (tailAtTopCenter) {
+                    moveTo(size.width * 0.5f, 0f)
+                    lineTo(size.width, size.height)
+                    lineTo(0f, size.height)
+                } else {
+                    moveTo(0f, 0f)
+                    lineTo(size.width * 0.52f, size.height)
+                    lineTo(size.width, 0f)
+                }
                 close()
             }
             drawPath(tail, Color.White)
@@ -717,8 +730,8 @@ internal fun PetSpeechBubble(
                 modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
                 color = OnboardingPurpleDark,
                 fontFamily = NunitoFontFamily,
-                fontSize = 15.sp,
-                lineHeight = 18.sp,
+                fontSize = if (smallerText) 14.sp else 15.sp,
+                lineHeight = if (smallerText) 17.sp else 18.sp,
                 fontWeight = FontWeight.ExtraBold,
                 textAlign = TextAlign.Center,
             )
