@@ -519,6 +519,26 @@ private fun HomeHeader(
             .height(metrics.headerHeight)
             .padding(horizontal = metrics.horizontalPadding),
     ) {
+        if (state.isTestMode) {
+            Surface(
+                color = HomePurple.copy(alpha = 0.10f),
+                shape = RoundedCornerShape(50),
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 2.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.demo_mode_label),
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                    color = HomePurpleDark.copy(alpha = 0.72f),
+                    fontSize = 8.sp,
+                    lineHeight = 9.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = NunitoFontFamily,
+                    maxLines = 1,
+                )
+            }
+        }
         Column(
             modifier = Modifier
                 .align(Alignment.TopCenter)
@@ -531,16 +551,6 @@ private fun HomeHeader(
         ) {
             val day = dayForPeriod(state.resources.currentPeriod)
             val weekday = stringArrayResource(R.array.weekdays_short)[day - 1]
-            if (state.isTestMode) {
-                Text(
-                    text = stringResource(R.string.demo_mode_label),
-                    color = HomePurpleDark.copy(alpha = 0.72f),
-                    fontSize = 9.sp,
-                    lineHeight = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    fontFamily = NunitoFontFamily,
-                )
-            }
             Text(
                 text = stringResource(
                     R.string.period_value,
