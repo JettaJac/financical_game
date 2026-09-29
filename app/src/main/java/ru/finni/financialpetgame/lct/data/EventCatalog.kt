@@ -1,0 +1,130 @@
+package ru.finni.financialpetgame.lct.data
+
+import android.content.Context
+import ru.finni.financialpetgame.lct.R
+import ru.finni.financialpetgame.lct.domain.events.AllowedCycles
+import ru.finni.financialpetgame.lct.domain.events.EventCatalogData
+import ru.finni.financialpetgame.lct.domain.events.EventDef
+import ru.finni.financialpetgame.lct.domain.events.EventDeltas
+import ru.finni.financialpetgame.lct.domain.events.EventFrequency
+import ru.finni.financialpetgame.lct.domain.events.EventKind
+import ru.finni.financialpetgame.lct.domain.events.JobDef
+import ru.finni.financialpetgame.lct.domain.events.ScenarioStep
+import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
+import javax.inject.Singleton
+import org.json.JSONArray
+import org.json.JSONObject
+
+@Singleton
+class EventCatalog @Inject constructor(@ApplicationContext context: Context) {
+    val data: EventCatalogData = EventCatalogData(
+        events = JSONArray(context.readAsset("events/event_defs.json")).objects().map(::eventDef),
+        jobs = JSONArray(context.readAsset("events/job_defs.json")).objects().map(::jobDef),
+        scenario = JSONArray(context.readAsset("events/scenario_script.json"))
+            .objects()
+            .map(::scenarioStep),
+    )
+
+    private fun eventDef(json: JSONObject) = EventDef(
+        id = json.getString("id"),
+        title = json.getString("title"),
+        kind = EventKind.valueOf(json.getString("kind").snakeToPascal()),
+        deltas = json.getJSONObject("deltas").deltas(),
+        canDecline = json.getBoolean("canDecline"),
+        frequency = EventFrequency.valueOf(json.getString("frequency").snakeToPascal()),
+        minLevel = json.optInt("minLevel", 1),
+        requiresFlags = json.optJSONArray("requiresFlags").strings(),
+        setsFlags = json.optJSONArray("setsFlags").strings(),
+        unlocksJobId = json.optString("unlocksJobId").takeIf(String::isNotBlank),
+        hideRewardUntilAccept = json.optBoolean("hideRewardUntilAccept", false),
+        moneyFromCard = json.optInt("moneyFromCard", json.getJSONObject("deltas").optInt("money")),
+        moneyFromScript = json.optIntOrNull("moneyFromScript"),
+        permanentExpenseDelta = json.optInt("permanentExpenseDelta", 0),
+        poolEligible = json.optBoolean("poolEligible", false),
+        illustrationRes = eventIllustration(json.getString("id")),
+    )
+
+    private fun jobDef(json: JSONObject) = JobDef(
+        id = json.getString("id"),
+        payout = json.getInt("payout"),
+        statCost = json.getJSONObject("statCost").deltas(),
+        remainingActions = json.getInt("remainingActions"),
+        allowedCycles = AllowedCycles.valueOf(json.getString("allowedCycles").snakeToPascal()),
+        periodLimit = json.optIntOrNull("periodLimit"),
+        taskStorageId = json.optString("taskStorageId").takeIf(String::isNotBlank),
+    )
+
+    private fun scenarioStep(json: JSONObject) = ScenarioStep(
+        id = json.getString("id"),
+        week = json.getInt("week"),
+        day = json.getInt("day"),
+        eventId = json.optString("eventId").takeIf(String::isNotBlank),
+        jobActionId = json.optString("jobActionId").takeIf(String::isNotBlank),
+        moneyOverride = json.optIntOrNull("moneyOverride"),
+        requiresFlags = json.optJSONArray("requiresFlags").strings(),
+        minBalanceExclusive = json.optIntOrNull("minBalanceExclusive"),
+        triggerImmediately = json.optBoolean("triggerImmediately", false),
+    )
+}
+
+private fun eventIllustration(id: String): Int = when (id) {
+    "login_bonus", "budget_difference" -> R.drawable.coin_money
+    "help_mom_dinner" -> R.drawable.soup_cooked
+    "marketplace_training", "income_training" -> R.drawable.phone
+    "newspaper_offer", "newspaper_permanent_offer" -> R.drawable.newspapers
+    "grandma_gift" -> R.drawable.dinner
+    "store_discount" -> R.drawable.sales
+    "marketplace_toy_sale" -> R.drawable.sales
+    "flyers_offer" -> R.drawable.promote
+    "pet_sitting_offer" -> R.drawable.feed_cat
+    "friend_repaid_debt", "friend_debt" -> R.drawable.debt
+    "deposit_offer", "forced_deposit_offer" -> R.drawable.carbon_piggy_bank
+    "friend_sports_section" -> R.drawable.gym
+    "handmade_30", "handmade_20" -> R.drawable.pearls
+    "money_in_jacket", "random_money", "lost_coin" -> R.drawable.money_fell
+    "board_game" -> R.drawable.board_game
+    "good_weather", "rainbow" -> R.drawable.sunny_sky
+    "friend_birthday", "grandfather_birthday" -> R.drawable.birthday
+    "recycle_paper" -> R.drawable.recycle
+    "praise_1", "praise_2" -> R.drawable.positive_chores
+    "dog_walking_offer" -> R.drawable.walking_dog
+    "charity" -> R.drawable.coin_money
+    "cinema" -> R.drawable.cinema
+    "bed_broken" -> R.drawable.bed
+    "lunch_price_rise" -> R.drawable.dinner
+    "flooded_room" -> R.drawable.coach_in_water
+    "tv_quiz" -> R.drawable.victorina
+    "neighbour_fair" -> R.drawable.sales
+    "broken_charger" -> R.drawable.broke_charger
+    "lessons_cancelled" -> R.drawable.homework
+    "torn_pillow" -> R.drawable.broke_pillow
+    "aunt_letter" -> R.drawable.newspapers
+    "new_phone" -> R.drawable.new_phone
+    "park_trip_35", "park_trip_40" -> R.drawable.park_attraction
+    "deleted_game" -> R.drawable.phone
+    "guest_visit" -> R.drawable.meet_the_friends
+    else -> R.drawable.goal_pillow
+}
+
+private fun Context.readAsset(path: String): String =
+    assets.open(path).bufferedReader().use { it.readText() }
+
+private fun JSONArray.objects(): List<JSONObject> =
+    List(length()) { index -> getJSONObject(index) }
+
+private fun JSONArray?.strings(): Set<String> =
+    if (this == null) emptySet() else List(length()) { index -> getString(index) }.toSet()
+
+private fun JSONObject.deltas() = EventDeltas(
+    health = optInt("health"),
+    happiness = optInt("happiness"),
+    energy = optInt("energy"),
+    money = optInt("money"),
+)
+
+private fun JSONObject.optIntOrNull(key: String): Int? =
+    if (has(key) && !isNull(key)) getInt(key) else null
+
+private fun String.snakeToPascal(): String =
+    split('_').joinToString("") { word -> word.replaceFirstChar(Char::uppercase) }

@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.financial_game"
+    namespace = "ru.finni.financialpetgame.lct"
     compileSdk {
         version = release(36) {
             minorApiLevel = 1
@@ -15,7 +15,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.financial_game"
+        applicationId = "ru.finni.financialpetgame.lct"
         minSdk = 26
         targetSdk = 36
         versionCode = 1

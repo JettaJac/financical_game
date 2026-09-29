@@ -1,0 +1,106 @@
+package ru.finni.financialpetgame.lct.domain
+
+import ru.finni.financialpetgame.lct.data.GameSnapshot
+import kotlinx.coroutines.flow.Flow
+import ru.finni.financialpetgame.lct.domain.events.JobDef
+import ru.finni.financialpetgame.lct.domain.events.ScheduledEvent
+
+interface GameRepository {
+    val snapshot: Flow<GameSnapshot>
+
+    suspend fun initialize()
+
+    suspend fun completeTimerCycle()
+
+    suspend fun advanceExpiredCycles(nowMillis: Long)
+
+    suspend fun buyCareItem(item: CardItem)
+
+    suspend fun buyGoal(goal: Goals, price: Int): Boolean
+
+    suspend fun selectGoal(goal: Goals)
+
+    suspend fun applyEffects(effects: List<Effect>)
+
+    suspend fun completeOnboarding(setup: PetSetup)
+
+    suspend fun updatePetAppearance(appearance: PetAppearance): Boolean
+
+    suspend fun saveBudgetPlan(optionalExpenses: Int)
+
+    suspend fun completeBudgetReview()
+
+    suspend fun completeHomeTutorial()
+
+    suspend fun setDemoMode(enabled: Boolean)
+
+    suspend fun addCustomGoal(title: String, target: Int, illustrationRes: Int)
+
+    suspend fun selectCustomGoal()
+
+    suspend fun recordAction(description: String, moneyDelta: Int = 0)
+
+    suspend fun openDeposit(term: DepositTerm, amount: Int): Boolean
+
+    suspend fun closeDeposit(): Boolean
+
+    suspend fun resolveScheduledEvent(
+        event: ScheduledEvent,
+        unlockedJob: JobDef?,
+        accepted: Boolean,
+    )
+
+    suspend fun reset()
+}
+
+internal fun completedWeeks(currentPeriod: Int, completedCycles: Int): Int {
+    if (completedCycles <= 0) return 0
+    val safePeriod = currentPeriod.coerceAtLeast(1)
+    return (safePeriod + completedCycles - 1) / 7 - (safePeriod - 1) / 7
+}
+
+internal fun moneyAfterCompletedCycles(
+    money: Int,
+    income: Int,
+    expense: Int,
+    currentPeriod: Int,
+    completedCycles: Int,
+): Int = money + (income - expense) * completedWeeks(currentPeriod, completedCycles)
+
+internal fun hasCycleExpired(cycleEndsAtMillis: Long, nowMillis: Long): Boolean =
+    cycleEndsAtMillis > 0L && nowMillis >= cycleEndsAtMillis
+
+internal fun nextCycleEnd(nowMillis: Long): Long =
+    nowMillis + GameDefaults.CYCLE_DURATION_MILLIS
+
+internal fun migratedCycleEnd(
+    cycleEndsAtMillis: Long,
+    nowMillis: Long,
+    previousDurationSeconds: Int,
+    currentDurationSeconds: Int = GameDefaults.CYCLE_DURATION_SECONDS,
+): Long {
+    if (cycleEndsAtMillis <= nowMillis) return cycleEndsAtMillis
+    if (previousDurationSeconds <= 0 || currentDurationSeconds <= 0) {
+        return nowMillis + currentDurationSeconds.coerceAtLeast(0) * 1_000L
+    }
+    val previousDurationMillis = previousDurationSeconds * 1_000L
+    val currentDurationMillis = currentDurationSeconds * 1_000L
+    val remainingMillis = (cycleEndsAtMillis - nowMillis).coerceAtMost(previousDurationMillis)
+    val scaledRemainingMillis =
+        (remainingMillis * currentDurationMillis + previousDurationMillis - 1) /
+            previousDurationMillis
+    return nowMillis + scaledRemainingMillis
+}
+
+internal fun cycleSecondsRemaining(cycleEndsAtMillis: Long, nowMillis: Long): Int {
+    val remainingMillis = (cycleEndsAtMillis - nowMillis).coerceAtLeast(0L)
+    return ((remainingMillis + 999L) / 1_000L)
+        .coerceAtMost(Int.MAX_VALUE.toLong())
+        .toInt()
+}
+
+internal fun moneyAfterPurchase(money: Int, price: Int): Int =
+    if (money >= price) money - price else money
+
+internal fun levelAfterGoalPurchase(currentLevel: Int, goalLevel: Int): Int =
+    if (goalLevel == currentLevel) currentLevel + 1 else currentLevel
