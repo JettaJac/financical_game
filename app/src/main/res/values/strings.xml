@@ -1,0 +1,281 @@
+<resources>
+    <!-- App -->
+    <string name="app_name">Питомец Финни</string>
+
+    <!-- Common -->
+    <string name="pet">Кот</string>
+    <string name="soon">Скоро</string>
+
+    <!-- Home: header and status -->
+    <string name="open_menu">Открыть меню</string>
+    <string name="income">доход: %1$d</string>
+    <string name="expense">расход: %1$d</string>
+    <string name="money">%1$d$</string>
+    <string name="progress_value">%1$d / %2$d</string>
+    <string name="period_value">%1$d день (%2$s) %3$d неделя</string>
+    <string-array name="weekdays_short">
+        <item>ПН</item>
+        <item>ВТ</item>
+        <item>СР</item>
+        <item>ЧТ</item>
+        <item>ПТ</item>
+        <item>СБ</item>
+        <item>ВС</item>
+    </string-array>
+    <string name="timer">Таймер</string>
+
+    <!-- Weekly budget planning -->
+    <string name="budget_intro_message">Давай составим план бюджета, чтобы мне хватило на всё!</string>
+    <string name="budget_make_plan">Составить план</string>
+    <string name="budget_choose_category_guide">Куда отнесем это: к доходам или расходам?</string>
+    <string name="budget_choose_frequency_guide">Отличный выбор! Теперь уточни, к какому виду она относится</string>
+    <string name="budget_choose_category">К чему относится?</string>
+    <string name="budget_choose_subcategory">Выбери подкатегорию</string>
+    <string name="budget_income">Доходы</string>
+    <string name="budget_expenses">Расходы</string>
+    <string name="budget_recurring">Постоянные</string>
+    <string name="budget_irregular">Нерегулярные</string>
+    <string name="budget_savings">Накопления (вклад)</string>
+    <string name="budget_mandatory_success">Отлично! Все обязательные доходы и расходы распределены правильно</string>
+    <string name="budget_optional_guide">Теперь запланируем необязательные расходы на неделю. Предлагаю начать с 20 монет</string>
+    <string name="budget_optional_too_high">Так расходов получится больше доходов. Запланируй не больше %1$d монет, чтобы итоговый баланс был не ниже нуля.</string>
+    <string name="budget_optional_maximum">Максимум при текущем бюджете: %1$d</string>
+    <string name="budget_enter_amount">Введи сумму</string>
+    <string name="budget_review_guide">Давай проверим бюджет и согласуем его!</string>
+    <string name="budget_total">Итог:</string>
+    <string name="budget_total_expenses">Всего расходов:</string>
+    <string name="budget_balance_hint">Разница между доходами и расходами</string>
+    <string name="budget_to_game">К игре</string>
+    <string name="budget_optional_expenses">Необязательные расходы</string>
+    <string name="budget_pocket_money">Карманные деньги</string>
+    <string name="budget_school_lunch">Школьные обеды</string>
+    <string name="budget_mobile_service">Связь</string>
+    <string name="budget_vitamins">Витамины</string>
+    <string name="budget_sports_section">Спортивная секция</string>
+    <string name="budget_period_results">Итоги</string>
+    <string name="budget_period_success_summary">Молодец, ты хорошо справился за эту неделю!</string>
+    <string name="budget_period_failed_summary">В этот раз расходы превысили план. В следующую неделю получится лучше!</string>
+    <string name="budget_planned">запланировано</string>
+    <string name="budget_actual">фактически</string>
+    <string name="budget_additional_income">Дополнительные</string>
+    <string name="budget_recurring_expenses">Обязательные</string>
+    <string name="budget_period_income_total">Всего доходов</string>
+    <string name="budget_period_expense_total">Всего расходов</string>
+    <string name="budget_period_next">Далее</string>
+    <string name="budget_success_message">Ты молодец! Твой бюджет точен, лови 10 монет!</string>
+    <string name="budget_collect_reward">Забрать монеты</string>
+    <string name="budget_current">Текущий бюджет</string>
+    <string name="budget_planned_title">Запланированный бюджет</string>
+    <string name="budget_show_planned">Запланированный бюджет</string>
+    <string name="budget_show_current">Текущий бюджет</string>
+    <string name="budget_coins">монеты</string>
+    <string name="budget_mandatory">Обязательные</string>
+    <string name="budget_optional_short">Необязательные</string>
+    <string name="budget_unplanned">Непредвиденные</string>
+    <string name="budget_no_operations">Нет операций</string>
+
+    <!-- Deposits -->
+    <string name="deposit_title">Вклад</string>
+    <string name="deposit_intro">Ты можешь открыть вклад, и в конце срока получишь приятную надбавку! Но если закроешь его раньше срока, тогда будет штраф</string>
+    <string name="deposit_terms">Условия</string>
+    <string name="deposit_term_format">на %1$d дней (ставка %2$d%%, штраф %3$d%%)</string>
+    <string name="deposit_enter_amount">Введи сумму</string>
+    <string name="deposit_not_enough_money">На балансе доступно %1$d монет</string>
+    <string name="deposit_income">Доход</string>
+    <string name="deposit_remaining_amount">Сумма, которая останется</string>
+    <string name="deposit_maturity_caption">Сумма, которую ты получишь после %1$d дней игры</string>
+    <string name="deposit_early_caption">Сумма, которую ты получишь, если закроешь вклад раньше %1$d дней</string>
+    <string name="deposit_open">Открыть</string>
+    <string name="deposit_open_deposits">Открытые вклады</string>
+    <string name="deposit_rate_for_days">%1$d%% на %2$d дней</string>
+    <string name="deposit_until_end">До окончания срока:</string>
+    <string name="deposit_game_days">%1$d игровых дней</string>
+    <string name="deposit_maturity_caption_short">По истечению времени ты получишь:</string>
+    <string name="deposit_close">Закрыть</string>
+    <string name="deposit_close_confirmation">Ты уверен, что хочешь закрыть вклад?</string>
+    <string name="deposit_success">Молодец! Ты заработал %1$d монет!</string>
+    <string name="deposit_collect">Забрать</string>
+
+    <!-- Home: sections -->
+    <string name="health">Здоровье</string>
+    <string name="food">Еда</string>
+    <string name="happiness">Счастье</string>
+    <string name="energy">Энергия</string>
+    <string name="shop">Магазин</string>
+    <string name="tasks">Список дел</string>
+    <string name="section_placeholder">Здесь скоро появится содержимое</string>
+
+    <!-- Tasks and jobs -->
+    <string name="task_get_ready">Привести себя в порядок</string>
+    <string name="task_lessons">Уроки</string>
+    <string name="task_cleaning">Уборка</string>
+    <string name="task_bead_crafts">Сделать поделки из бисера</string>
+    <string name="task_deliver_newspapers">Разносить газеты</string>
+    <string name="task_hand_out_flyers">Раздавать листовки</string>
+    <string name="task_recycle_paper">Сдал макулатуру</string>
+    <string name="task_feed_neighbours_cat">Кормить соседского кота, пока соседи в отпуске</string>
+    <string name="task_walk_neighbours_dog">Выгул соседской собаки</string>
+    <string name="task_help_grandfather">Помочь дедушке разобрать гараж</string>
+    <string name="task_water_plants">Поливать растения</string>
+    <string name="task_do">Выполнить</string>
+    <string name="task_do_with_reward">Выполнить · +%1$d</string>
+    <string name="task_unavailable">Недоступно</string>
+    <string name="task_available_next_week">На следующей неделе</string>
+
+    <!-- Menu -->
+    <string name="menu">МЕНЮ</string>
+    <string name="continue_action">Продолжить</string>
+    <string name="press_back_again_to_exit">Нажмите «Назад» ещё раз, чтобы выйти</string>
+    <string name="home_tutorial_goal">Здесь наша цель. Мы копим на неё монеты, а после покупки получаем бонус. Если цель соответствует нашему текущему уровню, после покупки уровень повысится.</string>
+    <string name="home_tutorial_cycle">Один игровой день — это один цикл длительностью 7 минут. Семь циклов составляют неделю, а в конце недели мы сравним фактический бюджет с планом.</string>
+    <string name="home_tutorial_budget">Здесь можно проверить бюджет: сравнить фактические доходы и расходы с планом, который мы составили в начале недели.</string>
+    <string name="home_tutorial_deposit">А здесь находятся вклады. Можно вложить деньги на выбранный срок и получить прибыль, если дождаться его окончания.</string>
+    <string name="home_tutorial_food">Я хочу кушать. Покормить меня можно во вкладке «Еда».</string>
+    <string name="home_tutorial_food_options">Пока нам доступна одна позиция, но по мере прохождения ты сможешь угощать меня другими лакомствами.</string>
+    <string name="home_tutorial_play_rest">Отлично! Ещё я люблю играть, и мне иногда хочется немного отдохнуть — это вкладки рядом.</string>
+    <string name="home_tutorial_stats">Следи за моими показателями, а то в ответственный момент у меня не будет настроения или сил.</string>
+    <string name="home_tutorial_shop">Ещё одна вкладка — «Магазин», где ты можешь покупать различные аксессуары для меня и дома.</string>
+    <string name="home_tutorial_tasks">И последнее — это наши с тобой дела. Не забывай утром приводить себя в порядок и делать уроки, это обязательно.</string>
+    <string name="home_tutorial_earnings">А также подглядывай сюда: именно тут мы сможем заработать денег на наши хотелки.</string>
+    <string name="restart_action">Рестарт</string>
+    <string name="restart_confirmation">Вы уверены?</string>
+    <string name="cancel_action">Отмена</string>
+    <string name="change_character_action">Изменить персонажа</string>
+    <string name="parent_area_action">Родительская</string>
+    <string name="parent_mode_password_title">Родительская</string>
+    <string name="parent_mode_enter">Войти</string>
+    <string name="parent_goal_planning">Планирование цели с ребенком</string>
+    <string name="parent_game_history">История игры ребенка</string>
+    <string name="parent_history">История</string>
+    <string name="parent_cycle_history">История цикла %1$d</string>
+    <string name="parent_goal_name">Название цели</string>
+    <string name="parent_goal_amount">Сумма</string>
+    <string name="parent_plan_action">Запланировать</string>
+    <string name="parent_goal_added">Цель добавлена в список целей ребёнка</string>
+    <string name="parent_history_empty">История пока пуста</string>
+    <string name="parent_cycle_summary">Цикл %1$d · действий: %2$d</string>
+    <string name="demo_mode_action">Демонстрационный режим</string>
+    <string name="demo_mode_enabled">Демонстрационный режим включён</string>
+    <string name="demo_mode_disable">Выключить демонстрационный режим</string>
+    <string name="demo_mode_label">Демонстрационный режим</string>
+    <string name="demo_mode_hint">Демонстрационный режим позволяет пропускать циклы при тапе на кнопку цикла.</string>
+    <string name="demo_mode_password_title">Демонстрационный режим</string>
+    <string name="demo_mode_password_label">Пароль</string>
+    <string name="demo_mode_password_error">Неверный пароль</string>
+    <string name="demo_mode_enable">Включить</string>
+    <string name="support_action">Поддержка</string>
+    <string name="exit_action">Выход</string>
+
+    <!-- Personal account -->
+    <string name="personal_account_title">Личный кабинет</string>
+    <string name="personal_account_back">Назад</string>
+    <string name="personal_account_name">Имя</string>
+    <string name="personal_account_colour">Цвет</string>
+    <string name="personal_account_fur">Шерсть</string>
+    <string name="apply_action">Применить</string>
+
+    <!-- Store -->
+    <string name="store">МАГАЗИН</string>
+    <string name="close_store">Закрыть магазин</string>
+    <string name="buy">Купить</string>
+    <string name="buy_price">Купить · %1$d ₽</string>
+    <string name="action_eat">Съесть</string>
+    <string name="action_play">Сыграть</string>
+    <string name="action_do">Сделать</string>
+    <string name="action_meet">Встретиться</string>
+    <string name="action_go">Поехать</string>
+    <string name="action_visit">Сходить</string>
+    <string name="action_rest">Отдохнуть</string>
+    <string name="action_sleep">Поспать</string>
+    <string name="action_listen">Послушать</string>
+    <string name="action_take">Принять</string>
+    <string name="cooldown_remaining">Через %1$s</string>
+    <string name="shop_flower_pot">Горшок с цветком</string>
+    <string name="shop_favourite_mug">Любимая кружка</string>
+    <string name="shop_floor_lamp">Торшер в комнату</string>
+    <string name="shop_soft_rug">Мягкий красивый коврик</string>
+    <string name="shop_soft_armchair">Мягкое кресло</string>
+    <string name="shop_stylish_scarf">Стильный шарф</string>
+    <string name="shop_glowing_orb">Светящийся шар</string>
+
+    <!-- Events -->
+    <string name="event_sports_section_description">Друг предложил пойти\nна спортивную секцию</string>
+    <string name="event_accept">Согласиться</string>
+    <string name="event_decline">Отказаться</string>
+    <string name="event_close">Пропустить событие</string>
+
+    <!-- Food items -->
+    <string name="school_lunch">Школьный обед</string>
+    <string name="soda">Газировка</string>
+    <string name="ice_cream">Мороженое</string>
+    <string name="mashed_potatoes">Пюре с котлеткой</string>
+    <string name="hamburger_cola">Гамбургер с колой</string>
+    <string name="pizza">Пицца</string>
+    <string name="pasta">Паста карбонара</string>
+    <string name="set_rolls">Сет Роллов</string>
+
+    <!-- Happiness items -->
+    <string name="master_budget">МастерБюджета</string>
+    <string name="catch_money">Поймай деньги</string>
+    <string name="change_money">Игра «Разменяй купюры»</string>
+    <string name="ball_game">Поиграть в мячик</string>
+    <string name="board_game">Настольная игра</string>
+    <string name="meeting_with_friends">Встреча с друзьями</string>
+    <string name="trip">Поездка за город</string>
+    <string name="zoo">Сходить в зоопарк</string>
+
+    <!-- Energy items -->
+    <string name="seat">Посидеть</string>
+    <string name="take_a_nap">Поспать</string>
+    <string name="listen_music">Послушать музыку</string>
+    <string name="take_a_massage">Посидеть в массажном кресле</string>
+    <string name="bath">Тёплая ванна</string>
+    <string name="spa">Спа-день</string>
+    <string name="body_massage">Массаж всего тела</string>
+    <string name="yoga">Йога с питомцем</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_greeting">Привет!\nЯ Финник</string>
+    <string name="onboarding_explanation">Привет! Я помогу тебе узнать, откуда берутся деньги, как их лучше потратить и как копить на свою мечту. Начнем?</string>
+    <string name="onboarding_start">Погнали!</string>
+    <string name="onboarding_name_question">Как ты хочешь\nменя назвать?</string>
+    <string name="onboarding_next">Далее</string>
+    <string name="onboarding_select">Выбрать</string>
+    <string name="onboarding_choose_hair_colour">Выбери цвет</string>
+    <string name="onboarding_choose_hair_style">Выбери шерсть питомцу</string>
+    <string name="onboarding_choose_goal">Давай выберем цель</string>
+    <string name="hair_colour_beige">Бежевая шерсть</string>
+    <string name="hair_colour_violet">Сиреневая шерсть</string>
+    <string name="hair_colour_orange">Персиковая шерсть</string>
+    <string name="eye_colour_violet">Фиолетовые глаза</string>
+    <string name="eye_colour_green">Зелёные глаза</string>
+    <string name="eye_colour_blue">Голубые глаза</string>
+    <string name="hair_style_default">Гладкая шерсть</string>
+    <string name="hair_style_hairy">Пушистая шерсть</string>
+    <string name="hair_style_curly">Кудрявая шерсть</string>
+
+    <!-- Goals -->
+    <string name="goal_level">Уровень %1$d</string>
+    <string name="goal_remaining">Осталось %1$d монет до цели</string>
+    <string name="goal_reached">Цель достигнута!</string>
+    <string name="goal_purchased">Куплено</string>
+
+    <string name="goal_pillow_title">Купить питомцу подушку</string>
+    <string name="goal_pillow_description">Питомец устаёт. Если купить ему уютную подушку, он будет отдыхать лучше и реже грустить. Добавляется +10 к энергии на постоянной основе.</string>
+    <string name="goal_ball_title">Купить мяч для игры</string>
+    <string name="goal_ball_description">Твоя цель — мячик для друга. Копи понемногу, и скоро питомец будет весело прыгать! +10 радости</string>
+    <string name="goal_treat_title">Купить любимую вкусняшку</string>
+    <string name="goal_treat_description">Твой питомец любит вкусняшки. Порадуй его!! +10 еда Потом цель ставиться при достижение каждого нового уровня</string>
+    <string name="goal_money_box_title">Копилка-сейф</string>
+    <string name="goal_money_box_description">Копилка не делает питомца счастливее сразу, но каждый цикл приносит монетки. Это твой первый помощник в накоплениях.</string>
+    <string name="goal_toys_bundle_title">Набор игрушек</string>
+    <string name="goal_toys_bundle_description">Получишь +15 счастья за игру, и 1 новый скин на выбор</string>
+    <string name="goal_pet_house_title">Домик для питомца</string>
+    <string name="goal_pet_house_description">Новая комната для твоего питомца даст +15 энергии за отдых</string>
+    <string name="goal_bicycle_title">Велосипед</string>
+    <string name="goal_bicycle_description">Велосипед — это не только весело. Питомец станет сильнее и будет меньше уставать. Питомец «гуляет», +10 счастья за прогулку, открывает ивент «Поездка»</string>
+    <string name="goal_party_title">Праздник для друзей</string>
+    <string name="goal_party_description">+30 счастья, ачивка «Душа компании», открывает ивенты с друзьями</string>
+    <string name="coins">Монеты</string>
+
+</resources>
