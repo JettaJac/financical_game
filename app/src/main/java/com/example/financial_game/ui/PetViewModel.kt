@@ -59,6 +59,9 @@ internal fun hasJustReachedGoal(previous: GameSnapshot?, current: GameSnapshot):
     return previous.money < previous.goalTarget
 }
 
+internal fun needsGoalSelection(snapshot: GameSnapshot): Boolean =
+    snapshot.onboardingCompleted && snapshot.goalId in snapshot.purchasedGoalIds
+
 internal fun goalPurchaseEvent(resources: GameSnapshot): GameEvent {
     val goal = Goals.fromStorageId(resources.goalId)
     return GameEvent(
@@ -176,6 +179,8 @@ class PetViewModel @Inject constructor(
                             nowMillis = nowMillis,
                             overlay = if (scheduledEvent != null || reachedGoalEvent != null) {
                                 null
+                            } else if (needsGoalSelection(resources)) {
+                                HomeOverlay.GoalSelection
                             } else {
                                 it.overlay
                             },
@@ -272,7 +277,15 @@ class PetViewModel @Inject constructor(
             PetAction.OpenMenu -> _state.update { it.copy(overlay = HomeOverlay.Menu) }
             PetAction.OpenBudget -> _state.update { it.copy(overlay = HomeOverlay.Budget) }
             PetAction.OpenDeposit -> _state.update { it.copy(overlay = HomeOverlay.Deposit) }
-            PetAction.OpenGoal -> _state.update { it.copy(overlay = HomeOverlay.Goal) }
+            PetAction.OpenGoal -> _state.update {
+                it.copy(
+                    overlay = if (needsGoalSelection(it.resources)) {
+                        HomeOverlay.GoalSelection
+                    } else {
+                        HomeOverlay.Goal
+                    },
+                )
+            }
             PetAction.OpenPersonalAccount -> _state.update {
                 it.copy(overlay = HomeOverlay.PersonalAccount)
             }

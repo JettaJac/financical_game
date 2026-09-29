@@ -651,6 +651,25 @@ class PetViewModelTest {
     }
 
     @Test
+    fun purchased_current_goal_requires_selecting_a_new_goal_after_state_restoration() {
+        val purchasedCurrentGoal = GameSnapshot(
+            goalId = Goals.Pillow.name,
+            purchasedGoalIds = setOf(Goals.Pillow.name),
+            onboardingCompleted = true,
+        )
+
+        assertEquals(true, needsGoalSelection(purchasedCurrentGoal))
+        assertEquals(
+            false,
+            needsGoalSelection(purchasedCurrentGoal.copy(goalId = Goals.Ball.name)),
+        )
+        assertEquals(
+            false,
+            needsGoalSelection(purchasedCurrentGoal.copy(onboardingCompleted = false)),
+        )
+    }
+
+    @Test
     fun buying_goal_of_current_level_increases_character_level() {
         assertEquals(2, levelAfterGoalPurchase(currentLevel = 1, goalLevel = 1))
         assertEquals(3, levelAfterGoalPurchase(currentLevel = 3, goalLevel = 2))
