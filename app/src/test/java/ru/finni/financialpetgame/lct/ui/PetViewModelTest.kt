@@ -49,6 +49,14 @@ import kotlin.math.roundToInt
 
 class PetViewModelTest {
     @Test
+    fun accepting_deposit_offer_opens_deposit_but_declining_does_not() {
+        assertEquals(true, opensDepositAfterEvent("deposit_offer", accepted = true))
+        assertEquals(true, opensDepositAfterEvent("forced_deposit_offer", accepted = true))
+        assertEquals(false, opensDepositAfterEvent("deposit_offer", accepted = false))
+        assertEquals(false, opensDepositAfterEvent("weather", accepted = true))
+    }
+
+    @Test
     fun second_back_press_exits_only_inside_two_second_window() {
         assertEquals(true, isSecondBackPress(previousPressAt = 1_000, currentPressAt = 3_000))
         assertEquals(false, isSecondBackPress(previousPressAt = 1_000, currentPressAt = 3_001))

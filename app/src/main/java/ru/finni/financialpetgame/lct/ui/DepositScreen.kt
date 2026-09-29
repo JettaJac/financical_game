@@ -370,7 +370,11 @@ private fun DepositSummary(
             fontSize = 13.sp,
         )
         Spacer(Modifier.height(8.dp))
-        Text(stringResource(R.string.deposit_income), color = DepositPurple, fontWeight = FontWeight.Bold)
+        Text(
+            stringResource(R.string.deposit_remaining_amount),
+            color = DepositPurple,
+            fontWeight = FontWeight.Bold,
+        )
         MoneyValue(earlyPayout, fontSize = 25)
         Text(
             stringResource(R.string.deposit_early_caption, duration),

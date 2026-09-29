@@ -82,6 +82,7 @@
     <string name="deposit_enter_amount">Введи сумму</string>
     <string name="deposit_not_enough_money">На балансе доступно %1$d монет</string>
     <string name="deposit_income">Доход</string>
+    <string name="deposit_remaining_amount">Сумма, которая останется</string>
     <string name="deposit_maturity_caption">Сумма, которую ты получишь после %1$d дней игры</string>
     <string name="deposit_early_caption">Сумма, которую ты получишь, если закроешь вклад раньше %1$d дней</string>
     <string name="deposit_open">Открыть</string>

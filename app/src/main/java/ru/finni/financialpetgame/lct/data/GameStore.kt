@@ -553,7 +553,11 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             val mature = deposit.isMature(checkNotNull(preferences[currentPeriod]))
             val payout = if (mature) deposit.maturityPayout else deposit.earlyClosePayout
             preferences[money] = checkNotNull(preferences[money]) + payout
-            recordAdditionalIncome(preferences, (payout - amount).coerceAtLeast(0))
+            if (mature) {
+                recordAdditionalIncome(preferences, deposit.profit)
+            } else {
+                recordOptionalExpense(preferences, deposit.earlyCloseLoss)
+            }
             appendAction(
                 preferences,
                 if (mature) "Получен доход по вкладу" else "Вклад закрыт досрочно",

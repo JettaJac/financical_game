@@ -18,6 +18,8 @@ class DepositTest {
     fun payoutsUseConfiguredPercentages() {
         assertEquals(140, deposit.maturityPayout)
         assertEquals(80, deposit.earlyClosePayout)
+        assertEquals(40, deposit.profit)
+        assertEquals(20, deposit.earlyCloseLoss)
     }
 
     @Test

@@ -19,6 +19,12 @@ data class ActiveDeposit(
 
     val earlyClosePayout: Int
         get() = amount - amount * earlyClosePenaltyPercent / 100
+
+    val profit: Int
+        get() = (maturityPayout - amount).coerceAtLeast(0)
+
+    val earlyCloseLoss: Int
+        get() = (amount - earlyClosePayout).coerceAtLeast(0)
 }
 
 data class DepositTerm(

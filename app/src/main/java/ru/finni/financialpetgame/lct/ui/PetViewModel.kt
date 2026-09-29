@@ -425,6 +425,9 @@ class PetViewModel @Inject constructor(
                     unlockedJob = eventScheduler.jobFor(scheduled),
                     accepted = accept,
                 )
+                if (opensDepositAfterEvent(scheduled.definition.id, accept)) {
+                    _state.update { it.copy(overlay = HomeOverlay.Deposit) }
+                }
             }
             return
         }
@@ -472,6 +475,14 @@ class PetViewModel @Inject constructor(
         }
     }
 }
+
+private val DEPOSIT_OFFER_EVENT_IDS = setOf(
+    "deposit_offer",
+    "forced_deposit_offer",
+)
+
+internal fun opensDepositAfterEvent(eventId: String, accepted: Boolean): Boolean =
+    accepted && eventId in DEPOSIT_OFFER_EVENT_IDS
 
 private fun ScheduledEvent.asGameEvent(): GameEvent = GameEvent(
     descriptionRes = R.string.app_name,
