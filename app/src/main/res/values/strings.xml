@@ -215,14 +215,14 @@
     <string name="set_rolls">Сет Роллов</string>
 
     <!-- Happiness items -->
-    <string name="master_budget">МастерБюджета</string>
-    <string name="catch_money">Поймай деньги</string>
+    <string name="master_budget">«МастерБюджета»</string>
+    <string name="catch_money">«Поймай деньги»</string>
     <string name="change_money">«Разменяй купюры»</string>
-    <string name="ball_game">Поиграть в мячик</string>
+    <string name="ball_game">Игра в мячик</string>
     <string name="board_game">Настольная игра</string>
     <string name="meeting_with_friends">Встреча с друзьями</string>
     <string name="trip">Поездка за город</string>
-    <string name="zoo">Сходить в зоопарк</string>
+    <string name="zoo">Поход в зоопарк</string>
 
     <!-- Energy items -->
     <string name="seat">Посидеть</string>
