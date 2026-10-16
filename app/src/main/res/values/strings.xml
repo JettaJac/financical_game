@@ -260,11 +260,11 @@
     <string name="goal_reached">Цель достигнута!</string>
     <string name="goal_purchased">Куплено</string>
 
-    <string name="goal_pillow_title">Купить питомцу подушку</string>
+    <string name="goal_pillow_title">Подушка питомцу</string>
     <string name="goal_pillow_description">Питомец устаёт. Если купить ему уютную подушку, он будет отдыхать лучше и реже грустить. Добавляется +10 к энергии на постоянной основе.</string>
-    <string name="goal_ball_title">Купить мяч для игры</string>
+    <string name="goal_ball_title">Мяч для игры</string>
     <string name="goal_ball_description">Твоя цель — мячик для друга. Копи понемногу, и скоро питомец будет весело прыгать! +10 радости</string>
-    <string name="goal_treat_title">Купить любимую вкусняшку</string>
+    <string name="goal_treat_title">Любимая вкусняшку питомца</string>
     <string name="goal_treat_description">Твой питомец любит вкусняшки. Порадуй его!! +10 еда Потом цель ставиться при достижение каждого нового уровня</string>
     <string name="goal_money_box_title">Копилка-сейф</string>
     <string name="goal_money_box_description">Копилка не делает питомца счастливее сразу, но каждый цикл приносит монетки. Это твой первый помощник в накоплениях.</string>
