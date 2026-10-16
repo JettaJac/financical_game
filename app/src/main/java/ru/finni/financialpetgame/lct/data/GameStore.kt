@@ -192,8 +192,10 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
     private val onboardingCompleted = booleanPreferencesKey("onboarding_completed")
     private val eventUnlockedTaskIds = stringSetPreferencesKey("event_unlocked_task_ids")
     private val budgetPlanWeek = intPreferencesKey("budget_plan_week")
+    private val budgetPlanRecurringExpense = intPreferencesKey("budget_plan_recurring_expense")
     private val plannedOptionalExpenses = intPreferencesKey("planned_optional_expenses")
     private val actualOptionalExpenses = intPreferencesKey("actual_optional_expenses")
+    private val actualUnplannedExpenses = intPreferencesKey("actual_unplanned_expenses")
     private val actualAdditionalIncome = intPreferencesKey("actual_additional_income")
     private val lastReviewedBudgetWeek = intPreferencesKey("last_reviewed_budget_week")
     private val budgetTutorialCompleted = booleanPreferencesKey("budget_tutorial_completed")
@@ -215,6 +217,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
     private val depositDurationCycles = intPreferencesKey("deposit_duration_cycles")
     private val depositInterestPercent = intPreferencesKey("deposit_interest_percent")
     private val depositPenaltyPercent = intPreferencesKey("deposit_penalty_percent")
+    private val pendingExpenseDelta = intPreferencesKey("pending_expense_delta")
 
     override val snapshot: Flow<GameSnapshot> = flow {
         emitAll(context.gameDataStore.data.map { preferences ->
@@ -231,6 +234,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             val taskWeeklyUseCounts = preferences.intMap(TASK_WEEKLY_USE_COUNT_PREFIX)
             val taskUseWeeks = preferences.intMap(TASK_USE_WEEK_PREFIX)
             val jobRemainingActions = preferences.intMap(JOB_REMAINING_ACTIONS_PREFIX)
+            val jobForTaskIds = preferences.stringMap(JOB_FOR_TASK_PREFIX)
 
             val secondsRemaining = cycleSecondsRemaining(
                 cycleEndsAtMillis = checkNotNull(preferences[cycleEndsAtMillis]),
@@ -260,8 +264,10 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 cycleEndsAtMillis = checkNotNull(preferences[cycleEndsAtMillis]),
                 onboardingCompleted = checkNotNull(preferences[onboardingCompleted]),
                 budgetPlanWeek = checkNotNull(preferences[budgetPlanWeek]),
+                budgetPlanRecurringExpense = checkNotNull(preferences[budgetPlanRecurringExpense]),
                 plannedOptionalExpenses = checkNotNull(preferences[plannedOptionalExpenses]),
                 actualOptionalExpenses = checkNotNull(preferences[actualOptionalExpenses]),
+                actualUnplannedExpenses = checkNotNull(preferences[actualUnplannedExpenses]),
                 actualAdditionalIncome = checkNotNull(preferences[actualAdditionalIncome]),
                 lastReviewedBudgetWeek = checkNotNull(preferences[lastReviewedBudgetWeek]),
                 budgetTutorialCompleted = checkNotNull(preferences[budgetTutorialCompleted]),
@@ -280,6 +286,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 eventPoolHandledCycles = checkNotNull(preferences[eventPoolHandledCycles]),
                 activeJobIds = checkNotNull(preferences[activeJobIds]),
                 jobRemainingActions = jobRemainingActions,
+                jobForTaskIds = jobForTaskIds,
                 actionHistory = decodeActionHistory(preferences[actionHistory]),
                 customGoal = preferences[customGoalTitle]?.let { title ->
                     ru.finni.financialpetgame.lct.data.CustomGoal(
@@ -299,6 +306,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                             earlyClosePenaltyPercent = preferences[depositPenaltyPercent] ?: 4,
                         )
                     },
+                pendingExpenseDelta = checkNotNull(preferences[pendingExpenseDelta]),
             ).withCharacteristicsAt(secondsRemaining)
         })
     }
@@ -366,6 +374,10 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             if (preferences[onboardingCompleted] == null) preferences[onboardingCompleted] = false
             if (preferences[plannedOptionalExpenses] == null) preferences[plannedOptionalExpenses] = 0
             if (preferences[actualOptionalExpenses] == null) preferences[actualOptionalExpenses] = 0
+            if (preferences[actualUnplannedExpenses] == null) {
+                preferences[actualUnplannedExpenses] = 0
+            }
+            if (preferences[pendingExpenseDelta] == null) preferences[pendingExpenseDelta] = 0
             if (preferences[actualAdditionalIncome] == null) preferences[actualAdditionalIncome] = 0
             if (preferences[lastReviewedBudgetWeek] == null) {
                 preferences[lastReviewedBudgetWeek] = 0
@@ -390,6 +402,9 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 } else {
                     0
                 }
+            }
+            if (preferences[budgetPlanRecurringExpense] == null) {
+                preferences[budgetPlanRecurringExpense] = checkNotNull(preferences[expense])
             }
             if (preferences[eventUnlockedTaskIds] == null) {
                 preferences[eventUnlockedTaskIds] = emptySet()
@@ -479,8 +494,11 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             preferences[actionHistory] = "[]"
             preferences[currentPeriod] = GameDefaults.CURRENT_PERIOD
             preferences[budgetPlanWeek] = 0
+            preferences[budgetPlanRecurringExpense] = GameDefaults.EXPENSE
             preferences[plannedOptionalExpenses] = 0
             preferences[actualOptionalExpenses] = 0
+            preferences[actualUnplannedExpenses] = 0
+            preferences[pendingExpenseDelta] = 0
             preferences[actualAdditionalIncome] = 0
             preferences[lastReviewedBudgetWeek] = 0
             preferences[budgetTutorialCompleted] = false
@@ -500,6 +518,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             preferences[customGoalTitle] = title.trim()
             preferences[customGoalTarget] = target.coerceAtLeast(1)
             preferences[customGoalIllustration] = illustrationRes
+            preferences[purchasedGoalIds] = checkNotNull(preferences[purchasedGoalIds]) - "custom"
             appendAction(preferences, "Родитель добавил цель «${title.trim()}»")
         }
     }
@@ -556,7 +575,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             if (mature) {
                 recordAdditionalIncome(preferences, deposit.profit)
             } else {
-                recordOptionalExpense(preferences, deposit.earlyCloseLoss)
+                recordUnplannedExpense(preferences, deposit.earlyCloseLoss)
             }
             appendAction(
                 preferences,
@@ -705,8 +724,12 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             )
 
             if (item is TaskItem) {
-                // A task used at any point in this cycle unlocks exactly at the next cycle boundary.
-                preferences[cooldownUnlockCycleKey(item)] = currentCycle + 1.0
+                preferences[cooldownUnlockCycleKey(item)] = if (item == TaskItem.Cleaning) {
+                    cooldownUnlockCycle(currentCyclePosition, 3.0)
+                } else {
+                    // A regular task unlocks exactly at the next cycle boundary.
+                    currentCycle + 1.0
+                }
             } else if (instanceJobId == null) {
                 when (val cooldown = item.cooldown) {
                     Cooldown.None -> Unit
@@ -794,6 +817,24 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
         return purchased
     }
 
+    override suspend fun buyCustomGoal(price: Int): Boolean {
+        val safePrice = price.coerceAtLeast(0)
+        var purchased = false
+        context.gameDataStore.edit { preferences ->
+            val title = preferences[customGoalTitle] ?: return@edit
+            if ("custom" in checkNotNull(preferences[purchasedGoalIds])) return@edit
+            val currentMoney = checkNotNull(preferences[money])
+            if (currentMoney < safePrice) return@edit
+
+            preferences[money] = currentMoney - safePrice
+            preferences[level] = checkNotNull(preferences[level]) + 1
+            preferences[purchasedGoalIds] = checkNotNull(preferences[purchasedGoalIds]) + "custom"
+            appendAction(preferences, "Куплена цель «$title»", -safePrice)
+            purchased = true
+        }
+        return purchased
+    }
+
     override suspend fun selectGoal(goal: Goals) {
         context.gameDataStore.edit { preferences ->
             if (goal.name in checkNotNull(preferences[purchasedGoalIds])) return@edit
@@ -867,11 +908,15 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
         context.gameDataStore.edit { preferences ->
             val period = checkNotNull(preferences[currentPeriod])
             preferences[budgetPlanWeek] = budgetWeekForPeriod(period)
+            preferences[budgetPlanRecurringExpense] = checkNotNull(preferences[expense])
             preferences[plannedOptionalExpenses] = optionalExpenses.coerceIn(
                 minimumValue = 0,
-                maximumValue = MandatoryBudget.maximumOptionalExpense,
+                maximumValue = (
+                    checkNotNull(preferences[income]) - checkNotNull(preferences[expense])
+                ).coerceAtLeast(0),
             )
             preferences[actualOptionalExpenses] = 0
+            preferences[actualUnplannedExpenses] = 0
             preferences[actualAdditionalIncome] = 0
             preferences[budgetTutorialCompleted] = true
             preferences[cycleEndsAtMillis] =
@@ -889,13 +934,14 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             if ((preferences[lastReviewedBudgetWeek] ?: 0) >= completedWeek) return@edit
 
             val result = BudgetPeriodResult(
-                plannedIncome = MandatoryBudget.income,
-                actualIncome = MandatoryBudget.income +
+                plannedIncome = checkNotNull(preferences[income]),
+                actualIncome = checkNotNull(preferences[income]) +
                     (preferences[actualAdditionalIncome] ?: 0),
-                plannedExpenses = MandatoryBudget.expense +
+                plannedExpenses = checkNotNull(preferences[budgetPlanRecurringExpense]) +
                     checkNotNull(preferences[plannedOptionalExpenses]),
-                actualExpenses = MandatoryBudget.expense +
-                    checkNotNull(preferences[actualOptionalExpenses]),
+                actualExpenses = checkNotNull(preferences[budgetPlanRecurringExpense]) +
+                    checkNotNull(preferences[actualOptionalExpenses]) +
+                    checkNotNull(preferences[actualUnplannedExpenses]),
             )
             if (result.isSuccessful) {
                 preferences[money] = checkNotNull(preferences[money]) + BUDGET_SUCCESS_REWARD
@@ -948,7 +994,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 preferences[eventFlags] =
                     checkNotNull(preferences[eventFlags]) + definition.setsFlags
                 if (definition.permanentExpenseDelta != 0) {
-                    preferences[expense] = checkNotNull(preferences[expense]) +
+                    preferences[pendingExpenseDelta] = checkNotNull(preferences[pendingExpenseDelta]) +
                         definition.permanentExpenseDelta
                 }
                 unlockedJob?.let { createJobInstance(preferences, it) }
@@ -1027,6 +1073,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
     private fun normalizeTaskCooldowns(preferences: MutablePreferences) {
         val nextCycle = checkNotNull(preferences[currentPeriod]) + 1.0
         TaskItem.entries.forEach { task ->
+            if (task == TaskItem.Cleaning) return@forEach
             val key = cooldownUnlockCycleKey(task)
             val savedUnlockCycle = preferences[key] ?: return@forEach
             if (savedUnlockCycle > nextCycle) preferences[key] = nextCycle
@@ -1074,6 +1121,13 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             currentLevel = checkNotNull(preferences[roomDirtLevel]),
             completedCycles = count,
         )
+        if (ru.finni.financialpetgame.lct.domain.completedWeeks(periodBeforeCompletion, count) > 0) {
+            val pendingDelta = checkNotNull(preferences[pendingExpenseDelta])
+            if (pendingDelta != 0) {
+                preferences[expense] = currentExpense + pendingDelta
+                preferences[pendingExpenseDelta] = 0
+            }
+        }
         resetCycleAdjustments(preferences)
     }
 
@@ -1091,6 +1145,14 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
         if (preferences[budgetPlanWeek] != budgetWeekForPeriod(period)) return
         preferences[actualAdditionalIncome] =
             (preferences[actualAdditionalIncome] ?: 0) + amount
+    }
+
+    private fun recordUnplannedExpense(preferences: MutablePreferences, amount: Int) {
+        if (amount <= 0) return
+        val period = checkNotNull(preferences[currentPeriod])
+        if (preferences[budgetPlanWeek] != budgetWeekForPeriod(period)) return
+        preferences[actualUnplannedExpenses] =
+            (preferences[actualUnplannedExpenses] ?: 0) + amount
     }
 
     private fun applyEventDeltas(preferences: MutablePreferences, event: ScheduledEvent) {
@@ -1145,6 +1207,16 @@ private fun <T : Enum<T>> List<T>.findByName(name: String?, fallback: T): T =
 private fun Preferences.intMap(prefix: String): Map<String, Int> = asMap()
     .mapNotNull { (key, value) ->
         if (key.name.startsWith(prefix) && value is Int) {
+            key.name.removePrefix(prefix) to value
+        } else {
+            null
+        }
+    }
+    .toMap()
+
+private fun Preferences.stringMap(prefix: String): Map<String, String> = asMap()
+    .mapNotNull { (key, value) ->
+        if (key.name.startsWith(prefix) && value is String) {
             key.name.removePrefix(prefix) to value
         } else {
             null

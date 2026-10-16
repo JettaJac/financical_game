@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import ru.finni.financialpetgame.lct.R
+import ru.finni.financialpetgame.lct.data.CustomGoal
 import ru.finni.financialpetgame.lct.domain.Goals
 import ru.finni.financialpetgame.lct.domain.Resource
 import ru.finni.financialpetgame.lct.ui.theme.NunitoFontFamily
@@ -71,13 +72,17 @@ private val GoalSurface = Color(0xFFFCF7FF)
 internal fun GoalOverlay(
     money: Int,
     target: Int,
-    goal: Goals,
+    goal: Goals?,
+    customGoal: CustomGoal? = null,
+    currentLevel: Int = 1,
     alreadyPurchased: Boolean,
     onBuy: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val title = stringResource(goal.titleRes)
-    val primaryEffect = goal.goalEffects.firstOrNull()
+    val title = customGoal?.title ?: stringResource(checkNotNull(goal).titleRes)
+    val primaryEffect = goal?.goalEffects?.firstOrNull()
+    val illustrationRes = customGoal?.illustrationRes ?: checkNotNull(goal).illustrationRes
+    val displayedLevel = goal?.level ?: currentLevel
     val safeTarget = target.coerceAtLeast(1)
     val progress = (money.toFloat() / safeTarget).coerceIn(0f, 1f)
     val remaining = (safeTarget - money).coerceAtLeast(0)
@@ -198,7 +203,7 @@ internal fun GoalOverlay(
                         )
                     }
                     Text(
-                        text = stringResource(R.string.goal_level, goal.level),
+                        text = stringResource(R.string.goal_level, displayedLevel),
                         color = GoalPurple,
                         fontFamily = NunitoFontFamily,
                         fontSize = 16.sp,
@@ -213,7 +218,7 @@ internal fun GoalOverlay(
                             .clip(RoundedCornerShape(8.dp)),
                     ) {
                         Image(
-                            painter = painterResource(goal.illustrationRes),
+                            painter = painterResource(illustrationRes),
                             contentDescription = title,
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.FillWidth,
@@ -287,14 +292,16 @@ internal fun GoalOverlay(
                         }
                     }
                     Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = stringResource(goal.descriptionRes),
-                        modifier = Modifier.fillMaxWidth(),
-                        color = GoalPurpleDark,
-                        fontFamily = NunitoFontFamily,
-                        fontSize = 14.sp,
-                        lineHeight = 17.sp,
-                    )
+                    goal?.let {
+                        Text(
+                            text = stringResource(it.descriptionRes),
+                            modifier = Modifier.fillMaxWidth(),
+                            color = GoalPurpleDark,
+                            fontFamily = NunitoFontFamily,
+                            fontSize = 14.sp,
+                            lineHeight = 17.sp,
+                        )
+                    }
                     Spacer(Modifier.height(14.dp))
                     Button(
                         onClick = onBuy,

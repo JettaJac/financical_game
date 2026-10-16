@@ -87,6 +87,7 @@ private fun eventIllustration(id: String): Int = when (id) {
     "good_weather", "rainbow" -> R.drawable.sunny_sky
     "friend_birthday", "grandfather_birthday" -> R.drawable.birthday
     "recycle_paper" -> R.drawable.recycle
+    "help_grandfather_garage" -> R.drawable.grandpa
     "praise_1", "praise_2" -> R.drawable.positive_chores
     "dog_walking_offer" -> R.drawable.walking_dog
     "charity" -> R.drawable.coin_money

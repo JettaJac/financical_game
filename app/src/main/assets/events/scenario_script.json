@@ -58,7 +58,7 @@
 
   {"id":"w2d4_quiz","week":2,"day":4,"eventId":"tv_quiz"},
   {"id":"w2d4_dog_action_3","week":2,"day":4,"jobActionId":"walk_neighbours_dog"},
-  {"id":"w2d4_garage_first","week":2,"day":4,"jobActionId":"grandfather_garage","moneyOverride":0},
+  {"id":"w2d4_garage_offer","week":2,"day":4,"eventId":"help_grandfather_garage"},
   {"id":"w2d4_fair","week":2,"day":4,"eventId":"neighbour_fair"},
   {"id":"w2d4_charger","week":2,"day":4,"eventId":"broken_charger"},
 

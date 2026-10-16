@@ -32,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -74,6 +75,8 @@ internal fun BudgetPlanningScreen(
     @DrawableRes petImageRes: Int,
     firstPlanning: Boolean,
     previousOptionalExpenses: Int,
+    recurringIncome: Int = MandatoryBudget.income,
+    recurringExpense: Int = MandatoryBudget.expense,
     onComplete: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -87,7 +90,17 @@ internal fun BudgetPlanningScreen(
         )
     }
     val optionalExpenseAmount = optionalExpenses.toIntOrNull() ?: 0
-    val optionalExpenseTooHigh = optionalExpenseAmount > MandatoryBudget.maximumOptionalExpense
+    val budgetEntries = remember(recurringExpense) {
+        MandatoryBudget.entries.map { entry ->
+            if (entry.id == "school_lunch") {
+                entry.copy(amount = entry.amount + (recurringExpense - MandatoryBudget.expense))
+            } else {
+                entry
+            }
+        }
+    }
+    val maximumOptionalExpense = (recurringIncome - recurringExpense).coerceAtLeast(0)
+    val optionalExpenseTooHigh = optionalExpenseAmount > maximumOptionalExpense
 
     when (screen) {
         BUDGET_INTRO -> BudgetIntroScreen(
@@ -98,11 +111,11 @@ internal fun BudgetPlanningScreen(
             modifier = modifier,
         )
         BUDGET_CLASSIFY -> {
-            val entry = MandatoryBudget.entries[entryIndex]
+            val entry = budgetEntries[entryIndex]
             BudgetClassificationScreen(
                 petImageRes = petImageRes,
                 entry = entry,
-                placedEntries = MandatoryBudget.entries.take(entryIndex),
+                placedEntries = budgetEntries.take(entryIndex),
                 step = classificationStep,
                 guideText = guideText,
                 onCategorySelected = { selected ->
@@ -119,7 +132,7 @@ internal fun BudgetPlanningScreen(
                 },
                 onFrequencySelected = { selected ->
                     if (selected == entry.frequency) {
-                        if (entryIndex == MandatoryBudget.entries.lastIndex) {
+                        if (entryIndex == budgetEntries.lastIndex) {
                             screen = BUDGET_SUMMARY
                         } else {
                             entryIndex += 1
@@ -135,6 +148,7 @@ internal fun BudgetPlanningScreen(
         }
         BUDGET_SUMMARY -> BudgetMandatorySummaryScreen(
             petImageRes = petImageRes,
+            entries = budgetEntries,
             onContinue = { screen = BUDGET_OPTIONAL },
             modifier = modifier,
         )
@@ -142,7 +156,8 @@ internal fun BudgetPlanningScreen(
             petImageRes = petImageRes,
             value = optionalExpenses,
             onValueChange = { value -> optionalExpenses = value.filter(Char::isDigit).take(6) },
-            maximumOptionalExpenses = MandatoryBudget.maximumOptionalExpense,
+            maximumOptionalExpenses = maximumOptionalExpense,
+            entries = budgetEntries,
             showBalanceError = optionalExpenseTooHigh,
             onContinue = {
                 if (!optionalExpenseTooHigh) screen = BUDGET_REVIEW
@@ -152,6 +167,9 @@ internal fun BudgetPlanningScreen(
         BUDGET_REVIEW -> BudgetReviewScreen(
             petImageRes = petImageRes,
             optionalExpenses = optionalExpenseAmount,
+            entries = budgetEntries,
+            recurringIncome = recurringIncome,
+            recurringExpense = recurringExpense,
             onComplete = { onComplete(optionalExpenseAmount) },
             modifier = modifier,
         )
@@ -286,6 +304,7 @@ private fun BudgetClassificationScreen(
 @Composable
 private fun BudgetMandatorySummaryScreen(
     @DrawableRes petImageRes: Int,
+    entries: List<BudgetEntry>,
     onContinue: () -> Unit,
     modifier: Modifier,
 ) {
@@ -300,7 +319,7 @@ private fun BudgetMandatorySummaryScreen(
             )
         },
     ) {
-        BudgetSections(entries = MandatoryBudget.entries, showFrequency = true)
+        BudgetSections(entries = entries, showFrequency = true)
     }
 }
 
@@ -310,6 +329,7 @@ private fun BudgetOptionalExpensesScreen(
     value: String,
     onValueChange: (String) -> Unit,
     maximumOptionalExpenses: Int,
+    entries: List<BudgetEntry>,
     showBalanceError: Boolean,
     onContinue: () -> Unit,
     modifier: Modifier,
@@ -365,7 +385,7 @@ private fun BudgetOptionalExpensesScreen(
         },
     ) {
         BudgetSections(
-            entries = MandatoryBudget.entries,
+            entries = entries,
             showFrequency = true,
         )
     }
@@ -375,11 +395,14 @@ private fun BudgetOptionalExpensesScreen(
 private fun BudgetReviewScreen(
     @DrawableRes petImageRes: Int,
     optionalExpenses: Int,
+    entries: List<BudgetEntry>,
+    recurringIncome: Int,
+    recurringExpense: Int,
     onComplete: () -> Unit,
     modifier: Modifier,
 ) {
-    val totalExpenses = MandatoryBudget.expense + optionalExpenses
-    val balance = MandatoryBudget.income - totalExpenses
+    val totalExpenses = recurringExpense + optionalExpenses
+    val balance = recurringIncome - totalExpenses
     BudgetPage(
         petImageRes = petImageRes,
         guide = stringResource(R.string.budget_review_guide),
@@ -420,10 +443,10 @@ private fun BudgetReviewScreen(
         },
     ) {
         BudgetSectionTitle(stringResource(R.string.budget_income))
-        BudgetEntryRow(MandatoryBudget.entries.first())
+        BudgetEntryRow(entries.first())
         Spacer(Modifier.height(15.dp))
         BudgetSectionTitle(stringResource(R.string.budget_expenses))
-        MandatoryBudget.entries
+        entries
             .filter { it.category == BudgetCategory.Expense }
             .forEach { BudgetEntryRow(it) }
         if (optionalExpenses > 0) {

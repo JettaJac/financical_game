@@ -14,6 +14,7 @@ data class GameEvent(
     @param:StringRes val acceptButtonTextRes: Int = R.string.event_accept,
     @param:StringRes val declineButtonTextRes: Int = R.string.event_decline,
     val goalPurchase: GoalPurchase? = null,
+    val customGoalPurchase: Boolean = false,
     val descriptionText: String? = null,
     val canDecline: Boolean = true,
     val hideRewardUntilAccept: Boolean = false,

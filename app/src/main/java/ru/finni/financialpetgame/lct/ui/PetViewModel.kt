@@ -68,6 +68,18 @@ internal fun needsGoalSelection(snapshot: GameSnapshot): Boolean =
     snapshot.onboardingCompleted && snapshot.goalId in snapshot.purchasedGoalIds
 
 internal fun goalPurchaseEvent(resources: GameSnapshot): GameEvent {
+    if (resources.goalId == "custom") {
+        val customGoal = resources.customGoal
+        return GameEvent(
+            descriptionRes = R.string.app_name,
+            descriptionText = customGoal?.title ?: resources.goalTitle,
+            illustrationRes = customGoal?.illustrationRes ?: R.drawable.goal_pillow,
+            acceptEffects = listOf(Effect(Resource.Money, -resources.goalTarget)),
+            showCloseButton = true,
+            acceptButtonTextRes = R.string.buy,
+            customGoalPurchase = true,
+        )
+    }
     val goal = Goals.fromStorageId(resources.goalId)
     return GameEvent(
         descriptionRes = goal.titleRes,
@@ -115,6 +127,7 @@ sealed interface PetAction {
     data object SkipEvent : PetAction
     data class BuyCareItem(val item: CardItem) : PetAction
     data class BuyGoal(val goal: Goals, val price: Int) : PetAction
+    data class BuyCustomGoal(val price: Int) : PetAction
     data class SelectGoal(val goal: Goals) : PetAction
     data object SelectCustomGoal : PetAction
     data class AddCustomGoal(val title: String, val target: Int, val illustrationRes: Int) : PetAction
@@ -200,9 +213,7 @@ class PetViewModel @Inject constructor(
                             isInitialized = true,
                             isTestMode = resources.demoModeEnabled,
                             nowMillis = nowMillis,
-                            overlay = if (scheduledEvent != null || reachedGoalEvent != null) {
-                                null
-                            } else if (needsGoalSelection(resources)) {
+                            overlay = if (needsGoalSelection(resources)) {
                                 HomeOverlay.GoalSelection
                             } else {
                                 it.overlay
@@ -256,7 +267,7 @@ class PetViewModel @Inject constructor(
             if (scheduledEvent != null) {
                 _state.update {
                     if (it.activeEvent == null) {
-                        it.copy(activeEvent = scheduledEvent, overlay = null)
+                        it.copy(activeEvent = scheduledEvent)
                     } else {
                         it
                     }
@@ -295,7 +306,7 @@ class PetViewModel @Inject constructor(
             elapsedCycleSeconds = GameDefaults.CYCLE_DURATION_SECONDS,
         )?.asGameEvent()
         if (pendingEvent != null) {
-            _state.update { it.copy(activeEvent = pendingEvent, overlay = null) }
+            _state.update { it.copy(activeEvent = pendingEvent) }
             return
         }
 
@@ -344,6 +355,7 @@ class PetViewModel @Inject constructor(
             PetAction.Exit -> _state.update { it.copy(exitRequested = true) }
             is PetAction.BuyCareItem -> viewModelScope.launch { repository.buyCareItem(action.item) }
             is PetAction.BuyGoal -> purchaseGoal(GoalPurchase(action.goal, action.price))
+            is PetAction.BuyCustomGoal -> purchaseCustomGoal(action.price)
             is PetAction.SelectGoal -> viewModelScope.launch {
                 repository.selectGoal(action.goal)
                 _state.update { it.copy(overlay = null) }
@@ -452,6 +464,10 @@ class PetViewModel @Inject constructor(
             purchaseGoal(event.goalPurchase)
             return
         }
+        if (accept && event.customGoalPurchase) {
+            purchaseCustomGoal(currentState.resources.goalTarget)
+            return
+        }
         val effects = if (accept) event.acceptEffects else event.declineEffects
         if (!canApplyEffects(currentState.resources.money, effects)) return
 
@@ -470,6 +486,22 @@ class PetViewModel @Inject constructor(
                             activeEvent = null,
                             overlay = HomeOverlay.GoalSelection,
                         )
+                    }
+                }
+            } finally {
+                goalPurchaseInProgress = false
+            }
+        }
+    }
+
+    private fun purchaseCustomGoal(price: Int) {
+        if (goalPurchaseInProgress) return
+        goalPurchaseInProgress = true
+        viewModelScope.launch {
+            try {
+                if (repository.buyCustomGoal(price)) {
+                    _state.update {
+                        it.copy(activeEvent = null, overlay = HomeOverlay.GoalSelection)
                     }
                 }
             } finally {

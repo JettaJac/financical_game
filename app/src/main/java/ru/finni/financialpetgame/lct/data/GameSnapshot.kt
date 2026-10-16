@@ -37,8 +37,10 @@ data class GameSnapshot(
     val cycleEndsAtMillis: Long = 0L,
     val onboardingCompleted: Boolean = false,
     val budgetPlanWeek: Int = 0,
+    val budgetPlanRecurringExpense: Int = GameDefaults.EXPENSE,
     val plannedOptionalExpenses: Int = 0,
     val actualOptionalExpenses: Int = 0,
+    val actualUnplannedExpenses: Int = 0,
     val actualAdditionalIncome: Int = 0,
     val lastReviewedBudgetWeek: Int = 0,
     val budgetTutorialCompleted: Boolean = false,
@@ -57,9 +59,11 @@ data class GameSnapshot(
     val eventPoolHandledCycles: Set<String> = emptySet(),
     val activeJobIds: Set<String> = emptySet(),
     val jobRemainingActions: Map<String, Int> = emptyMap(),
+    val jobForTaskIds: Map<String, String> = emptyMap(),
     val actionHistory: List<GameActionRecord> = emptyList(),
     val customGoal: CustomGoal? = null,
     val activeDeposit: ActiveDeposit? = null,
+    val pendingExpenseDelta: Int = 0,
 )
 
 data class GameActionRecord(

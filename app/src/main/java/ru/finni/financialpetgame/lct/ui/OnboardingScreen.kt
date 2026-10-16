@@ -387,7 +387,8 @@ internal fun GoalSelectionScreen(
     onCustomGoalSelected: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
-    val pageCount = goals.size + if (customGoal != null) 1 else 0
+    val sortedGoals = remember(goals) { goals.sortedByDescending(Goals::level) }
+    val pageCount = sortedGoals.size + if (customGoal != null) 1 else 0
     val pagerState = rememberPagerState(pageCount = { pageCount })
 
     OnboardingStage(
@@ -413,22 +414,27 @@ internal fun GoalSelectionScreen(
                 modifier = Modifier.fillMaxWidth().height(120.dp),
                 pageSpacing = 12.dp,
             ) { page ->
-                if (page < goals.size) GoalChoiceCard(goals[page])
-                else CustomGoalChoiceCard(checkNotNull(customGoal))
+                if (customGoal != null && page == 0) {
+                    CustomGoalChoiceCard(customGoal)
+                } else {
+                    GoalChoiceCard(sortedGoals[page - if (customGoal != null) 1 else 0])
+                }
             }
             Spacer(Modifier.height(8.dp))
             GoalPageIndicator(
-                pageCount = goals.size,
+                pageCount = pageCount,
                 selectedPage = pagerState.currentPage,
             )
             Spacer(Modifier.height(18.dp))
             PrimaryButton(
                 text = stringResource(R.string.onboarding_select),
                 onClick = {
-                    if (pagerState.currentPage < goals.size) {
-                        onGoalSelected(goals[pagerState.currentPage])
-                    } else {
+                    if (customGoal != null && pagerState.currentPage == 0) {
                         onCustomGoalSelected?.invoke()
+                    } else {
+                        onGoalSelected(
+                            sortedGoals[pagerState.currentPage - if (customGoal != null) 1 else 0],
+                        )
                     }
                 },
             )
@@ -471,13 +477,28 @@ private fun GoalChoiceCard(goal: Goals) {
             tintIcon = false,
             modifier = Modifier.align(Alignment.TopStart).padding(8.dp),
         )
-        if (effect != null) {
-            GoalValueBadge(
-                text = "+${effect.increase}",
-                iconRes = effect.resource.iconRes(),
-                contentDescription = stringResource(effect.resource.labelRes()),
-                modifier = Modifier.align(Alignment.TopEnd).padding(8.dp),
-            )
+        Column(
+            modifier = Modifier.align(Alignment.TopEnd).padding(8.dp),
+            horizontalAlignment = Alignment.End,
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Surface(color = Color(0xFFECC8FF), shape = RoundedCornerShape(6.dp)) {
+                Text(
+                    text = stringResource(R.string.goal_level, goal.level),
+                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp),
+                    color = OnboardingPurple,
+                    fontFamily = NunitoFontFamily,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 11.sp,
+                )
+            }
+            if (effect != null) {
+                GoalValueBadge(
+                    text = "+${effect.increase}",
+                    iconRes = effect.resource.iconRes(),
+                    contentDescription = stringResource(effect.resource.labelRes()),
+                )
+            }
         }
         Text(
             text = stringResource(goal.titleRes),

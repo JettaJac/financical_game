@@ -362,25 +362,21 @@ private fun DepositSummary(
             .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text(stringResource(R.string.deposit_income), color = DepositPurple, fontWeight = FontWeight.Bold)
-        MoneyValue(maturityPayout, fontSize = 32)
         Text(
             stringResource(R.string.deposit_maturity_caption, duration),
             color = DepositPurple,
-            fontSize = 13.sp,
-        )
-        Spacer(Modifier.height(8.dp))
-        Text(
-            stringResource(R.string.deposit_remaining_amount),
-            color = DepositPurple,
+            fontSize = 15.sp,
             fontWeight = FontWeight.Bold,
         )
-        MoneyValue(earlyPayout, fontSize = 25)
+        MoneyValue(maturityPayout, fontSize = 32)
+        Spacer(Modifier.height(8.dp))
         Text(
             stringResource(R.string.deposit_early_caption, duration),
             color = DepositPurple,
-            fontSize = 13.sp,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Bold,
         )
+        MoneyValue(earlyPayout, fontSize = 25)
         Spacer(Modifier.height(10.dp))
         DepositButton(buttonText, buttonEnabled, onButtonClick)
     }

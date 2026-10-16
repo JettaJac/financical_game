@@ -259,7 +259,7 @@ enum class TaskItem(
     Cleaning(
         earnings = 0,
         level = 1,
-        cooldown = OncePerCycleTaskCooldown,
+        cooldown = Cooldown.Cycles(3.0),
         activeDays = 6..7,
         careEffects = taskEffects(health = 0, happiness = -5, energy = -10),
     ),
@@ -288,11 +288,11 @@ enum class TaskItem(
         careEffects = taskEffects(health = -8, happiness = 0, energy = -8, money = 30),
     ),
     RecyclePaper(
-        earnings = 0,
+        earnings = 20,
         level = 2,
         cooldown = OncePerCycleTaskCooldown,
         requiresEvent = true,
-        careEffects = taskEffects(health = -5, happiness = 0, energy = -5),
+        careEffects = taskEffects(health = -5, happiness = 0, energy = -5, money = 20),
     ),
     FeedNeighboursCat(
         earnings = 40,
@@ -309,7 +309,7 @@ enum class TaskItem(
         careEffects = taskEffects(health = -15, happiness = 0, energy = -15, money = 55),
     ),
     HelpGrandfather(
-        earnings = 20,
+        earnings = 15,
         level = 3,
         cooldown = OncePerCycleTaskCooldown,
         activeDays = 6..7,

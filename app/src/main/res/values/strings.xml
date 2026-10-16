@@ -72,6 +72,7 @@
     <string name="budget_mandatory">Обязательные</string>
     <string name="budget_optional_short">Необязательные</string>
     <string name="budget_unplanned">Непредвиденные</string>
+    <string name="budget_deposit_penalty">Штраф за досрочное закрытие вклада</string>
     <string name="budget_no_operations">Нет операций</string>
 
     <!-- Deposits -->

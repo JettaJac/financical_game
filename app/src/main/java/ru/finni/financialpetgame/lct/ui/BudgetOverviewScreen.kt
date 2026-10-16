@@ -191,7 +191,15 @@ private fun BudgetDetails(
             ),
             initiallyExpanded = true,
         ) {
-            recurring.forEach { BudgetOverviewEntry(it) }
+            recurring.forEach { entry ->
+                BudgetOverviewEntry(
+                    if (entry.id == "school_lunch") {
+                        entry.copy(amount = entry.amount + (state.expense - MandatoryBudget.expense))
+                    } else {
+                        entry
+                    },
+                )
+            }
         }
         BudgetGroup(
             title = stringResource(
@@ -217,13 +225,23 @@ private fun BudgetDetails(
                 )
             }
         }
-        BudgetGroup(title = stringResource(R.string.budget_unplanned), initiallyExpanded = false) {
-            Text(
-                text = stringResource(R.string.budget_no_operations),
-                color = OverviewPurpleDark.copy(alpha = 0.6f),
-                fontFamily = NunitoFontFamily,
-                modifier = Modifier.padding(vertical = 10.dp),
-            )
+        BudgetGroup(
+            title = stringResource(R.string.budget_unplanned),
+            initiallyExpanded = state.actualUnplannedExpenses > 0,
+        ) {
+            if (view == BudgetView.Current && state.actualUnplannedExpenses > 0) {
+                BudgetAmountRow(
+                    title = stringResource(R.string.budget_deposit_penalty),
+                    amount = state.actualUnplannedExpenses,
+                )
+            } else {
+                Text(
+                    text = stringResource(R.string.budget_no_operations),
+                    color = OverviewPurpleDark.copy(alpha = 0.6f),
+                    fontFamily = NunitoFontFamily,
+                    modifier = Modifier.padding(vertical = 10.dp),
+                )
+            }
         }
         Spacer(Modifier.height(20.dp))
     }

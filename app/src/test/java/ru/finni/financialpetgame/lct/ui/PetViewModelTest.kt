@@ -513,10 +513,11 @@ class PetViewModelTest {
     }
 
     @Test
-    fun every_task_has_one_cycle_cooldown() {
-        TaskItem.entries.forEach { task ->
+    fun regular_tasks_have_one_cycle_cooldown_and_cleaning_has_three() {
+        TaskItem.entries.filterNot { it == TaskItem.Cleaning }.forEach { task ->
             assertEquals(Cooldown.Cycles(1.0), task.cooldown)
         }
+        assertEquals(Cooldown.Cycles(3.0), TaskItem.Cleaning.cooldown)
     }
 
     @Test

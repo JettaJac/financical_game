@@ -140,8 +140,8 @@ private fun BudgetComparisonScreen(
                 ResultSectionTitle(stringResource(R.string.budget_income))
                 ResultComparisonRow(
                     title = stringResource(R.string.budget_recurring),
-                    planned = MandatoryBudget.income,
-                    actual = MandatoryBudget.income,
+                    planned = result.plannedIncome,
+                    actual = result.plannedIncome,
                 )
                 ResultComparisonRow(
                     title = stringResource(R.string.budget_additional_income),
@@ -157,8 +157,8 @@ private fun BudgetComparisonScreen(
                 ResultSectionTitle(stringResource(R.string.budget_expenses))
                 ResultComparisonRow(
                     title = stringResource(R.string.budget_recurring_expenses),
-                    planned = MandatoryBudget.expense,
-                    actual = MandatoryBudget.expense,
+                    planned = result.plannedExpenses - plannedOptionalExpenses,
+                    actual = result.actualExpenses - actualOptionalExpenses,
                 )
                 ResultComparisonRow(
                     title = stringResource(R.string.budget_optional_expenses),

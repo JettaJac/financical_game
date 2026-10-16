@@ -271,6 +271,8 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
             ),
             firstPlanning = !state.resources.budgetTutorialCompleted,
             previousOptionalExpenses = state.resources.plannedOptionalExpenses,
+            recurringIncome = state.resources.income,
+            recurringExpense = state.resources.expense,
             onComplete = { onAction(PetAction.CompleteBudgetPlanning(it)) },
         )
         return
@@ -295,14 +297,21 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
             onClose = { onAction(PetAction.CloseDepositAccount) },
         )
         HomeOverlay.Goal -> {
-            val goal = Goals.fromStorageId(state.resources.goalId)
+            val isCustomGoal = state.resources.goalId == "custom"
+            val goal = if (isCustomGoal) null else Goals.fromStorageId(state.resources.goalId)
             GoalOverlay(
                 money = state.resources.money,
                 target = state.resources.goalTarget,
                 goal = goal,
-                alreadyPurchased = goal.name in state.resources.purchasedGoalIds,
+                customGoal = state.resources.customGoal.takeIf { isCustomGoal },
+                currentLevel = state.resources.level,
+                alreadyPurchased = state.resources.goalId in state.resources.purchasedGoalIds,
                 onBuy = {
-                    onAction(PetAction.BuyGoal(goal, state.resources.goalTarget))
+                    if (goal != null) {
+                        onAction(PetAction.BuyGoal(goal, state.resources.goalTarget))
+                    } else {
+                        onAction(PetAction.BuyCustomGoal(state.resources.goalTarget))
+                    }
                 },
                 onDismiss = handleSystemBack,
             )
@@ -319,7 +328,9 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
                 GoalSelectionScreen(
                     goals = availableGoals,
                     onGoalSelected = { onAction(PetAction.SelectGoal(it)) },
-                    customGoal = state.resources.customGoal,
+                    customGoal = state.resources.customGoal.takeUnless {
+                        "custom" in state.resources.purchasedGoalIds
+                    },
                     onCustomGoalSelected = { onAction(PetAction.SelectCustomGoal) },
                 )
             }
@@ -924,6 +935,8 @@ private fun HomeBottomPanel(
                     taskWeeklyUseCounts = state.resources.taskWeeklyUseCounts,
                     taskUseWeeks = state.resources.taskUseWeeks,
                     eventUnlockedTaskIds = state.resources.eventUnlockedTaskIds,
+                    jobRemainingActions = state.resources.jobRemainingActions,
+                    jobForTaskIds = state.resources.jobForTaskIds,
                     currentEnergy = state.resources.energy,
                 )
             }
@@ -1064,7 +1077,7 @@ private fun HomeTab(
                 Spacer(Modifier.height(4.dp))
             }
         }
-        if (selected && observedValue != null) {
+        if (observedValue != null) {
             Surface(
                 color = Color(0xFFE8C5FA),
                 shape = RoundedCornerShape(6.dp),
@@ -1174,6 +1187,8 @@ private fun CardRow(
     taskWeeklyUseCounts: Map<String, Int> = emptyMap(),
     taskUseWeeks: Map<String, Int> = emptyMap(),
     eventUnlockedTaskIds: Set<String> = emptySet(),
+    jobRemainingActions: Map<String, Int> = emptyMap(),
+    jobForTaskIds: Map<String, String> = emptyMap(),
     nextPurchaseHalfPrice: Boolean = false,
     currentEnergy: Int = 100,
     modifier: Modifier = Modifier,
@@ -1246,6 +1261,11 @@ private fun CardRow(
                         alreadyPurchased = alreadyPurchased,
                         remainingCooldown = remainingCooldown,
                         weeklyTaskLimitReached = weeklyTaskLimitReached,
+                        effectivePrice = effectivePrice,
+                        remainingActions = (product.item as? TaskItem)
+                            ?.let { jobForTaskIds[it.storageId] }
+                            ?.let(jobRemainingActions::get)
+                            ?.takeIf { it >= 0 },
                         onBuyClick = { onBuyClick(product.item) },
                         modifier = Modifier.weight(1f),
                     )
@@ -1294,18 +1314,23 @@ private fun ProductCard(
     alreadyPurchased: Boolean,
     remainingCooldown: CooldownRemaining?,
     weeklyTaskLimitReached: Boolean,
+    effectivePrice: Int,
+    remainingActions: Int?,
     onBuyClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
+    Box(
         modifier = modifier
             .fillMaxHeight()
             .clip(RoundedCornerShape(10.dp))
             .background(Color.White)
             .border(1.dp, HomePurpleDark, RoundedCornerShape(10.dp))
             .padding(horizontal = 8.dp, vertical = 5.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+      Column(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+      ) {
         Image(
             painter = painterResource(product.illustration),
             contentDescription = stringResource(product.title),
@@ -1399,7 +1424,7 @@ private fun ProductCard(
                     )
                     Spacer(Modifier.width(3.dp))
                     Text(
-                        text = product.item.price.toString(),
+                        text = effectivePrice.toString(),
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
@@ -1413,6 +1438,22 @@ private fun ProductCard(
                 }
             }
         }
+      }
+      remainingActions?.let { remaining ->
+          Surface(
+              modifier = Modifier.align(Alignment.TopEnd),
+              color = HomePurple,
+              shape = CircleShape,
+          ) {
+              Text(
+                  text = remaining.toString(),
+                  modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
+                  color = Color.White,
+                  fontSize = 10.sp,
+                  fontWeight = FontWeight.Bold,
+              )
+          }
+      }
     }
 }
 

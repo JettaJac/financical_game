@@ -18,6 +18,8 @@ interface GameRepository {
 
     suspend fun buyGoal(goal: Goals, price: Int): Boolean
 
+    suspend fun buyCustomGoal(price: Int): Boolean
+
     suspend fun selectGoal(goal: Goals)
 
     suspend fun applyEffects(effects: List<Effect>)

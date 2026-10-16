@@ -73,10 +73,11 @@ data class BudgetPeriodResult(
 internal fun budgetWeekForPeriod(currentPeriod: Int): Int = weekForPeriod(currentPeriod) + 1
 
 internal fun budgetPeriodResult(snapshot: GameSnapshot): BudgetPeriodResult = BudgetPeriodResult(
-    plannedIncome = MandatoryBudget.income,
-    actualIncome = MandatoryBudget.income + snapshot.actualAdditionalIncome,
-    plannedExpenses = MandatoryBudget.expense + snapshot.plannedOptionalExpenses,
-    actualExpenses = MandatoryBudget.expense + snapshot.actualOptionalExpenses,
+    plannedIncome = snapshot.income,
+    actualIncome = snapshot.income + snapshot.actualAdditionalIncome,
+    plannedExpenses = snapshot.budgetPlanRecurringExpense + snapshot.plannedOptionalExpenses,
+    actualExpenses = snapshot.budgetPlanRecurringExpense + snapshot.actualOptionalExpenses +
+        snapshot.actualUnplannedExpenses,
 )
 
 internal fun needsBudgetReview(snapshot: GameSnapshot): Boolean {
