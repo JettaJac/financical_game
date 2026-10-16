@@ -171,7 +171,7 @@
     <string name="personal_account_back">Назад</string>
     <string name="personal_account_name">Имя</string>
     <string name="personal_account_colour">Цвет</string>
-    <string name="personal_account_fur">Шерсть</string>
+    <string name="personal_account_fur">Шерстка</string>
     <string name="apply_action">Применить</string>
 
     <!-- Store -->
@@ -242,17 +242,17 @@
     <string name="onboarding_next">Далее</string>
     <string name="onboarding_select">Выбрать</string>
     <string name="onboarding_choose_hair_colour">Выбери цвет</string>
-    <string name="onboarding_choose_hair_style">Выбери шерсть питомцу</string>
+    <string name="onboarding_choose_hair_style">Выбери шерстку питомцу</string>
     <string name="onboarding_choose_goal">Давай выберем цель</string>
-    <string name="hair_colour_beige">Бежевая шерсть</string>
-    <string name="hair_colour_violet">Сиреневая шерсть</string>
-    <string name="hair_colour_orange">Персиковая шерсть</string>
+    <string name="hair_colour_beige">Бежевая шерстка</string>
+    <string name="hair_colour_violet">Сиреневая шерстка</string>
+    <string name="hair_colour_orange">Персиковая шерстка</string>
     <string name="eye_colour_violet">Фиолетовые глаза</string>
     <string name="eye_colour_green">Зелёные глаза</string>
     <string name="eye_colour_blue">Голубые глаза</string>
-    <string name="hair_style_default">Гладкая шерсть</string>
-    <string name="hair_style_hairy">Пушистая шерсть</string>
-    <string name="hair_style_curly">Кудрявая шерсть</string>
+    <string name="hair_style_default">Гладкая шерстка</string>
+    <string name="hair_style_hairy">Пушистая шерстка</string>
+    <string name="hair_style_curly">Кудрявая шерстка</string>
 
     <!-- Goals -->
     <string name="goal_level">Уровень %1$d</string>

@@ -56,7 +56,7 @@ enum class Goals(
         titleRes = R.string.goal_pet_house_title,
         target = 300,
         descriptionRes = R.string.goal_pet_house_description,
-        illustrationRes = R.drawable.home_background,
+        illustrationRes = R.drawable.pethouse,
         goalEffects = listOf(Effect(resource = Resource.Energy, increase = 15)),
         level = 2,
     ),
