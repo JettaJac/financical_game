@@ -122,6 +122,24 @@
     <string name="task_do_with_reward">Выполнить · +%1$d</string>
     <string name="task_unavailable">Недоступно</string>
     <string name="task_available_next_week">На следующей неделе</string>
+    <string name="goal_level_hint">Выбери цель моего уровня. Когда мы её достигнем, я стану на уровень выше!</string>
+    <string name="cycle_energy_blocked">Я совсем устал и не могу закончить этот день. Давай сначала поспим или немного посидим.</string>
+    <string name="low_health_hint">Покорми меня</string>
+    <string name="low_energy_hint">Я устал, давай отдохнем</string>
+    <string name="low_happiness_hint">Мы давно с тобой не играли, давай поиграем</string>
+    <string name="deposit_closed_by_event">У нас закончились силы и деньги, поэтому вклад закрылся досрочно. Из него удержан штраф.</string>
+    <string name="item_needs_event">Это действие откроется после специального события.</string>
+    <string name="item_not_enough_money">Не хватает монет для покупки.</string>
+    <string name="item_level_locked">Это станет доступно на уровне %1$d.</string>
+    <string name="item_on_cooldown">Можно будет снова использовать через %1$s.</string>
+    <string name="item_weekdays_only">Это действие доступно по будням.</string>
+    <string name="item_weekends_only">Это действие доступно в выходные.</string>
+    <string name="item_limit_reached">Эту работу больше нельзя выполнить: попытки закончились.</string>
+    <string name="item_low_energy">Сначала отдохни: для этого действия пока мало энергии.</string>
+    <string name="work_sleepy">Сначала отдохни: поспи или немного посиди.</string>
+    <string name="work_lessons">Сначала сделай уроки, потом можно работать.</string>
+    <string name="item_already_purchased">Этот предмет уже куплен.</string>
+    <string name="finny_ok">Хорошо</string>
 
     <!-- Menu -->
     <string name="menu">МЕНЮ</string>

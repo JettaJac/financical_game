@@ -395,6 +395,15 @@ internal fun GoalSelectionScreen(
         animationAssetPath = TALKING_ANIMATION,
         modifier = modifier,
     ) {
+        PetSpeechBubble(
+            text = stringResource(R.string.goal_level_hint),
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 192.dp, start = 16.dp, end = 16.dp)
+                .widthIn(max = 280.dp),
+            smallerText = true,
+        )
+
         Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)

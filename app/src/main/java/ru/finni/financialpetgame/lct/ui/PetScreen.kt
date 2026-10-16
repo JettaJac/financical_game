@@ -12,6 +12,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.layout.Arrangement
@@ -97,12 +98,15 @@ import ru.finni.financialpetgame.lct.domain.cooldownRemaining
 import ru.finni.financialpetgame.lct.domain.dayForPeriod
 import ru.finni.financialpetgame.lct.domain.isAvailable
 import ru.finni.financialpetgame.lct.domain.weekForPeriod
+import ru.finni.financialpetgame.lct.domain.currentCyclePosition
+import ru.finni.financialpetgame.lct.domain.events.EventKind
 import ru.finni.financialpetgame.lct.domain.needsBudgetPlanning
 import ru.finni.financialpetgame.lct.domain.needsBudgetReview
 import ru.finni.financialpetgame.lct.domain.budgetPeriodResult
 import ru.finni.financialpetgame.lct.domain.canApplyEffects
 import ru.finni.financialpetgame.lct.domain.canDeclineEvent
 import ru.finni.financialpetgame.lct.ui.theme.NunitoFontFamily
+import kotlinx.coroutines.delay
 
 private val HomePurple = Color(0xFF8743D3)
 private val HomePurpleDark = Color(0xFF4B2163)
@@ -352,11 +356,12 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
     }
 
     state.activeEvent?.let { event ->
-        val canAcceptEvent = canApplyEffects(state.resources.money, event.acceptEffects)
+        val canAcceptEvent = event.scheduledEvent?.definition?.kind == EventKind.Negative ||
+            canApplyEffects(state.resources.money, event.acceptEffects)
         EventOverlay(
             event = event,
             acceptButtonText = stringResource(event.acceptButtonTextRes),
-            declineButtonText = if (canDeclineEvent(state.resources.money, event)) {
+            declineButtonText = if (canDeclineEvent(state.resources, event)) {
                 stringResource(event.declineButtonTextRes)
             } else {
                 null
@@ -367,6 +372,119 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
             onDecline = { onAction(PetAction.DeclineEvent) },
             onClose = { onAction(PetAction.SkipEvent) },
         )
+    }
+
+    state.customMessage?.let { message ->
+        LaunchedEffect(message) {
+            delay(4_500)
+            onAction(PetAction.DismissMessage)
+        }
+        ItemAvailabilityAnnotation(
+            message = message,
+            petImageRes = petImageResource(
+                state.resources.level,
+                state.resources.hairColour,
+                state.resources.hairStyle,
+            ),
+            onDismiss = { onAction(PetAction.DismissMessage) },
+        )
+    }
+
+    val finnyMessage = state.finnyPrompt?.let { prompt ->
+        stringResource(
+            when (prompt) {
+                FinnyPrompt.LowHealth -> R.string.low_health_hint
+                FinnyPrompt.LowHappiness -> R.string.low_happiness_hint
+                FinnyPrompt.LowEnergy -> R.string.low_energy_hint
+                FinnyPrompt.CycleEnergyBlocked -> R.string.cycle_energy_blocked
+                FinnyPrompt.DepositClosed -> R.string.deposit_closed_by_event
+            },
+        )
+    }
+    finnyMessage?.let { message ->
+        FinnySpeechOverlay(
+            message = message,
+            onDismiss = { onAction(PetAction.DismissMessage) },
+        )
+    }
+}
+
+@Composable
+private fun FinnySpeechOverlay(
+    message: String,
+    onDismiss: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .clickable(onClick = onDismiss),
+    ) {
+        PetSpeechBubble(
+            text = message,
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .safeDrawingPadding()
+                .padding(top = 150.dp, start = 24.dp, end = 24.dp)
+                .widthIn(max = 320.dp),
+        )
+    }
+}
+
+@Composable
+private fun ItemAvailabilityAnnotation(
+    message: String,
+    @DrawableRes petImageRes: Int,
+    onDismiss: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onDismiss,
+            )
+            .safeDrawingPadding()
+            .padding(horizontal = 20.dp)
+            .padding(bottom = 274.dp),
+        contentAlignment = Alignment.BottomCenter,
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onDismiss),
+            color = Color.White,
+            shape = RoundedCornerShape(14.dp),
+            shadowElevation = 8.dp,
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Image(
+                    painter = painterResource(petImageRes),
+                    contentDescription = null,
+                    modifier = Modifier.size(38.dp),
+                    contentScale = ContentScale.Fit,
+                )
+                Text(
+                    text = message,
+                    modifier = Modifier.weight(1f),
+                    color = HomePurpleDark,
+                    fontFamily = NunitoFontFamily,
+                    fontSize = 14.sp,
+                    lineHeight = 18.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = "×",
+                    color = HomePurple,
+                    fontSize = 22.sp,
+                    lineHeight = 22.sp,
+                )
+            }
+        }
     }
 }
 
@@ -448,6 +566,9 @@ private fun HomePage(state: PetState, onAction: (PetAction) -> Unit) {
             tutorialHighlightedSections = tutorialHighlightedSections(state.homeTutorialStep),
             onSectionClick = { onAction(PetAction.SelectSection(it)) },
             onBuyClick = { onAction(PetAction.BuyCareItem(it)) },
+            onUnavailableClick = { message, emphasizeMoney ->
+                onAction(PetAction.ShowMessage(message, emphasizeMoney))
+            },
             metrics = metrics,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -689,7 +810,7 @@ private fun HomeHeader(
             HeaderValue(
                 icon = R.drawable.coin_money,
                 value = state.resources.money.toString(),
-                observedValue = state.resources.money,
+                observedValue = state.resources.money * 31 + state.moneyAttentionNonce,
                 width = metrics.headerValueWidth,
             )
             LinearProgressIndicator(
@@ -855,6 +976,7 @@ private fun HomeBottomPanel(
     tutorialHighlightedSections: Set<HomeSection>,
     onSectionClick: (HomeSection) -> Unit,
     onBuyClick: (CardItem) -> Unit,
+    onUnavailableClick: (String, Boolean) -> Unit,
     metrics: HomeLayoutMetrics,
     modifier: Modifier = Modifier,
 ) {
@@ -884,6 +1006,7 @@ private fun HomeBottomPanel(
                     onBuyClick = onBuyClick,
                     horizontalPadding = metrics.horizontalPadding,
                     itemGap = metrics.itemGap,
+                    onUnavailableClick = onUnavailableClick,
                 )
                 HomeSection.Happiness -> CardRow(
                     items = HappinessItems,
@@ -895,6 +1018,7 @@ private fun HomeBottomPanel(
                     onBuyClick = onBuyClick,
                     horizontalPadding = metrics.horizontalPadding,
                     itemGap = metrics.itemGap,
+                    onUnavailableClick = onUnavailableClick,
                 )
                 HomeSection.Energy -> CardRow(
                     items = EnergyItems,
@@ -906,6 +1030,7 @@ private fun HomeBottomPanel(
                     onBuyClick = onBuyClick,
                     horizontalPadding = metrics.horizontalPadding,
                     itemGap = metrics.itemGap,
+                    onUnavailableClick = onUnavailableClick,
                 )
                 HomeSection.Shop -> CardRow(
                     items = ShopItems,
@@ -917,6 +1042,7 @@ private fun HomeBottomPanel(
                     onBuyClick = onBuyClick,
                     horizontalPadding = metrics.horizontalPadding,
                     itemGap = metrics.itemGap,
+                    onUnavailableClick = onUnavailableClick,
                     purchasedItemIds = state.resources.purchasedShopItemIds,
                     nextPurchaseHalfPrice =
                         "nextPurchaseHalfPrice" in state.resources.eventFlags,
@@ -938,6 +1064,8 @@ private fun HomeBottomPanel(
                     jobRemainingActions = state.resources.jobRemainingActions,
                     jobForTaskIds = state.resources.jobForTaskIds,
                     currentEnergy = state.resources.energy,
+                    restedAtPeriod = state.resources.restedAtPeriod,
+                    onUnavailableClick = onUnavailableClick,
                 )
             }
         }
@@ -1191,6 +1319,8 @@ private fun CardRow(
     jobForTaskIds: Map<String, String> = emptyMap(),
     nextPurchaseHalfPrice: Boolean = false,
     currentEnergy: Int = 100,
+    restedAtPeriod: Int = 0,
+    onUnavailableClick: (String, Boolean) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
 ) {
     if (items.isEmpty()) return
@@ -1235,7 +1365,11 @@ private fun CardRow(
                             taskUseWeeks[task.storageId] == currentWeek &&
                             (taskWeeklyUseCounts[task.storageId] ?: 0) >= weeklyLimit.count
                     } ?: false
-                    val remainingCooldown = cooldownRemaining(
+                    val cycleRecoveryAction = cycleSecondsRemaining == 0 &&
+                        currentEnergy == 0 &&
+                        (product.item == EnergyItem.TakeASeat ||
+                            product.item == EnergyItem.TakeANap)
+                    val remainingCooldown = if (cycleRecoveryAction) null else cooldownRemaining(
                         cooldown = product.item.cooldown,
                         unlockCycle = cooldownUnlockCycles[product.item.storageId] ?: 0.0,
                         currentPeriod = currentPeriod,
@@ -1248,16 +1382,59 @@ private fun CardRow(
                     } else {
                         product.item.price
                     }
+                    val task = product.item as? TaskItem
+                    val cyclePosition = currentCyclePosition(currentPeriod, cycleSecondsRemaining)
+                    val lessonsCompleted =
+                        (cooldownUnlockCycles[TaskItem.Lessons.storageId] ?: 0.0) > cyclePosition
+                    val workBlockedByRest = task?.earnings?.let { it > 0 } == true &&
+                        restedAtPeriod != currentPeriod
+                    val workBlockedByLessons = task?.earnings?.let { it > 0 } == true &&
+                        dayForPeriod(currentPeriod) in TaskItem.Lessons.activeDays &&
+                        !lessonsCompleted
+                    val unavailableReason = when {
+                        alreadyPurchased -> stringResource(R.string.item_already_purchased)
+                        product.item is TaskItem && product.item.requiresEvent &&
+                            product.item.storageId !in eventUnlockedTaskIds ->
+                            stringResource(R.string.item_needs_event)
+                        workBlockedByRest -> stringResource(R.string.work_sleepy)
+                        workBlockedByLessons -> stringResource(R.string.work_lessons)
+                        money < effectivePrice -> stringResource(R.string.item_not_enough_money)
+                        level < product.item.level ->
+                            stringResource(R.string.item_level_locked, product.item.level)
+                        remainingCooldown is CooldownRemaining.Time -> stringResource(
+                            R.string.item_on_cooldown,
+                            formatCountdown(remainingCooldown.seconds),
+                        )
+                        weeklyTaskLimitReached ->
+                            stringResource(R.string.task_available_next_week)
+                        product.item is TaskItem &&
+                            dayForPeriod(currentPeriod) !in product.item.activeDays -> stringResource(
+                                if (product.item.activeDays.last <= 5) {
+                                    R.string.item_weekdays_only
+                                } else {
+                                    R.string.item_weekends_only
+                                },
+                            )
+                        product.item is TaskItem &&
+                            product.item.usageLimit is TaskUsageLimit.Total ->
+                            stringResource(R.string.item_limit_reached)
+                        product.item is TaskItem && currentEnergy <= 10 ->
+                            stringResource(R.string.item_low_energy)
+                        else -> stringResource(R.string.task_unavailable)
+                    }
+                    val canBuy = money >= effectivePrice &&
+                        remainingCooldown == null &&
+                        (level >= product.item.level ||
+                            (product.item is TaskItem &&
+                                product.item.storageId in eventUnlockedTaskIds)) &&
+                        taskAvailable &&
+                        !workBlockedByRest &&
+                        !workBlockedByLessons &&
+                        (product.item !is TaskItem || currentEnergy > 10) &&
+                        !alreadyPurchased
                     ProductCard(
                         product = product,
-                        canBuy = money >= effectivePrice &&
-                            remainingCooldown == null &&
-                            (level >= product.item.level ||
-                                (product.item is TaskItem &&
-                                    product.item.storageId in eventUnlockedTaskIds)) &&
-                            taskAvailable &&
-                            (product.item !is TaskItem || currentEnergy > 10) &&
-                            !alreadyPurchased,
+                        canBuy = canBuy,
                         alreadyPurchased = alreadyPurchased,
                         remainingCooldown = remainingCooldown,
                         weeklyTaskLimitReached = weeklyTaskLimitReached,
@@ -1266,7 +1443,13 @@ private fun CardRow(
                             ?.let { jobForTaskIds[it.storageId] }
                             ?.let(jobRemainingActions::get)
                             ?.takeIf { it >= 0 },
-                        onBuyClick = { onBuyClick(product.item) },
+                        onBuyClick = {
+                            if (canBuy) onBuyClick(product.item)
+                            else onUnavailableClick(
+                                unavailableReason,
+                                money < effectivePrice,
+                            )
+                        },
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -1353,9 +1536,9 @@ private fun ProductCard(
         CareStats(product.item)
         Button(
             onClick = onBuyClick,
-            enabled = canBuy,
+            enabled = true,
             colors = ButtonDefaults.buttonColors(
-                containerColor = HomePurple,
+                containerColor = if (canBuy) HomePurple else HomePurple.copy(alpha = 0.22f),
                 disabledContainerColor = HomePurple.copy(alpha = 0.22f),
                 disabledContentColor = HomePurpleDark.copy(alpha = 0.62f),
             ),

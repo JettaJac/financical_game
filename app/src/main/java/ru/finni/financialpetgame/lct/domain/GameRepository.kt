@@ -4,6 +4,7 @@ import ru.finni.financialpetgame.lct.data.GameSnapshot
 import kotlinx.coroutines.flow.Flow
 import ru.finni.financialpetgame.lct.domain.events.JobDef
 import ru.finni.financialpetgame.lct.domain.events.ScheduledEvent
+import ru.finni.financialpetgame.lct.domain.events.EventResolutionResult
 
 interface GameRepository {
     val snapshot: Flow<GameSnapshot>
@@ -50,7 +51,7 @@ interface GameRepository {
         event: ScheduledEvent,
         unlockedJob: JobDef?,
         accepted: Boolean,
-    )
+    ): EventResolutionResult
 
     suspend fun reset()
 }
@@ -74,6 +75,8 @@ internal fun roomDirtAfterCompletedCycles(currentLevel: Int, completedCycles: In
 
 internal fun hasCycleExpired(cycleEndsAtMillis: Long, nowMillis: Long): Boolean =
     cycleEndsAtMillis > 0L && nowMillis >= cycleEndsAtMillis
+
+internal fun canCompleteCycle(energy: Int): Boolean = energy > 0
 
 internal fun nextCycleEnd(nowMillis: Long): Long =
     nowMillis + GameDefaults.CYCLE_DURATION_MILLIS

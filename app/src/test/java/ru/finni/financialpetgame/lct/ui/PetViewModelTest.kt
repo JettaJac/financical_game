@@ -26,6 +26,7 @@ import ru.finni.financialpetgame.lct.domain.canDeclineEvent
 import ru.finni.financialpetgame.lct.domain.characteristicValue
 import ru.finni.financialpetgame.lct.domain.cycleSecondsRemaining
 import ru.finni.financialpetgame.lct.domain.hasCycleExpired
+import ru.finni.financialpetgame.lct.domain.canCompleteCycle
 import ru.finni.financialpetgame.lct.domain.nextCycleEnd
 import ru.finni.financialpetgame.lct.domain.migratedCycleEnd
 import ru.finni.financialpetgame.lct.domain.isAvailable
@@ -48,6 +49,12 @@ import org.junit.Test
 import kotlin.math.roundToInt
 
 class PetViewModelTest {
+    @Test
+    fun cycle_waits_until_energy_is_restored() {
+        assertEquals(false, canCompleteCycle(0))
+        assertEquals(true, canCompleteCycle(1))
+    }
+
     @Test
     fun accepting_deposit_offer_opens_deposit_but_declining_does_not() {
         assertEquals(true, opensDepositAfterEvent("deposit_offer", accepted = true))
@@ -160,7 +167,7 @@ class PetViewModelTest {
     }
 
     @Test
-    fun unaffordable_event_cannot_be_accepted_and_can_always_be_declined() {
+    fun unaffordable_regular_event_is_not_automatically_declinable() {
         val forcedExpense = GameEvent(
             descriptionRes = R.string.app_name,
             illustrationRes = R.drawable.goal_pillow,
@@ -169,11 +176,11 @@ class PetViewModelTest {
         )
 
         assertEquals(false, canApplyEffects(money = 40, forcedExpense.acceptEffects))
-        assertEquals(true, canDeclineEvent(money = 40, forcedExpense))
-        assertEquals(false, canDeclineEvent(money = 50, forcedExpense))
+        assertEquals(false, canDeclineEvent(GameSnapshot(money = 40), forcedExpense))
+        assertEquals(false, canDeclineEvent(GameSnapshot(money = 50), forcedExpense))
         assertEquals(
             true,
-            canDeclineEvent(money = 50, forcedExpense.copy(canDecline = true)),
+            canDeclineEvent(GameSnapshot(money = 50), forcedExpense.copy(canDecline = true)),
         )
     }
 
@@ -203,6 +210,83 @@ class PetViewModelTest {
         assertEquals(true, canResolveScheduledEvent(charity, accepted = false, currentMoney = 0))
         assertEquals(false, canResolveScheduledEvent(charity, accepted = true, currentMoney = 0))
         assertEquals(true, canResolveScheduledEvent(charity, accepted = true, currentMoney = 50))
+    }
+
+    @Test
+    fun negative_event_can_be_accepted_when_money_is_insufficient() {
+        val negative = ScheduledEvent(
+            definition = EventDef(
+                id = "forced_expense",
+                title = "Forced expense",
+                kind = EventKind.Negative,
+                deltas = EventDeltas(money = -50),
+                canDecline = false,
+                frequency = EventFrequency.Once,
+                minLevel = 1,
+                requiresFlags = emptySet(),
+                setsFlags = emptySet(),
+                unlocksJobId = null,
+                hideRewardUntilAccept = false,
+                moneyFromCard = -50,
+                moneyFromScript = null,
+            ),
+            scenarioStepId = null,
+            isScripted = true,
+            appliedDeltas = EventDeltas(money = -50),
+        )
+
+        assertEquals(true, canResolveScheduledEvent(negative, true, currentMoney = 10))
+        assertEquals(false, canResolveScheduledEvent(negative, false, currentMoney = 10))
+        assertEquals(
+            true,
+            canResolveScheduledEvent(
+                negative,
+                accepted = false,
+                currentMoney = 0,
+                canDeclineAtZero = true,
+            ),
+        )
+    }
+
+    @Test
+    fun declined_once_event_returns_when_retry_period_is_reached() {
+        val event = EventDef(
+            id = "job_offer",
+            title = "Job offer",
+            kind = EventKind.JobOffer,
+            deltas = EventDeltas(),
+            canDecline = true,
+            frequency = EventFrequency.Once,
+            minLevel = 1,
+            requiresFlags = emptySet(),
+            setsFlags = emptySet(),
+            unlocksJobId = null,
+            hideRewardUntilAccept = false,
+            moneyFromCard = 0,
+            moneyFromScript = null,
+        )
+        val scheduler = EventScheduler(EventCatalogData(listOf(event), emptyList(), emptyList()))
+
+        assertEquals(
+            null,
+            scheduler.next(
+                GameSnapshot(
+                    onboardingCompleted = true,
+                    currentPeriod = 4,
+                    eventRetryPeriods = mapOf(event.id to 5),
+                ),
+            ),
+        )
+        assertEquals(
+            event.id,
+            scheduler.next(
+                GameSnapshot(
+                    onboardingCompleted = true,
+                    currentPeriod = 5,
+                    eventRetryPeriods = mapOf(event.id to 5),
+                ),
+            )?.definition?.id,
+        )
     }
 
     @Test

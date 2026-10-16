@@ -57,6 +57,7 @@ data class GameSnapshot(
     val eventPeriodOccurrences: Set<String> = emptySet(),
     val handledScenarioEntryIds: Set<String> = emptySet(),
     val eventPoolHandledCycles: Set<String> = emptySet(),
+    val eventRetryPeriods: Map<String, Int> = emptyMap(),
     val activeJobIds: Set<String> = emptySet(),
     val jobRemainingActions: Map<String, Int> = emptyMap(),
     val jobForTaskIds: Map<String, String> = emptyMap(),
@@ -64,6 +65,7 @@ data class GameSnapshot(
     val customGoal: CustomGoal? = null,
     val activeDeposit: ActiveDeposit? = null,
     val pendingExpenseDelta: Int = 0,
+    val restedAtPeriod: Int = 0,
 )
 
 data class GameActionRecord(

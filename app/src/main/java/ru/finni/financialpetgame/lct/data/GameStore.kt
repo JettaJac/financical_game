@@ -18,6 +18,7 @@ import ru.finni.financialpetgame.lct.domain.CardItem
 import ru.finni.financialpetgame.lct.domain.Cooldown
 import ru.finni.financialpetgame.lct.domain.EyeColour
 import ru.finni.financialpetgame.lct.domain.Effect
+import ru.finni.financialpetgame.lct.domain.EnergyItem
 import ru.finni.financialpetgame.lct.domain.Goals
 import ru.finni.financialpetgame.lct.domain.HairColour
 import ru.finni.financialpetgame.lct.domain.HairStyle
@@ -32,6 +33,7 @@ import ru.finni.financialpetgame.lct.domain.currentCyclePosition
 import ru.finni.financialpetgame.lct.domain.characteristicValue
 import ru.finni.financialpetgame.lct.domain.cycleSecondsRemaining
 import ru.finni.financialpetgame.lct.domain.hasCycleExpired
+import ru.finni.financialpetgame.lct.domain.canCompleteCycle
 import ru.finni.financialpetgame.lct.domain.nextCycleEnd
 import ru.finni.financialpetgame.lct.domain.levelAfterGoalPurchase
 import ru.finni.financialpetgame.lct.domain.moneyAfterPurchase
@@ -48,6 +50,8 @@ import ru.finni.financialpetgame.lct.domain.BudgetPeriodResult
 import ru.finni.financialpetgame.lct.domain.ActiveDeposit
 import ru.finni.financialpetgame.lct.domain.DepositTerm
 import ru.finni.financialpetgame.lct.domain.events.EventFrequency
+import ru.finni.financialpetgame.lct.domain.events.EventKind
+import ru.finni.financialpetgame.lct.domain.events.EventResolutionResult
 import ru.finni.financialpetgame.lct.domain.events.JobDef
 import ru.finni.financialpetgame.lct.domain.events.ScheduledEvent
 import ru.finni.financialpetgame.lct.domain.events.canResolveScheduledEvent
@@ -77,6 +81,7 @@ private const val JOB_HAPPINESS_PREFIX = "job_happiness_"
 private const val JOB_ENERGY_PREFIX = "job_energy_"
 private const val JOB_ALLOWED_CYCLES_PREFIX = "job_allowed_cycles_"
 private const val JOB_PERIOD_LIMIT_PREFIX = "job_period_limit_"
+private const val EVENT_RETRY_PERIOD_PREFIX = "event_retry_period_"
 private const val NEXT_PURCHASE_DISCOUNT_FLAG = "nextPurchaseHalfPrice"
 private const val BRAIDED_BRACELETS_FLAG = "braidedBracelets"
 private const val LEGACY_CYCLE_DURATION_SECONDS = 20 * 60
@@ -161,6 +166,8 @@ private fun jobAllowedCyclesKey(jobId: String) =
     stringPreferencesKey("$JOB_ALLOWED_CYCLES_PREFIX$jobId")
 private fun jobPeriodLimitKey(jobId: String) =
     intPreferencesKey("$JOB_PERIOD_LIMIT_PREFIX$jobId")
+private fun eventRetryPeriodKey(eventId: String) =
+    intPreferencesKey("$EVENT_RETRY_PERIOD_PREFIX$eventId")
 
 @Singleton
 class GameStore @Inject constructor(@ApplicationContext private val context: Context) : GameRepository {
@@ -207,6 +214,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
     private val eventPeriodOccurrences = stringSetPreferencesKey("event_period_occurrences")
     private val handledScenarioEntryIds = stringSetPreferencesKey("handled_scenario_entry_ids")
     private val eventPoolHandledCycles = stringSetPreferencesKey("event_pool_handled_cycles")
+    private val restedAtPeriod = intPreferencesKey("rested_at_period")
     private val activeJobIds = stringSetPreferencesKey("active_job_ids")
     private val actionHistory = stringPreferencesKey("action_history")
     private val customGoalTitle = stringPreferencesKey("custom_goal_title")
@@ -235,6 +243,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             val taskUseWeeks = preferences.intMap(TASK_USE_WEEK_PREFIX)
             val jobRemainingActions = preferences.intMap(JOB_REMAINING_ACTIONS_PREFIX)
             val jobForTaskIds = preferences.stringMap(JOB_FOR_TASK_PREFIX)
+            val eventRetryPeriods = preferences.intMap(EVENT_RETRY_PERIOD_PREFIX)
 
             val secondsRemaining = cycleSecondsRemaining(
                 cycleEndsAtMillis = checkNotNull(preferences[cycleEndsAtMillis]),
@@ -284,6 +293,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 eventPeriodOccurrences = checkNotNull(preferences[eventPeriodOccurrences]),
                 handledScenarioEntryIds = checkNotNull(preferences[handledScenarioEntryIds]),
                 eventPoolHandledCycles = checkNotNull(preferences[eventPoolHandledCycles]),
+                eventRetryPeriods = eventRetryPeriods,
                 activeJobIds = checkNotNull(preferences[activeJobIds]),
                 jobRemainingActions = jobRemainingActions,
                 jobForTaskIds = jobForTaskIds,
@@ -307,6 +317,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                         )
                     },
                 pendingExpenseDelta = checkNotNull(preferences[pendingExpenseDelta]),
+                restedAtPeriod = checkNotNull(preferences[restedAtPeriod]),
             ).withCharacteristicsAt(secondsRemaining)
         })
     }
@@ -420,6 +431,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             if (preferences[eventPoolHandledCycles] == null) {
                 preferences[eventPoolHandledCycles] = emptySet()
             }
+            if (preferences[restedAtPeriod] == null) preferences[restedAtPeriod] = 0
             if (preferences[activeJobIds] == null) preferences[activeJobIds] = emptySet()
             if (preferences[actionHistory] == null) preferences[actionHistory] = "[]"
             if (preferences[depositAmount] == null) preferences[depositAmount] = 0
@@ -460,7 +472,8 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                         it.name.startsWith(JOB_HAPPINESS_PREFIX) ||
                         it.name.startsWith(JOB_ENERGY_PREFIX) ||
                         it.name.startsWith(JOB_ALLOWED_CYCLES_PREFIX) ||
-                        it.name.startsWith(JOB_PERIOD_LIMIT_PREFIX)
+                        it.name.startsWith(JOB_PERIOD_LIMIT_PREFIX) ||
+                        it.name.startsWith(EVENT_RETRY_PERIOD_PREFIX)
                 }
                 .forEach { preferences.remove(it) }
 
@@ -490,6 +503,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             preferences[eventPeriodOccurrences] = emptySet()
             preferences[handledScenarioEntryIds] = emptySet()
             preferences[eventPoolHandledCycles] = emptySet()
+            preferences[restedAtPeriod] = 0
             preferences[activeJobIds] = emptySet()
             preferences[actionHistory] = "[]"
             preferences[currentPeriod] = GameDefaults.CURRENT_PERIOD
@@ -598,6 +612,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
 
     override suspend fun completeTimerCycle() {
         context.gameDataStore.edit { preferences ->
+            if (!canCompleteCycle(currentEnergy(preferences, System.currentTimeMillis()))) return@edit
             appendAction(preferences, "Завершён цикл")
             applyCompletedCycles(preferences, count = 1)
             preferences[cycleEndsAtMillis] =
@@ -623,6 +638,9 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 currentPeriod = currentCycle,
                 cycleSecondsRemaining = secondsRemaining,
             )
+            val cycleRecoveryAction = secondsRemaining == 0 &&
+                currentEnergy(preferences, System.currentTimeMillis()) == 0 &&
+                (item == EnergyItem.TakeASeat || item == EnergyItem.TakeANap)
             val purchasedShopItems = checkNotNull(preferences[purchasedShopItemIds])
             if (item is ShopItem && item.storageId in purchasedShopItems) return@edit
             val instanceJobId = if (item is TaskItem) {
@@ -647,6 +665,15 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 )
             ) return@edit
 
+            if (item is TaskItem && item.earnings > 0) {
+                if (preferences[restedAtPeriod] != currentCycle) return@edit
+                val lessonsRequired = dayForPeriod(currentCycle) in TaskItem.Lessons.activeDays
+                val lessonsCompleted =
+                    (preferences[cooldownUnlockCycleKey(TaskItem.Lessons)] ?: 0.0) >
+                        currentCyclePosition
+                if (lessonsRequired && !lessonsCompleted) return@edit
+            }
+
             if (instanceJobId != null &&
                 (preferences[jobRemainingActionsKey(instanceJobId)] ?: -1) == 0
             ) return@edit
@@ -667,7 +694,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             if (item is TaskItem) {
                 val unlockCycle = preferences[cooldownUnlockCycleKey(item)] ?: 0.0
                 if (unlockCycle > currentCyclePosition) return@edit
-            } else if (instanceJobId == null) {
+            } else if (instanceJobId == null && !cycleRecoveryAction) {
                 when (item.cooldown) {
                     Cooldown.None -> Unit
                     is Cooldown.Cycles -> {
@@ -744,6 +771,9 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
 
             if (item is ShopItem) {
                 preferences[purchasedShopItemIds] = purchasedShopItems + item.storageId
+            }
+            if (item == EnergyItem.TakeASeat || item == EnergyItem.TakeANap) {
+                preferences[restedAtPeriod] = currentCycle
             }
             if (item is TaskItem) {
                 val currentWeek = weekForPeriod(currentCycle)
@@ -973,9 +1003,11 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
         event: ScheduledEvent,
         unlockedJob: JobDef?,
         accepted: Boolean,
-    ) {
+    ): EventResolutionResult {
+        var depositClosedWithPenalty = false
         context.gameDataStore.edit { preferences ->
             val definition = event.definition
+            val currentPeriodValue = checkNotNull(preferences[currentPeriod])
             val currentWeek = weekForPeriod(checkNotNull(preferences[currentPeriod])) + 1
             val occurrence = "${definition.id}@$currentWeek"
             val alreadyHandled = when (definition.frequency) {
@@ -986,11 +1018,31 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                     checkNotNull(preferences[eventPeriodOccurrences])
             }
             if (alreadyHandled) return@edit
-            if (!canResolveScheduledEvent(event, accepted, checkNotNull(preferences[money]))) {
+            val secondsRemaining = cycleSecondsRemaining(
+                checkNotNull(preferences[cycleEndsAtMillis]),
+                System.currentTimeMillis(),
+            )
+            val allCharacteristicsZero = listOf(
+                currentCharacteristic(preferences, Resource.Health, secondsRemaining),
+                currentCharacteristic(preferences, Resource.Happiness, secondsRemaining),
+                currentCharacteristic(preferences, Resource.Energy, secondsRemaining),
+            ).all { it == 0 }
+            val canDeclineAtZero = allCharacteristicsZero && (preferences[depositAmount] ?: 0) <= 0
+            if (!canResolveScheduledEvent(
+                    event,
+                    accepted,
+                    checkNotNull(preferences[money]),
+                    canDeclineAtZero,
+                )
+            ) {
                 return@edit
             }
             if (accepted) {
-                applyEventDeltas(preferences, event)
+                val depleted = applyEventDeltas(preferences, event, secondsRemaining)
+                if (depleted && (preferences[depositAmount] ?: 0) > 0) {
+                    closeDepositEarly(preferences)
+                    depositClosedWithPenalty = true
+                }
                 preferences[eventFlags] =
                     checkNotNull(preferences[eventFlags]) + definition.setsFlags
                 if (definition.permanentExpenseDelta != 0) {
@@ -998,6 +1050,9 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                         definition.permanentExpenseDelta
                 }
                 unlockedJob?.let { createJobInstance(preferences, it) }
+                preferences.remove(eventRetryPeriodKey(definition.id))
+            } else if (definition.frequency == EventFrequency.Once) {
+                preferences[eventRetryPeriodKey(definition.id)] = currentPeriodValue + 2
             }
 
             event.scenarioStepId?.let { stepId ->
@@ -1010,9 +1065,11 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                     checkNotNull(preferences[currentPeriod]).toString()
             }
             when (definition.frequency) {
-                EventFrequency.Once,
-                EventFrequency.PermanentModifier,
-                -> preferences[completedEventIds] =
+                EventFrequency.Once -> if (accepted) {
+                    preferences[completedEventIds] =
+                        checkNotNull(preferences[completedEventIds]) + definition.id
+                }
+                EventFrequency.PermanentModifier -> preferences[completedEventIds] =
                     checkNotNull(preferences[completedEventIds]) + definition.id
                 EventFrequency.PerPeriod -> preferences[eventPeriodOccurrences] =
                     checkNotNull(preferences[eventPeriodOccurrences]) + occurrence
@@ -1023,16 +1080,29 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 if (accepted) event.appliedDeltas.money else 0,
             )
         }
+        return EventResolutionResult(depositClosedWithPenalty)
     }
 
     private fun advanceExpiredCycles(preferences: MutablePreferences, nowMillis: Long) {
         val currentCycleEnd = checkNotNull(preferences[cycleEndsAtMillis])
         if (!hasCycleExpired(currentCycleEnd, nowMillis)) return
+        if (!canCompleteCycle(currentEnergy(preferences, nowMillis))) return
 
         applyCompletedCycles(preferences, count = 1)
         appendAction(preferences, "Завершён цикл")
         preferences[cycleEndsAtMillis] = nextCycleEnd(nowMillis)
     }
+
+    private fun currentEnergy(preferences: Preferences, nowMillis: Long): Int =
+        characteristicValue(
+            baseValue = GameDefaults.ENERGY,
+            permanentModifier = checkNotNull(preferences[energyModifier]),
+            cycleAdjustment = checkNotNull(preferences[energyCycleAdjustment]),
+            secondsRemaining = cycleSecondsRemaining(
+                checkNotNull(preferences[cycleEndsAtMillis]),
+                nowMillis,
+            ),
+        )
 
     private fun migrateLegacyCooldowns(preferences: MutablePreferences, nowMillis: Long) {
         val legacyEntries = preferences.asMap().entries.filter { (key, _) ->
@@ -1155,17 +1225,87 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             (preferences[actualUnplannedExpenses] ?: 0) + amount
     }
 
-    private fun applyEventDeltas(preferences: MutablePreferences, event: ScheduledEvent) {
+    private fun applyEventDeltas(
+        preferences: MutablePreferences,
+        event: ScheduledEvent,
+        secondsRemaining: Int,
+    ): Boolean {
         val deltas = event.appliedDeltas
         val permanent = event.definition.frequency == EventFrequency.PermanentModifier
-        applyCharacteristicEffect(preferences, Resource.Health, deltas.health, permanent)
-        applyCharacteristicEffect(
-            preferences, Resource.Happiness, deltas.happiness, permanent,
-        )
-        applyCharacteristicEffect(preferences, Resource.Energy, deltas.energy, permanent)
-        preferences[money] = checkNotNull(preferences[money]) + deltas.money
-        recordOptionalExpense(preferences, (-deltas.money).coerceAtLeast(0))
+        listOf(
+            Resource.Health to deltas.health,
+            Resource.Happiness to deltas.happiness,
+            Resource.Energy to deltas.energy,
+        ).forEach { (resource, delta) ->
+            val current = currentCharacteristic(preferences, resource, secondsRemaining)
+            val appliedDelta = if (event.definition.kind == EventKind.Negative) {
+                (current + delta).coerceAtLeast(0) - current
+            } else {
+                delta
+            }
+            applyCharacteristicEffect(preferences, resource, appliedDelta, permanent)
+        }
+        val currentMoney = checkNotNull(preferences[money])
+        val resultingMoney = if (event.definition.kind == EventKind.Negative) {
+            (currentMoney + deltas.money).coerceAtLeast(0)
+        } else {
+            currentMoney + deltas.money
+        }
+        preferences[money] = resultingMoney
+        recordOptionalExpense(preferences, (currentMoney - resultingMoney).coerceAtLeast(0))
         recordAdditionalIncome(preferences, deltas.money.coerceAtLeast(0))
+        return resultingMoney == 0 && listOf(
+            Resource.Health,
+            Resource.Happiness,
+            Resource.Energy,
+        ).all { resource ->
+            currentCharacteristic(preferences, resource, secondsRemaining) == 0
+        }
+    }
+
+    private fun currentCharacteristic(
+        preferences: Preferences,
+        resource: Resource,
+        secondsRemaining: Int,
+    ): Int {
+        if (resource == Resource.Money) return checkNotNull(preferences[money])
+        return characteristicValue(
+        baseValue = when (resource) {
+            Resource.Health -> GameDefaults.HEALTH
+            Resource.Happiness -> GameDefaults.HAPPINESS
+            Resource.Energy -> GameDefaults.ENERGY
+            Resource.Money -> 0
+        },
+        permanentModifier = when (resource) {
+            Resource.Health -> checkNotNull(preferences[healthModifier])
+            Resource.Happiness -> checkNotNull(preferences[happinessModifier])
+            Resource.Energy -> checkNotNull(preferences[energyModifier])
+            Resource.Money -> 0
+        },
+        cycleAdjustment = when (resource) {
+            Resource.Health -> checkNotNull(preferences[healthCycleAdjustment])
+            Resource.Happiness -> checkNotNull(preferences[happinessCycleAdjustment])
+            Resource.Energy -> checkNotNull(preferences[energyCycleAdjustment])
+            Resource.Money -> 0
+        },
+        secondsRemaining = secondsRemaining,
+        )
+    }
+
+    private fun closeDepositEarly(preferences: MutablePreferences) {
+        val amount = preferences[depositAmount] ?: return
+        if (amount <= 0) return
+        val deposit = ActiveDeposit(
+            amount = amount,
+            openedAtPeriod = preferences[depositOpenedAtPeriod] ?: 1,
+            durationCycles = preferences[depositDurationCycles] ?: 3,
+            interestPercent = preferences[depositInterestPercent] ?: 7,
+            earlyClosePenaltyPercent = preferences[depositPenaltyPercent] ?: 4,
+        )
+        preferences[money] = checkNotNull(preferences[money]) + deposit.earlyClosePayout
+        recordUnplannedExpense(preferences, deposit.earlyCloseLoss)
+        appendAction(preferences, "Вклад закрыт из-за критического события", deposit.earlyClosePayout)
+        clearDeposit(preferences)
     }
 
     private fun createJobInstance(preferences: MutablePreferences, job: JobDef) {

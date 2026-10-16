@@ -42,5 +42,12 @@ object GameEvents {
 internal fun canApplyEffects(money: Int, effects: List<Effect>): Boolean =
     money + effects.filter { it.resource == Resource.Money }.sumOf(Effect::increase) >= 0
 
-internal fun canDeclineEvent(money: Int, event: GameEvent): Boolean =
-    event.canDecline || !canApplyEffects(money, event.acceptEffects)
+internal fun canDeclineEvent(snapshot: ru.finni.financialpetgame.lct.data.GameSnapshot, event: GameEvent): Boolean =
+    event.canDecline || (
+        event.scheduledEvent?.definition?.kind ==
+            ru.finni.financialpetgame.lct.domain.events.EventKind.Negative &&
+            snapshot.activeDeposit == null &&
+            snapshot.health == 0 &&
+            snapshot.happiness == 0 &&
+            snapshot.energy == 0
+        )

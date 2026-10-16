@@ -95,6 +95,8 @@ enum class HomeOverlay { Menu, Budget, Deposit, Goal, GoalSelection, PersonalAcc
 
 enum class HomeSection { Food, Happiness, Energy, Shop, Tasks }
 
+enum class FinnyPrompt { LowHealth, LowHappiness, LowEnergy, CycleEnergyBlocked, DepositClosed }
+
 data class PetState(
     val resources: GameSnapshot = GameSnapshot(),
     val secondsRemaining: Int = TIMER_SECONDS,
@@ -109,6 +111,9 @@ data class PetState(
     val homeTutorialStep: Int? = null,
     val demoModeHintVisible: Boolean = false,
     val nowMillis: Long = System.currentTimeMillis(),
+    val finnyPrompt: FinnyPrompt? = null,
+    val customMessage: String? = null,
+    val moneyAttentionNonce: Int = 0,
 )
 
 sealed interface PetAction {
@@ -126,6 +131,8 @@ sealed interface PetAction {
     data object DeclineEvent : PetAction
     data object SkipEvent : PetAction
     data class BuyCareItem(val item: CardItem) : PetAction
+    data class ShowMessage(val message: String, val emphasizeMoney: Boolean = false) : PetAction
+    data object DismissMessage : PetAction
     data class BuyGoal(val goal: Goals, val price: Int) : PetAction
     data class BuyCustomGoal(val price: Int) : PetAction
     data class SelectGoal(val goal: Goals) : PetAction
@@ -158,6 +165,7 @@ class PetViewModel @Inject constructor(
     private var goalPurchaseInProgress = false
     private var appearanceUpdateInProgress = false
     private var eventResolutionInProgress = false
+    private val shownLowPrompts = mutableSetOf<String>()
     private val eventScheduler = EventScheduler(eventCatalog.data)
 
     init {
@@ -204,6 +212,9 @@ class PetViewModel @Inject constructor(
                                     resources.eventPoolHandledCycles
                                 )
                         }
+                        val lowPrompt = lowCharacteristicPrompts(resources).firstOrNull { prompt ->
+                            shownLowPrompts.add("${resources.currentPeriod}:$prompt")
+                        }
                         it.copy(
                             resources = resources,
                             secondsRemaining = cycleSecondsRemaining(
@@ -226,6 +237,15 @@ class PetViewModel @Inject constructor(
                                     resources.handledScenarioEntryIds::contains,
                                 ) -> 0
                                 else -> null
+                            },
+                            finnyPrompt = if (
+                                unresolvedActiveEvent == null &&
+                                scheduledEvent == null &&
+                                reachedGoalEvent == null
+                            ) {
+                                it.finnyPrompt ?: lowPrompt
+                            } else {
+                                it.finnyPrompt
                             },
                         )
                     }
@@ -257,6 +277,21 @@ class PetViewModel @Inject constructor(
             }
 
             val refreshedState = _state.value
+            val lowPrompt = lowCharacteristicPrompts(refreshedState.resources)
+                .firstOrNull { prompt ->
+                    shownLowPrompts.add(
+                        "${refreshedState.resources.currentPeriod}:$prompt",
+                    )
+                }
+            if (lowPrompt != null) {
+                _state.update {
+                    if (it.finnyPrompt == null && it.customMessage == null) {
+                        it.copy(finnyPrompt = lowPrompt)
+                    } else {
+                        it
+                    }
+                }
+            }
             val scheduledEvent = eventScheduler.next(
                 snapshot = refreshedState.resources,
                 elapsedCycleSeconds = eventElapsedCycleSeconds(
@@ -275,6 +310,15 @@ class PetViewModel @Inject constructor(
             }
 
             if (secondsRemaining == 0) repository.advanceExpiredCycles(nowMillis)
+            if (secondsRemaining == 0 && refreshedState.resources.energy == 0) {
+                _state.update {
+                    if (it.finnyPrompt == null && it.customMessage == null) {
+                        it.copy(finnyPrompt = FinnyPrompt.CycleEnergyBlocked)
+                    } else {
+                        it
+                    }
+                }
+            }
         }
     }
 
@@ -354,6 +398,17 @@ class PetViewModel @Inject constructor(
             }
             PetAction.Exit -> _state.update { it.copy(exitRequested = true) }
             is PetAction.BuyCareItem -> viewModelScope.launch { repository.buyCareItem(action.item) }
+            is PetAction.ShowMessage -> _state.update {
+                it.copy(
+                    customMessage = action.message,
+                    finnyPrompt = null,
+                    moneyAttentionNonce = it.moneyAttentionNonce +
+                        if (action.emphasizeMoney) 1 else 0,
+                )
+            }
+            PetAction.DismissMessage -> _state.update {
+                it.copy(customMessage = null, finnyPrompt = null)
+            }
             is PetAction.BuyGoal -> purchaseGoal(GoalPurchase(action.goal, action.price))
             is PetAction.BuyCustomGoal -> purchaseCustomGoal(action.price)
             is PetAction.SelectGoal -> viewModelScope.launch {
@@ -442,15 +497,28 @@ class PetViewModel @Inject constructor(
         val currentState = _state.value
         val event = currentState.activeEvent ?: return
         event.scheduledEvent?.let { scheduled ->
-            if (!canResolveScheduledEvent(scheduled, accept, currentState.resources.money)) return
+            val canDeclineAtZero = currentState.resources.activeDeposit == null &&
+                currentState.resources.health == 0 &&
+                currentState.resources.happiness == 0 &&
+                currentState.resources.energy == 0
+            if (!canResolveScheduledEvent(
+                    scheduled,
+                    accept,
+                    currentState.resources.money,
+                    canDeclineAtZero,
+                )
+            ) return
             eventResolutionInProgress = true
             viewModelScope.launch {
                 try {
-                    repository.resolveScheduledEvent(
+                    val result = repository.resolveScheduledEvent(
                         event = scheduled,
                         unlockedJob = eventScheduler.jobFor(scheduled),
                         accepted = accept,
                     )
+                    if (result.depositClosedWithPenalty) {
+                        _state.update { it.copy(finnyPrompt = FinnyPrompt.DepositClosed) }
+                    }
                     if (opensDepositAfterEvent(scheduled.definition.id, accept)) {
                         _state.update { it.copy(overlay = HomeOverlay.Deposit) }
                     }
@@ -523,6 +591,12 @@ class PetViewModel @Inject constructor(
             }
         }
     }
+}
+
+private fun lowCharacteristicPrompts(resources: GameSnapshot): List<FinnyPrompt> = buildList {
+    if (resources.health < 15) add(FinnyPrompt.LowHealth)
+    if (resources.energy < 15) add(FinnyPrompt.LowEnergy)
+    if (resources.happiness < 15) add(FinnyPrompt.LowHappiness)
 }
 
 private val DEPOSIT_OFFER_EVENT_IDS = setOf(

@@ -95,10 +95,17 @@ internal fun canResolveScheduledEvent(
     event: ScheduledEvent,
     accepted: Boolean,
     currentMoney: Int,
+    canDeclineAtZero: Boolean = false,
 ): Boolean {
     val canAfford = currentMoney + event.appliedDeltas.money >= 0
-    return if (accepted) canAfford else event.definition.canDecline || !canAfford
+    return if (accepted) {
+        canAfford || event.definition.kind == EventKind.Negative
+    } else {
+        event.definition.canDecline || canDeclineAtZero
+    }
 }
+
+data class EventResolutionResult(val depositClosedWithPenalty: Boolean = false)
 
 data class EventCatalogData(
     val events: List<EventDef>,
@@ -117,6 +124,22 @@ class EventScheduler(private val catalog: EventCatalogData) {
         if (!snapshot.onboardingCompleted) return null
         val week = weekForPeriod(snapshot.currentPeriod) + 1
         val day = dayForPeriod(snapshot.currentPeriod)
+
+        snapshot.eventRetryPeriods
+            .asSequence()
+            .filter { (_, retryPeriod) -> retryPeriod <= snapshot.currentPeriod }
+            .mapNotNull { (eventId, _) -> catalog.eventsById[eventId] }
+            .filter { it.id !in snapshot.completedEventIds }
+            .sortedBy(EventDef::id)
+            .firstOrNull()
+            ?.let { definition ->
+                return ScheduledEvent(
+                    definition = definition,
+                    scenarioStepId = null,
+                    isScripted = true,
+                    appliedDeltas = definition.deltas.withMoney(definition.moneyFromCard),
+                )
+            }
 
         val cycleEvents = catalog.scenario
             .filter { it.week == week && it.day == day && it.eventId != null }
