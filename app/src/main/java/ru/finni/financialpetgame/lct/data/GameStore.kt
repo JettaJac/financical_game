@@ -24,6 +24,7 @@ import ru.finni.financialpetgame.lct.domain.HairColour
 import ru.finni.financialpetgame.lct.domain.HairStyle
 import ru.finni.financialpetgame.lct.domain.PetAppearance
 import ru.finni.financialpetgame.lct.domain.PET_APPEARANCE_CHANGE_PRICE
+import ru.finni.financialpetgame.lct.domain.PET_TAP_HAPPINESS_REWARD
 import ru.finni.financialpetgame.lct.domain.PetSetup
 import ru.finni.financialpetgame.lct.domain.Resource
 import ru.finni.financialpetgame.lct.domain.ShopItem
@@ -34,6 +35,7 @@ import ru.finni.financialpetgame.lct.domain.characteristicValue
 import ru.finni.financialpetgame.lct.domain.cycleSecondsRemaining
 import ru.finni.financialpetgame.lct.domain.hasCycleExpired
 import ru.finni.financialpetgame.lct.domain.canCompleteCycle
+import ru.finni.financialpetgame.lct.domain.canRewardPetTap
 import ru.finni.financialpetgame.lct.domain.nextCycleEnd
 import ru.finni.financialpetgame.lct.domain.levelAfterGoalPurchase
 import ru.finni.financialpetgame.lct.domain.moneyAfterPurchase
@@ -185,6 +187,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
     private val healthCycleAdjustment = intPreferencesKey("health_cycle_adjustment")
     private val happinessCycleAdjustment = intPreferencesKey("happiness_cycle_adjustment")
     private val energyCycleAdjustment = intPreferencesKey("energy_cycle_adjustment")
+    private val rewardedPetTapsThisCycle = intPreferencesKey("rewarded_pet_taps_this_cycle")
     private val goalTitle = stringPreferencesKey("goal_title")
     private val goalTarget = intPreferencesKey("goal_target")
     private val goalId = stringPreferencesKey("goal_id")
@@ -262,6 +265,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 healthCycleAdjustment = checkNotNull(preferences[healthCycleAdjustment]),
                 happinessCycleAdjustment = checkNotNull(preferences[happinessCycleAdjustment]),
                 energyCycleAdjustment = checkNotNull(preferences[energyCycleAdjustment]),
+                rewardedPetTapsThisCycle = checkNotNull(preferences[rewardedPetTapsThisCycle]),
                 goalId = checkNotNull(preferences[goalId]),
                 goalTitle = checkNotNull(preferences[goalTitle]),
                 income = checkNotNull(preferences[income]),
@@ -353,6 +357,9 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 preferences[happinessCycleAdjustment] = 0
             }
             if (preferences[energyCycleAdjustment] == null) preferences[energyCycleAdjustment] = 0
+            if (preferences[rewardedPetTapsThisCycle] == null) {
+                preferences[rewardedPetTapsThisCycle] = 0
+            }
             if (preferences[goalTitle] == null) preferences[goalTitle] = GameDefaults.GOAL
             if (preferences[goalId] == null) preferences[goalId] = Goals.Pillow.name
             val hasLegacyRecurringMoney =
@@ -905,6 +912,24 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
         }
     }
 
+    override suspend fun rewardPetTap(): Boolean {
+        var rewarded = false
+        context.gameDataStore.edit { preferences ->
+            val tapCount = preferences[rewardedPetTapsThisCycle] ?: 0
+            if (!canRewardPetTap(tapCount)) return@edit
+
+            preferences[rewardedPetTapsThisCycle] = tapCount + 1
+            applyCharacteristicEffect(
+                preferences = preferences,
+                resource = Resource.Happiness,
+                change = PET_TAP_HAPPINESS_REWARD,
+                permanent = false,
+            )
+            rewarded = true
+        }
+        return rewarded
+    }
+
     override suspend fun completeOnboarding(setup: PetSetup) {
         context.gameDataStore.edit { preferences ->
             preferences[petName] = setup.name.trim()
@@ -1183,6 +1208,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
         preferences[healthCycleAdjustment] = 0
         preferences[happinessCycleAdjustment] = 0
         preferences[energyCycleAdjustment] = 0
+        preferences[rewardedPetTapsThisCycle] = 0
     }
 
     private fun applyCompletedCycles(preferences: MutablePreferences, count: Int) {

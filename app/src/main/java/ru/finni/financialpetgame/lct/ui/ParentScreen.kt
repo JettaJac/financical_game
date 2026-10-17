@@ -61,7 +61,6 @@ private enum class ParentPage { Home, GoalForm, GoalCreated, History, Cycle }
 internal fun ParentScreen(
     state: GameSnapshot,
     onBack: () -> Unit,
-    onSystemBack: () -> Unit,
     onAddGoal: (String, Int, Int) -> Unit,
 ) {
     var page by rememberSaveable { mutableStateOf(ParentPage.Home) }
@@ -76,7 +75,7 @@ internal fun ParentScreen(
             else -> ParentPage.Home
         }
     }
-    BackHandler(onBack = onSystemBack)
+    BackHandler(onBack = back)
 
     Column(
         Modifier

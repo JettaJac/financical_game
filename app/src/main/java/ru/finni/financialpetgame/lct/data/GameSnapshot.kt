@@ -22,6 +22,7 @@ data class GameSnapshot(
     val healthCycleAdjustment: Int = 0,
     val happinessCycleAdjustment: Int = 0,
     val energyCycleAdjustment: Int = 0,
+    val rewardedPetTapsThisCycle: Int = 0,
     val money: Int = GameDefaults.MONEY,
     val income: Int = GameDefaults.INCOME,
     val expense: Int = GameDefaults.EXPENSE,

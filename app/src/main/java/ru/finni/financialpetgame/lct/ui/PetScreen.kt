@@ -6,12 +6,14 @@ import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.selection.selectable
@@ -57,18 +59,23 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
@@ -108,6 +115,8 @@ import ru.finni.financialpetgame.lct.domain.canApplyEffects
 import ru.finni.financialpetgame.lct.domain.canDeclineEvent
 import ru.finni.financialpetgame.lct.ui.theme.NunitoFontFamily
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 
 private val HomePurple = Color(0xFF8743D3)
 private val HomePurpleDark = Color(0xFF4B2163)
@@ -225,19 +234,40 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
     val context = LocalContext.current
     val backMessage = stringResource(R.string.press_back_again_to_exit)
     var lastBackPressAt by remember { mutableLongStateOf(0L) }
+    val closeOverlay = {
+        lastBackPressAt = 0L
+        onAction(PetAction.CloseOverlay)
+    }
     val handleSystemBack = {
         val now = SystemClock.elapsedRealtime()
-        if (isSecondBackPress(lastBackPressAt, now)) {
-            lastBackPressAt = 0L
-            onAction(PetAction.Exit)
-        } else {
-            lastBackPressAt = now
-            when {
-                state.demoModeHintVisible -> onAction(PetAction.DismissDemoModeHint)
-                state.activeEvent?.showCloseButton == true -> onAction(PetAction.SkipEvent)
-                state.overlay != null -> onAction(PetAction.CloseOverlay)
+        when (
+            backPressAction(
+                previousPressAt = lastBackPressAt,
+                currentPressAt = now,
+                hasDemoHint = state.demoModeHintVisible,
+                hasActiveEvent = state.activeEvent != null,
+                activeEventCanClose = state.activeEvent?.showCloseButton == true,
+                hasOverlay = state.overlay != null,
+            )
+        ) {
+            BackPressAction.DismissDemoHint -> {
+                lastBackPressAt = 0L
+                onAction(PetAction.DismissDemoModeHint)
             }
-            Toast.makeText(context, backMessage, Toast.LENGTH_SHORT).show()
+            BackPressAction.SkipEvent -> {
+                lastBackPressAt = 0L
+                onAction(PetAction.SkipEvent)
+            }
+            BackPressAction.Ignore -> lastBackPressAt = 0L
+            BackPressAction.CloseOverlay -> closeOverlay()
+            BackPressAction.Exit -> {
+                lastBackPressAt = 0L
+                onAction(PetAction.Exit)
+            }
+            BackPressAction.PromptExit -> {
+                lastBackPressAt = now
+                Toast.makeText(context, backMessage, Toast.LENGTH_SHORT).show()
+            }
         }
     }
     BackHandler(onBack = handleSystemBack)
@@ -291,14 +321,14 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
 //    EventOverlay(GameEvents.SportsSection, acceptButtonText = "Принять")
 
     when (state.overlay) {
-        HomeOverlay.Menu -> MenuOverlay(state, onAction, handleSystemBack)
+        HomeOverlay.Menu -> MenuOverlay(state, onAction, closeOverlay)
         HomeOverlay.Budget -> BudgetOverviewScreen(
             state = state.resources,
-            onBack = { onAction(PetAction.CloseOverlay) },
+            onBack = closeOverlay,
         )
         HomeOverlay.Deposit -> DepositScreen(
             state = state.resources,
-            onBack = { onAction(PetAction.CloseOverlay) },
+            onBack = closeOverlay,
             onOpen = { term, amount -> onAction(PetAction.OpenDepositAccount(term, amount)) },
             onClose = { onAction(PetAction.CloseDepositAccount) },
             showEducationInitially = !state.resources.depositTutorialCompleted,
@@ -321,7 +351,7 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
                         onAction(PetAction.BuyCustomGoal(state.resources.goalTarget))
                     }
                 },
-                onDismiss = handleSystemBack,
+                onDismiss = closeOverlay,
             )
         }
         HomeOverlay.GoalSelection -> {
@@ -331,7 +361,7 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
                         it.name !in state.resources.purchasedGoalIds
                 }
             if (availableGoals.isEmpty() && state.resources.customGoal == null) {
-                LaunchedEffect(Unit) { onAction(PetAction.CloseOverlay) }
+                LaunchedEffect(Unit) { closeOverlay() }
             } else {
                 GoalSelectionScreen(
                     goals = availableGoals,
@@ -345,13 +375,12 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
         }
         HomeOverlay.PersonalAccount -> PersonalAccountScreen(
             initialState = state.resources,
-            onBack = { onAction(PetAction.CloseOverlay) },
+            onBack = closeOverlay,
             onApply = { onAction(PetAction.ApplyPetAppearance(it)) },
         )
         HomeOverlay.Parent -> ParentScreen(
             state = state.resources,
-            onBack = { onAction(PetAction.CloseOverlay) },
-            onSystemBack = handleSystemBack,
+            onBack = closeOverlay,
             onAddGoal = { title, target, image ->
                 onAction(PetAction.AddCustomGoal(title, target, image))
             },
@@ -494,10 +523,35 @@ private fun ItemAvailabilityAnnotation(
 
 private const val BACK_EXIT_INTERVAL_MILLIS = 2_000L
 
+internal enum class BackPressAction {
+    DismissDemoHint,
+    SkipEvent,
+    Ignore,
+    CloseOverlay,
+    Exit,
+    PromptExit,
+}
+
 internal fun isSecondBackPress(previousPressAt: Long, currentPressAt: Long): Boolean =
     previousPressAt > 0L &&
         currentPressAt >= previousPressAt &&
         currentPressAt - previousPressAt <= BACK_EXIT_INTERVAL_MILLIS
+
+internal fun backPressAction(
+    previousPressAt: Long,
+    currentPressAt: Long,
+    hasDemoHint: Boolean,
+    hasActiveEvent: Boolean,
+    activeEventCanClose: Boolean,
+    hasOverlay: Boolean,
+): BackPressAction = when {
+    hasDemoHint -> BackPressAction.DismissDemoHint
+    hasActiveEvent && activeEventCanClose -> BackPressAction.SkipEvent
+    hasActiveEvent -> BackPressAction.Ignore
+    hasOverlay -> BackPressAction.CloseOverlay
+    isSecondBackPress(previousPressAt, currentPressAt) -> BackPressAction.Exit
+    else -> BackPressAction.PromptExit
+}
 
 @Composable
 private fun HomePage(state: PetState, onAction: (PetAction) -> Unit) {
@@ -549,16 +603,14 @@ private fun HomePage(state: PetState, onAction: (PetAction) -> Unit) {
                 .padding(top = metrics.quickActionsTop),
         )
 
-        Image(
-            painter = painterResource(
-                petImageResource(
-                    level = state.resources.level,
-                    colour = state.resources.hairColour,
-                    style = state.resources.hairStyle,
-                ),
+        InteractivePetImage(
+            imageRes = petImageResource(
+                level = state.resources.level,
+                colour = state.resources.hairColour,
+                style = state.resources.hairStyle,
             ),
-            contentDescription = stringResource(R.string.pet),
-            contentScale = ContentScale.Fit,
+            reactionNonce = state.petTapReactionNonce,
+            onTap = { onAction(PetAction.PetTapped) },
             modifier = Modifier
                 .align(Alignment.Center)
                 .width(metrics.petWidth)
@@ -598,6 +650,176 @@ private fun HomePage(state: PetState, onAction: (PetAction) -> Unit) {
                     .align(Alignment.TopCenter)
                     .padding(top = 170.dp, start = 24.dp, end = 24.dp)
                     .widthIn(max = 320.dp),
+            )
+        }
+    }
+}
+
+private const val PET_MAX_STRETCH = 1.05f
+
+internal fun petScaleForDrag(
+    dragOffsetPx: Float,
+    fullStretchDistancePx: Float,
+): Float {
+    if (fullStretchDistancePx <= 0f) return 1f
+    val stretchProgress = (kotlin.math.abs(dragOffsetPx) / fullStretchDistancePx).coerceIn(0f, 1f)
+    return 1f + stretchProgress * (PET_MAX_STRETCH - 1f)
+}
+
+@Composable
+private fun InteractivePetImage(
+    @DrawableRes imageRes: Int,
+    reactionNonce: Int,
+    onTap: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val animationScope = rememberCoroutineScope()
+    val density = LocalDensity.current
+    val fullStretchDistancePx = with(density) { 220.dp.toPx() }
+    var dragOffset by remember { mutableStateOf(Offset.Zero) }
+    val tapScale = remember { Animatable(1f) }
+    val tapRotation = remember { Animatable(0f) }
+    val heartProgress = remember { Animatable(0f) }
+    var showHeart by remember { mutableStateOf(false) }
+    var heartJob by remember { mutableStateOf<Job?>(null) }
+    val interactionSource = remember { MutableInteractionSource() }
+
+    val animateTap = {
+        animationScope.launch {
+            tapScale.snapTo(0.94f)
+            tapScale.animateTo(1.05f, tween(110))
+            tapScale.animateTo(
+                1f,
+                spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessMedium,
+                ),
+            )
+        }
+        animationScope.launch {
+            tapRotation.snapTo(-2.5f)
+            tapRotation.animateTo(2.5f, tween(130))
+            tapRotation.animateTo(
+                0f,
+                spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessMedium,
+                ),
+            )
+        }
+    }
+
+    val showRewardHeart = {
+        heartJob?.cancel()
+        heartJob = animationScope.launch {
+            showHeart = true
+            heartProgress.snapTo(0f)
+            heartProgress.animateTo(1f, tween(700))
+            showHeart = false
+        }
+    }
+
+    LaunchedEffect(reactionNonce) {
+        if (reactionNonce > 0) showRewardHeart()
+    }
+
+    Box(
+        modifier = modifier
+            .graphicsLayer {
+                scaleX = petScaleForDrag(dragOffset.x, fullStretchDistancePx)
+                scaleY = petScaleForDrag(dragOffset.y, fullStretchDistancePx)
+                transformOrigin = TransformOrigin(
+                    pivotFractionX = when {
+                        dragOffset.x > 0f -> 0f
+                        dragOffset.x < 0f -> 1f
+                        else -> 0.5f
+                    },
+                    pivotFractionY = when {
+                        dragOffset.y > 0f -> 0f
+                        dragOffset.y < 0f -> 1f
+                        else -> 0.5f
+                    },
+                )
+            }
+            .pointerInput(fullStretchDistancePx) {
+                var reboundJob: Job? = null
+                val rebound = {
+                    reboundJob?.cancel()
+                    val startOffset = dragOffset
+                    reboundJob = animationScope.launch {
+                        Animatable(1f).animateTo(
+                            0f,
+                            spring(
+                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                stiffness = Spring.StiffnessLow,
+                            ),
+                        ) {
+                            dragOffset = startOffset * value
+                        }
+                    }
+                }
+                detectDragGestures(
+                    onDragStart = {
+                        reboundJob?.cancel()
+                    },
+                    onDrag = { change, dragAmount ->
+                        change.consume()
+                        dragOffset = Offset(
+                            x = (dragOffset.x + dragAmount.x).coerceIn(
+                                -fullStretchDistancePx,
+                                fullStretchDistancePx,
+                            ),
+                            y = (dragOffset.y + dragAmount.y).coerceIn(
+                                -fullStretchDistancePx,
+                                fullStretchDistancePx,
+                            ),
+                        )
+                    },
+                    onDragEnd = rebound,
+                    onDragCancel = rebound,
+                )
+            }
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = {
+                    animateTap()
+                    onTap()
+                },
+            ),
+        contentAlignment = Alignment.TopCenter,
+    ) {
+        Image(
+            painter = painterResource(imageRes),
+            contentDescription = stringResource(R.string.pet),
+            contentScale = ContentScale.Fit,
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    scaleX = tapScale.value
+                    scaleY = tapScale.value
+                    rotationZ = tapRotation.value
+                },
+        )
+        if (showHeart) {
+            val progress = heartProgress.value
+            val heartAlpha = when {
+                progress < 0.18f -> progress / 0.18f
+                else -> ((1f - progress) / 0.82f).coerceIn(0f, 1f)
+            }
+            Text(
+                text = stringResource(R.string.pet_tap_reaction),
+                modifier = Modifier
+                    .padding(top = 18.dp)
+                    .offset(y = (-56f * progress).dp)
+                    .graphicsLayer {
+                        alpha = heartAlpha
+                        scaleX = 0.72f + progress * 0.28f
+                        scaleY = 0.72f + progress * 0.28f
+                    },
+                color = Color(0xFFFF6C9D),
+                fontSize = 30.sp,
+                fontWeight = FontWeight.ExtraBold,
             )
         }
     }
@@ -1742,7 +1964,7 @@ private fun PageDots(isVisible: Boolean) {
 private fun MenuOverlay(
     state: PetState,
     onAction: (PetAction) -> Unit,
-    onSystemBack: () -> Unit,
+    onDismiss: () -> Unit,
 ) {
     var showRestartConfirmation by rememberSaveable { mutableStateOf(false) }
     var showDemoModePassword by rememberSaveable { mutableStateOf(false) }
@@ -1757,7 +1979,7 @@ private fun MenuOverlay(
         }
     }
 
-    Dialog(onDismissRequest = onSystemBack) {
+    Dialog(onDismissRequest = onDismiss) {
         Surface(shape = RoundedCornerShape(24.dp), tonalElevation = 8.dp) {
             Column(
                 modifier = Modifier.fillMaxWidth().padding(24.dp),
@@ -1771,7 +1993,7 @@ private fun MenuOverlay(
                 )
                 Spacer(Modifier.height(8.dp))
                 Button(
-                    onClick = { onAction(PetAction.CloseOverlay) },
+                    onClick = onDismiss,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(27)
                 ) {

@@ -114,6 +114,7 @@ data class PetState(
     val finnyPrompt: FinnyPrompt? = null,
     val customMessage: String? = null,
     val moneyAttentionNonce: Int = 0,
+    val petTapReactionNonce: Int = 0,
 )
 
 sealed interface PetAction {
@@ -131,6 +132,7 @@ sealed interface PetAction {
     data object DeclineEvent : PetAction
     data object SkipEvent : PetAction
     data class BuyCareItem(val item: CardItem) : PetAction
+    data object PetTapped : PetAction
     data class ShowMessage(val message: String, val emphasizeMoney: Boolean = false) : PetAction
     data object DismissMessage : PetAction
     data class BuyGoal(val goal: Goals, val price: Int) : PetAction
@@ -399,6 +401,11 @@ class PetViewModel @Inject constructor(
             }
             PetAction.Exit -> _state.update { it.copy(exitRequested = true) }
             is PetAction.BuyCareItem -> viewModelScope.launch { repository.buyCareItem(action.item) }
+            PetAction.PetTapped -> viewModelScope.launch {
+                if (repository.rewardPetTap()) {
+                    _state.update { it.copy(petTapReactionNonce = it.petTapReactionNonce + 1) }
+                }
+            }
             is PetAction.ShowMessage -> _state.update {
                 it.copy(
                     customMessage = action.message,

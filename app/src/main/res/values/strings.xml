@@ -4,6 +4,7 @@
 
     <!-- Common -->
     <string name="pet">Кот</string>
+    <string name="pet_tap_reaction">♥</string>
     <string name="soon">Скоро</string>
 
     <!-- Home: header and status -->

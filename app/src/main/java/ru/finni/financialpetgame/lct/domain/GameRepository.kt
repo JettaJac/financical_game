@@ -25,6 +25,8 @@ interface GameRepository {
 
     suspend fun applyEffects(effects: List<Effect>)
 
+    suspend fun rewardPetTap(): Boolean
+
     suspend fun completeOnboarding(setup: PetSetup)
 
     suspend fun updatePetAppearance(appearance: PetAppearance): Boolean
@@ -57,6 +59,12 @@ interface GameRepository {
 
     suspend fun reset()
 }
+
+internal const val PET_TAP_REWARD_LIMIT = 3
+internal const val PET_TAP_HAPPINESS_REWARD = 5
+
+internal fun canRewardPetTap(tapsThisCycle: Int): Boolean =
+    tapsThisCycle in 0 until PET_TAP_REWARD_LIMIT
 
 internal fun completedWeeks(currentPeriod: Int, completedCycles: Int): Int {
     if (completedCycles <= 0) return 0
