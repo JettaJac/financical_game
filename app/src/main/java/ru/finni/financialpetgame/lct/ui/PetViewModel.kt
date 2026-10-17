@@ -115,7 +115,14 @@ enum class HomeOverlay { Menu, Budget, Deposit, Goal, GoalSelection, PersonalAcc
 
 enum class HomeSection { Food, Happiness, Energy, Shop, Tasks }
 
-enum class FinnyPrompt { LowHealth, LowHappiness, LowEnergy, CycleEnergyBlocked, DepositClosed }
+enum class FinnyPrompt {
+    LowHealth,
+    LowHappiness,
+    LowEnergy,
+    CycleEnergyBlocked,
+    DepositClosed,
+    RoutineReminder,
+}
 
 data class PetState(
     val resources: GameSnapshot = GameSnapshot(),
@@ -153,6 +160,7 @@ sealed interface PetAction {
     data object SkipEvent : PetAction
     data class BuyCareItem(val item: CardItem) : PetAction
     data object PetTapped : PetAction
+    data object ShowRoutineReminder : PetAction
     data class ShowMessage(val message: String, val emphasizeMoney: Boolean = false) : PetAction
     data object DismissMessage : PetAction
     data class BuyGoal(val goal: Goals, val price: Int) : PetAction
@@ -419,6 +427,9 @@ class PetViewModel @Inject constructor(
                 if (repository.rewardPetTap()) {
                     _state.update { it.copy(petTapReactionNonce = it.petTapReactionNonce + 1) }
                 }
+            }
+            PetAction.ShowRoutineReminder -> _state.update {
+                it.copy(finnyPrompt = FinnyPrompt.RoutineReminder, customMessage = null)
             }
             is PetAction.ShowMessage -> _state.update {
                 it.copy(

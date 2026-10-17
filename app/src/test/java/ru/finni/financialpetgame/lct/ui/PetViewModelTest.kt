@@ -30,6 +30,8 @@ import ru.finni.financialpetgame.lct.domain.canCompleteCycle
 import ru.finni.financialpetgame.lct.domain.nextCycleEnd
 import ru.finni.financialpetgame.lct.domain.migratedCycleEnd
 import ru.finni.financialpetgame.lct.domain.isAvailable
+import ru.finni.financialpetgame.lct.domain.WorkPreparationBlock
+import ru.finni.financialpetgame.lct.domain.workPreparationBlock
 import ru.finni.financialpetgame.lct.domain.MandatoryBudget
 import ru.finni.financialpetgame.lct.domain.budgetPeriodResult
 import ru.finni.financialpetgame.lct.domain.needsBudgetPlanning
@@ -663,6 +665,39 @@ class PetViewModelTest {
         assertEquals(35, ShopItem.GlowingOrb.price)
         assertEquals(ShopItem.StylishScarf.careEffects, ShopItem.GlowingOrb.careEffects)
         assertEquals(Cooldown.None, ShopItem.GlowingOrb.cooldown)
+        assertEquals(70, ShopItem.MorningAutomation.price)
+        assertEquals(1, ShopItem.MorningAutomation.level)
+        assertEquals(emptyList<Effect>(), ShopItem.MorningAutomation.careEffects)
+        assertEquals(Cooldown.None, ShopItem.MorningAutomation.cooldown)
+    }
+
+    @Test
+    fun morning_automation_skips_daily_routine_but_not_rest() {
+        val cyclePosition = 3.5
+
+        assertEquals(
+            WorkPreparationBlock.Rest,
+            workPreparationBlock(3, cyclePosition, 2, 0.0, 0.0, emptySet()),
+        )
+        assertEquals(
+            WorkPreparationBlock.GetReady,
+            workPreparationBlock(3, cyclePosition, 3, 0.0, 0.0, emptySet()),
+        )
+        assertEquals(
+            WorkPreparationBlock.Lessons,
+            workPreparationBlock(3, cyclePosition, 3, 4.0, 0.0, emptySet()),
+        )
+        assertEquals(
+            null,
+            workPreparationBlock(
+                currentPeriod = 3,
+                currentCyclePosition = cyclePosition,
+                restedAtPeriod = 3,
+                getReadyUnlockCycle = 0.0,
+                lessonsUnlockCycle = 0.0,
+                purchasedShopItemIds = setOf(ShopItem.MorningAutomation.storageId),
+            ),
+        )
     }
 
     @Test

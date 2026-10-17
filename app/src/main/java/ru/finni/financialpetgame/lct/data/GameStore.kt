@@ -45,6 +45,7 @@ import ru.finni.financialpetgame.lct.domain.migratedCycleEnd
 import ru.finni.financialpetgame.lct.domain.isAvailable
 import ru.finni.financialpetgame.lct.domain.weekForPeriod
 import ru.finni.financialpetgame.lct.domain.withCharacteristicsAt
+import ru.finni.financialpetgame.lct.domain.workPreparationBlock
 import ru.finni.financialpetgame.lct.domain.budgetWeekForPeriod
 import ru.finni.financialpetgame.lct.domain.dayForPeriod
 import ru.finni.financialpetgame.lct.domain.MandatoryBudget
@@ -679,12 +680,17 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             ) return@edit
 
             if (item is TaskItem && item.earnings > 0) {
-                if (preferences[restedAtPeriod] != currentCycle) return@edit
-                val lessonsRequired = dayForPeriod(currentCycle) in TaskItem.Lessons.activeDays
-                val lessonsCompleted =
-                    (preferences[cooldownUnlockCycleKey(TaskItem.Lessons)] ?: 0.0) >
-                        currentCyclePosition
-                if (lessonsRequired && !lessonsCompleted) return@edit
+                val preparationBlock = workPreparationBlock(
+                    currentPeriod = currentCycle,
+                    currentCyclePosition = currentCyclePosition,
+                    restedAtPeriod = preferences[restedAtPeriod] ?: 0,
+                    getReadyUnlockCycle =
+                        preferences[cooldownUnlockCycleKey(TaskItem.GetReady)] ?: 0.0,
+                    lessonsUnlockCycle =
+                        preferences[cooldownUnlockCycleKey(TaskItem.Lessons)] ?: 0.0,
+                    purchasedShopItemIds = purchasedShopItems,
+                )
+                if (preparationBlock != null) return@edit
             }
 
             if (instanceJobId != null &&

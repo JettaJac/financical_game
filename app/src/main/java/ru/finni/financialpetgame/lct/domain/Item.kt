@@ -360,6 +360,27 @@ internal fun dayForPeriod(currentPeriod: Int): Int =
 internal fun weekForPeriod(currentPeriod: Int): Int =
     (currentPeriod.coerceAtLeast(1) - 1) / 7
 
+internal enum class WorkPreparationBlock { Rest, GetReady, Lessons }
+
+internal fun workPreparationBlock(
+    currentPeriod: Int,
+    currentCyclePosition: Double,
+    restedAtPeriod: Int,
+    getReadyUnlockCycle: Double,
+    lessonsUnlockCycle: Double,
+    purchasedShopItemIds: Set<String>,
+): WorkPreparationBlock? {
+    if (restedAtPeriod != currentPeriod) return WorkPreparationBlock.Rest
+    if (ShopItem.MorningAutomation.storageId in purchasedShopItemIds) return null
+    if (getReadyUnlockCycle <= currentCyclePosition) return WorkPreparationBlock.GetReady
+    if (dayForPeriod(currentPeriod) in TaskItem.Lessons.activeDays &&
+        lessonsUnlockCycle <= currentCyclePosition
+    ) {
+        return WorkPreparationBlock.Lessons
+    }
+    return null
+}
+
 private fun taskEffects(
     health: Int,
     happiness: Int,
@@ -398,7 +419,8 @@ enum class ShopItem(
     )),
     GlowingOrb(price = 35, level = 3, careEffects = listOf(
         Effect(Resource.Health, 10), Effect(Resource.Happiness, 10), Effect(Resource.Energy, 5),
-    ));
+    )),
+    MorningAutomation(price = 70, level = 1, careEffects = emptyList());
 
     override val storageId: String
         get() = "shop_$name"

@@ -1,6 +1,11 @@
 package ru.finni.financialpetgame.lct.ui
 
+import android.graphics.ImageDecoder
+import android.graphics.drawable.Animatable2
+import android.graphics.drawable.AnimatedImageDrawable
+import android.os.Build
 import android.os.SystemClock
+import android.widget.ImageView
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
@@ -54,12 +59,14 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -87,6 +94,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import ru.finni.financialpetgame.lct.R
 import ru.finni.financialpetgame.lct.domain.CardItem
@@ -100,12 +108,15 @@ import ru.finni.financialpetgame.lct.domain.EnergyItem
 import ru.finni.financialpetgame.lct.domain.GameEvent
 import ru.finni.financialpetgame.lct.domain.GameEvents
 import ru.finni.financialpetgame.lct.domain.GameDefaults
+import ru.finni.financialpetgame.lct.domain.HairColour
 import ru.finni.financialpetgame.lct.domain.HappinessItem
 import ru.finni.financialpetgame.lct.domain.Goals
 import ru.finni.financialpetgame.lct.domain.cooldownRemaining
 import ru.finni.financialpetgame.lct.domain.dayForPeriod
 import ru.finni.financialpetgame.lct.domain.isAvailable
 import ru.finni.financialpetgame.lct.domain.weekForPeriod
+import ru.finni.financialpetgame.lct.domain.WorkPreparationBlock
+import ru.finni.financialpetgame.lct.domain.workPreparationBlock
 import ru.finni.financialpetgame.lct.domain.currentCyclePosition
 import ru.finni.financialpetgame.lct.domain.events.EventKind
 import ru.finni.financialpetgame.lct.domain.needsBudgetPlanning
@@ -122,6 +133,22 @@ private val HomePurple = Color(0xFF8743D3)
 private val HomePurpleDark = Color(0xFF4B2163)
 private val HomeSurface = Color(0xFFFCF7FF)
 private val HomeTrack = Color(0xFFE6C1FA)
+
+private enum class HomePetAnimation { Sleepy, Brushing, Lessons }
+
+private fun HomePetAnimation.assetPath(colour: HairColour): String = when (this) {
+    HomePetAnimation.Sleepy -> when (colour) {
+        HairColour.Beige -> "webm/beige_sleepy_animated.webp"
+        HairColour.Violet -> "webm/violet_sleepy_animated.webp"
+        HairColour.Orange -> "webm/orange_sleepy_animated.webp"
+    }
+    HomePetAnimation.Brushing -> when (colour) {
+        HairColour.Beige -> "webm/beige_brushing_animated.webp"
+        HairColour.Violet -> "webm/violet_brushing_animated.webp"
+        HairColour.Orange -> "webm/orange_brushing_animated.webp"
+    }
+    HomePetAnimation.Lessons -> "webm/lessons_animated.webp"
+}
 
 internal fun roundedMinutesRemaining(seconds: Int): Int =
     ((seconds.coerceAtLeast(0).toLong() + 59L) / 60L).toInt()
@@ -212,6 +239,11 @@ private val ShopItems = listOf(
     CardItemUI(ShopItem.SoftArmchair, R.drawable.soft_coach, R.string.shop_soft_armchair),
     CardItemUI(ShopItem.StylishScarf, R.drawable.scarf, R.string.shop_stylish_scarf),
     CardItemUI(ShopItem.GlowingOrb, R.drawable.lightning_ball, R.string.shop_glowing_orb),
+    CardItemUI(
+        ShopItem.MorningAutomation,
+        R.drawable.automation_morning,
+        R.string.shop_morning_automation,
+    ),
 )
 
 private val TaskItems = listOf(
@@ -431,10 +463,11 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
                 FinnyPrompt.LowEnergy -> R.string.low_energy_hint
                 FinnyPrompt.CycleEnergyBlocked -> R.string.cycle_energy_blocked
                 FinnyPrompt.DepositClosed -> R.string.deposit_closed_by_event
+                FinnyPrompt.RoutineReminder -> R.string.routine_reminder
             },
         )
     }
-    finnyMessage?.let { message ->
+    finnyMessage?.takeIf { state.activeEvent == null }?.let { message ->
         FinnySpeechOverlay(
             message = message,
             onDismiss = { onAction(PetAction.DismissMessage) },
@@ -555,6 +588,32 @@ internal fun backPressAction(
 
 @Composable
 private fun HomePage(state: PetState, onAction: (PetAction) -> Unit) {
+    var oneShotPetAnimation by remember(state.resources.currentPeriod) {
+        mutableStateOf<HomePetAnimation?>(null)
+    }
+    var routinePromptShown by remember(state.resources.currentPeriod) {
+        mutableStateOf(false)
+    }
+    val morningRoutineAutomated =
+        ShopItem.MorningAutomation.storageId in state.resources.purchasedShopItemIds
+
+    LaunchedEffect(
+        state.resources.currentPeriod,
+        morningRoutineAutomated,
+        state.activeEvent,
+        state.homeTutorialStep,
+    ) {
+        if (
+            !routinePromptShown &&
+            !morningRoutineAutomated &&
+            state.activeEvent == null &&
+            state.homeTutorialStep == null
+        ) {
+            routinePromptShown = true
+            onAction(PetAction.ShowRoutineReminder)
+        }
+    }
+
     BoxWithConstraints(
         Modifier
             .fillMaxSize()
@@ -603,25 +662,57 @@ private fun HomePage(state: PetState, onAction: (PetAction) -> Unit) {
                 .padding(top = metrics.quickActionsTop),
         )
 
-        InteractivePetImage(
-            imageRes = petImageResource(
-                level = state.resources.level,
-                colour = state.resources.hairColour,
-                style = state.resources.hairStyle,
-            ),
-            reactionNonce = state.petTapReactionNonce,
-            onTap = { onAction(PetAction.PetTapped) },
-            modifier = Modifier
-                .align(Alignment.Center)
-                .width(metrics.petWidth)
-                .aspectRatio(292f / 360f),
+        val petImageRes = petImageResource(
+            level = state.resources.level,
+            colour = state.resources.hairColour,
+            style = state.resources.hairStyle,
         )
+        val cyclePosition = currentCyclePosition(
+            currentPeriod = state.resources.currentPeriod,
+            cycleSecondsRemaining = state.secondsRemaining,
+        )
+        val teethBrushed =
+            (state.resources.cooldownUnlockCycles[TaskItem.GetReady.storageId] ?: 0.0) >
+                cyclePosition
+        val petAnimation = oneShotPetAnimation ?: HomePetAnimation.Sleepy.takeIf {
+            !morningRoutineAutomated && !teethBrushed
+        }
+        val petModifier = Modifier
+            .align(Alignment.Center)
+            .width(metrics.petWidth)
+            .aspectRatio(6f / 7f)
+
+        if (petAnimation == null) {
+            InteractivePetImage(
+                imageRes = petImageRes,
+                reactionNonce = state.petTapReactionNonce,
+                onTap = { onAction(PetAction.PetTapped) },
+                modifier = petModifier,
+            )
+        } else {
+            AnimatedPetAsset(
+                assetPath = petAnimation.assetPath(state.resources.hairColour),
+                fallbackImageRes = petImageRes,
+                loop = petAnimation == HomePetAnimation.Sleepy,
+                onFinished = {
+                    oneShotPetAnimation = null
+                },
+                modifier = petModifier,
+            )
+        }
 
         HomeBottomPanel(
             state = state,
             tutorialHighlightedSections = tutorialHighlightedSections(state.homeTutorialStep),
             onSectionClick = { onAction(PetAction.SelectSection(it)) },
-            onBuyClick = { onAction(PetAction.BuyCareItem(it)) },
+            onBuyClick = { item ->
+                oneShotPetAnimation = when (item) {
+                    TaskItem.GetReady -> HomePetAnimation.Brushing
+                    TaskItem.Lessons -> HomePetAnimation.Lessons
+                    else -> oneShotPetAnimation
+                }
+                onAction(PetAction.BuyCareItem(item))
+            },
             onUnavailableClick = { message, emphasizeMoney ->
                 onAction(PetAction.ShowMessage(message, emphasizeMoney))
             },
@@ -653,6 +744,78 @@ private fun HomePage(state: PetState, onAction: (PetAction) -> Unit) {
             )
         }
     }
+}
+
+@Composable
+private fun AnimatedPetAsset(
+    assetPath: String,
+    @DrawableRes fallbackImageRes: Int,
+    loop: Boolean,
+    onFinished: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    val currentOnFinished by rememberUpdatedState(onFinished)
+    val drawable = remember(context, assetPath) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            ImageDecoder.decodeDrawable(ImageDecoder.createSource(context.assets, assetPath))
+        } else {
+            null
+        }
+    }
+
+    if (drawable == null) {
+        Image(
+            painter = painterResource(fallbackImageRes),
+            contentDescription = stringResource(R.string.pet),
+            contentScale = ContentScale.Fit,
+            modifier = modifier,
+        )
+        LaunchedEffect(assetPath, loop) {
+            if (!loop) currentOnFinished()
+        }
+        return
+    }
+
+    DisposableEffect(drawable, loop) {
+        val animatedDrawable = drawable as? AnimatedImageDrawable
+        val callback = if (!loop && animatedDrawable != null) {
+            object : Animatable2.AnimationCallback() {
+                override fun onAnimationEnd(endedDrawable: android.graphics.drawable.Drawable?) {
+                    currentOnFinished()
+                }
+            }
+        } else {
+            null
+        }
+        animatedDrawable?.repeatCount = if (loop) {
+            AnimatedImageDrawable.REPEAT_INFINITE
+        } else {
+            0
+        }
+        if (callback != null && animatedDrawable != null) {
+            animatedDrawable.registerAnimationCallback(callback)
+        }
+        animatedDrawable?.start()
+        onDispose {
+            if (callback != null && animatedDrawable != null) {
+                animatedDrawable.unregisterAnimationCallback(callback)
+            }
+            animatedDrawable?.stop()
+        }
+    }
+
+    AndroidView(
+        factory = { viewContext ->
+            ImageView(viewContext).apply {
+                scaleType = ImageView.ScaleType.FIT_CENTER
+                setImageDrawable(drawable)
+                contentDescription = viewContext.getString(R.string.pet)
+            }
+        },
+        update = { imageView -> imageView.setImageDrawable(drawable) },
+        modifier = modifier,
+    )
 }
 
 private const val PET_MAX_STRETCH = 1.05f
@@ -1297,6 +1460,7 @@ private fun HomeBottomPanel(
                     jobForTaskIds = state.resources.jobForTaskIds,
                     currentEnergy = state.resources.energy,
                     restedAtPeriod = state.resources.restedAtPeriod,
+                    purchasedItemIds = state.resources.purchasedShopItemIds,
                     onUnavailableClick = onUnavailableClick,
                 )
             }
@@ -1616,20 +1780,31 @@ private fun CardRow(
                     }
                     val task = product.item as? TaskItem
                     val cyclePosition = currentCyclePosition(currentPeriod, cycleSecondsRemaining)
-                    val lessonsCompleted =
-                        (cooldownUnlockCycles[TaskItem.Lessons.storageId] ?: 0.0) > cyclePosition
-                    val workBlockedByRest = task?.earnings?.let { it > 0 } == true &&
-                        restedAtPeriod != currentPeriod
-                    val workBlockedByLessons = task?.earnings?.let { it > 0 } == true &&
-                        dayForPeriod(currentPeriod) in TaskItem.Lessons.activeDays &&
-                        !lessonsCompleted
+                    val preparationBlock = if (task?.earnings?.let { it > 0 } == true) {
+                        workPreparationBlock(
+                            currentPeriod = currentPeriod,
+                            currentCyclePosition = cyclePosition,
+                            restedAtPeriod = restedAtPeriod,
+                            getReadyUnlockCycle =
+                                cooldownUnlockCycles[TaskItem.GetReady.storageId] ?: 0.0,
+                            lessonsUnlockCycle =
+                                cooldownUnlockCycles[TaskItem.Lessons.storageId] ?: 0.0,
+                            purchasedShopItemIds = purchasedItemIds,
+                        )
+                    } else {
+                        null
+                    }
                     val unavailableReason = when {
                         alreadyPurchased -> stringResource(R.string.item_already_purchased)
                         product.item is TaskItem && product.item.requiresEvent &&
                             product.item.storageId !in eventUnlockedTaskIds ->
                             stringResource(R.string.item_needs_event)
-                        workBlockedByRest -> stringResource(R.string.work_sleepy)
-                        workBlockedByLessons -> stringResource(R.string.work_lessons)
+                        preparationBlock == WorkPreparationBlock.Rest ->
+                            stringResource(R.string.work_sleepy)
+                        preparationBlock == WorkPreparationBlock.GetReady ->
+                            stringResource(R.string.work_get_ready)
+                        preparationBlock == WorkPreparationBlock.Lessons ->
+                            stringResource(R.string.work_lessons)
                         money < effectivePrice -> stringResource(R.string.item_not_enough_money)
                         level < product.item.level ->
                             stringResource(R.string.item_level_locked, product.item.level)
@@ -1660,8 +1835,7 @@ private fun CardRow(
                             (product.item is TaskItem &&
                                 product.item.storageId in eventUnlockedTaskIds)) &&
                         taskAvailable &&
-                        !workBlockedByRest &&
-                        !workBlockedByLessons &&
+                        preparationBlock == null &&
                         (product.item !is TaskItem || currentEnergy > 10) &&
                         !alreadyPurchased
                     ProductCard(
@@ -1734,12 +1908,24 @@ private fun ProductCard(
     onBuyClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val showsMorningAutomationDetails = product.item == ShopItem.MorningAutomation
+    var showMorningAutomationDetails by rememberSaveable(product.item.storageId) {
+        mutableStateOf(false)
+    }
+
     Box(
         modifier = modifier
             .fillMaxHeight()
             .clip(RoundedCornerShape(10.dp))
             .background(Color.White)
             .border(1.dp, HomePurpleDark, RoundedCornerShape(10.dp))
+            .then(
+                if (showsMorningAutomationDetails) {
+                    Modifier.clickable { showMorningAutomationDetails = true }
+                } else {
+                    Modifier
+                },
+            )
             .padding(horizontal = 8.dp, vertical = 5.dp),
     ) {
       Column(
@@ -1763,11 +1949,21 @@ private fun ProductCard(
             ),
             lineHeight = 12.sp,
             textAlign = TextAlign.Center,
-            maxLines = if (product.item is TaskItem) 2 else 1,
+            maxLines = if (
+                product.item is TaskItem || product.item == ShopItem.MorningAutomation
+            ) 2 else 1,
         )
-        CareStats(product.item)
+        if (!showsMorningAutomationDetails) {
+            CareStats(product.item)
+        }
         Button(
-            onClick = onBuyClick,
+            onClick = {
+                if (showsMorningAutomationDetails) {
+                    showMorningAutomationDetails = true
+                } else {
+                    onBuyClick()
+                }
+            },
             enabled = true,
             colors = ButtonDefaults.buttonColors(
                 containerColor = if (canBuy) HomePurple else HomePurple.copy(alpha = 0.22f),
@@ -1854,6 +2050,15 @@ private fun ProductCard(
             }
         }
       }
+      if (product.item is HappinessItem) {
+          Image(
+              painter = painterResource(R.drawable.cube),
+              contentDescription = null,
+              modifier = Modifier
+                  .align(Alignment.TopEnd)
+                  .size(30.dp),
+          )
+      }
       remainingActions?.let { remaining ->
           Surface(
               modifier = Modifier.align(Alignment.TopEnd),
@@ -1869,6 +2074,37 @@ private fun ProductCard(
               )
           }
       }
+    }
+
+    if (showMorningAutomationDetails) {
+        AlertDialog(
+            onDismissRequest = { showMorningAutomationDetails = false },
+            title = { Text(stringResource(R.string.shop_morning_automation)) },
+            text = { Text(stringResource(R.string.shop_morning_automation_description)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showMorningAutomationDetails = false
+                        if (!alreadyPurchased) onBuyClick()
+                    },
+                ) {
+                    Text(
+                        stringResource(
+                            if (alreadyPurchased) R.string.goal_purchased else R.string.buy,
+                        ),
+                    )
+                }
+            },
+            dismissButton = if (alreadyPurchased) {
+                null
+            } else {
+                {
+                    TextButton(onClick = { showMorningAutomationDetails = false }) {
+                        Text(stringResource(R.string.cancel_action))
+                    }
+                }
+            },
+        )
     }
 }
 

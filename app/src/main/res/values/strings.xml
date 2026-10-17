@@ -189,7 +189,7 @@
     <string name="section_placeholder">Здесь скоро появится содержимое</string>
 
     <!-- Tasks and jobs -->
-    <string name="task_get_ready">Привести себя в порядок</string>
+    <string name="task_get_ready">Почистить зубы</string>
     <string name="task_lessons">Сделать уроки</string>
     <string name="task_cleaning">Убраться</string>
     <string name="task_bead_crafts">Сделать поделки из бисера</string>
@@ -219,7 +219,9 @@
     <string name="item_limit_reached">Эту работу больше нельзя выполнить: попытки закончились.</string>
     <string name="item_low_energy">Сначала отдохни: для этого действия пока мало энергии.</string>
     <string name="work_sleepy">Сначала отдохни: поспи или немного посиди.</string>
+    <string name="work_get_ready">Сначала почисти зубы, потом можно работать.</string>
     <string name="work_lessons">Сначала сделай уроки, потом можно работать.</string>
+    <string name="routine_reminder">Сначала уроки и чистка зубов — потом остальные дела!</string>
     <string name="item_already_purchased">Этот предмет уже куплен.</string>
     <string name="finny_ok">Хорошо</string>
 
@@ -298,6 +300,8 @@
     <string name="shop_soft_armchair">Мягкое кресло</string>
     <string name="shop_stylish_scarf">Стильный шарф</string>
     <string name="shop_glowing_orb">Светящийся шар</string>
+    <string name="shop_morning_automation">Автоматизация утреннего ритуала</string>
+    <string name="shop_morning_automation_description">Каждый игровой день автоматически выполняет утренний ритуал: больше не нужно отдельно чистить зубы и делать уроки перед работой.</string>
 
     <!-- Events -->
     <string name="event_sports_section_description">Друг предложил пойти\nна спортивную секцию</string>
