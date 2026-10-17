@@ -249,6 +249,52 @@ class PetViewModelTest {
     }
 
     @Test
+    fun resolved_retry_event_is_removed_from_active_overlay() {
+        val retryEvent = ScheduledEvent(
+            definition = EventDef(
+                id = "retry_event",
+                title = "Retry event",
+                kind = EventKind.Story,
+                deltas = EventDeltas(),
+                canDecline = true,
+                frequency = EventFrequency.Once,
+                minLevel = 1,
+                requiresFlags = emptySet(),
+                setsFlags = emptySet(),
+                unlocksJobId = null,
+                hideRewardUntilAccept = false,
+                moneyFromCard = 0,
+                moneyFromScript = null,
+            ),
+            scenarioStepId = null,
+            isScripted = true,
+            appliedDeltas = EventDeltas(),
+        )
+
+        assertEquals(
+            true,
+            isScheduledEventHandled(
+                retryEvent,
+                GameSnapshot(currentPeriod = 5, completedEventIds = setOf("retry_event")),
+            ),
+        )
+        assertEquals(
+            true,
+            isScheduledEventHandled(
+                retryEvent,
+                GameSnapshot(currentPeriod = 5, eventRetryPeriods = mapOf("retry_event" to 7)),
+            ),
+        )
+        assertEquals(
+            false,
+            isScheduledEventHandled(
+                retryEvent,
+                GameSnapshot(currentPeriod = 5, eventRetryPeriods = mapOf("retry_event" to 5)),
+            ),
+        )
+    }
+
+    @Test
     fun declined_once_event_returns_when_retry_period_is_reached() {
         val event = EventDef(
             id = "job_offer",

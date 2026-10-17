@@ -21,7 +21,9 @@ import ru.finni.financialpetgame.lct.domain.cycleSecondsRemaining
 import ru.finni.financialpetgame.lct.domain.needsBudgetPlanning
 import ru.finni.financialpetgame.lct.domain.needsBudgetReview
 import ru.finni.financialpetgame.lct.domain.withCharacteristicsAt
+import ru.finni.financialpetgame.lct.domain.weekForPeriod
 import ru.finni.financialpetgame.lct.domain.events.EventScheduler
+import ru.finni.financialpetgame.lct.domain.events.EventFrequency
 import ru.finni.financialpetgame.lct.domain.events.ScheduledEvent
 import ru.finni.financialpetgame.lct.domain.events.canResolveScheduledEvent
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -66,6 +68,24 @@ internal fun hasJustReachedGoal(previous: GameSnapshot?, current: GameSnapshot):
 
 internal fun needsGoalSelection(snapshot: GameSnapshot): Boolean =
     snapshot.onboardingCompleted && snapshot.goalId in snapshot.purchasedGoalIds
+
+internal fun isScheduledEventHandled(event: ScheduledEvent, snapshot: GameSnapshot): Boolean {
+    event.scenarioStepId?.let { return it in snapshot.handledScenarioEntryIds }
+    if (!event.isScripted) {
+        return snapshot.currentPeriod.toString() in snapshot.eventPoolHandledCycles
+    }
+    if (event.definition.id in snapshot.completedEventIds) return true
+    if (
+        event.definition.frequency == EventFrequency.PerPeriod &&
+        "${event.definition.id}@${weekForPeriod(snapshot.currentPeriod) + 1}" in
+            snapshot.eventPeriodOccurrences
+    ) {
+        return true
+    }
+    return snapshot.eventRetryPeriods[event.definition.id]?.let { retryPeriod ->
+        retryPeriod > snapshot.currentPeriod
+    } == true
+}
 
 internal fun goalPurchaseEvent(resources: GameSnapshot): GameEvent {
     if (resources.goalId == "custom") {
@@ -205,15 +225,9 @@ class PetViewModel @Inject constructor(
                     _state.update {
                         val nowMillis = System.currentTimeMillis()
                         val unresolvedActiveEvent = it.activeEvent?.takeUnless { active ->
-                            val activeScheduled = active.scheduledEvent
-                                ?: return@takeUnless false
-                            activeScheduled.scenarioStepId?.let(
-                                resources.handledScenarioEntryIds::contains,
-                            ) ?: (
-                                !activeScheduled.isScripted &&
-                                    resources.currentPeriod.toString() in
-                                    resources.eventPoolHandledCycles
-                                )
+                            active.scheduledEvent?.let { scheduled ->
+                                isScheduledEventHandled(scheduled, resources)
+                            } ?: false
                         }
                         val lowPrompt = lowCharacteristicPrompts(resources).firstOrNull { prompt ->
                             shownLowPrompts.add("${resources.currentPeriod}:$prompt")
@@ -527,6 +541,13 @@ class PetViewModel @Inject constructor(
                         unlockedJob = eventScheduler.jobFor(scheduled),
                         accepted = accept,
                     )
+                    _state.update { state ->
+                        if (state.activeEvent?.scheduledEvent == scheduled) {
+                            state.copy(activeEvent = null)
+                        } else {
+                            state
+                        }
+                    }
                     if (result.depositClosedWithPenalty) {
                         _state.update { it.copy(finnyPrompt = FinnyPrompt.DepositClosed) }
                     }
