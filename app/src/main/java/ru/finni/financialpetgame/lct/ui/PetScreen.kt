@@ -439,35 +439,35 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
         )
     }
 
-    state.customMessage?.let { message ->
+    state.customMessage?.takeIf {
+        state.activeEvent == null && state.overlay == null
+    }?.let { message ->
         LaunchedEffect(message) {
             delay(4_500)
             onAction(PetAction.DismissMessage)
         }
         ItemAvailabilityAnnotation(
             message = message,
-            petImageRes = petImageResource(
-                state.resources.level,
-                state.resources.hairColour,
-                state.resources.hairStyle,
-            ),
             onDismiss = { onAction(PetAction.DismissMessage) },
         )
     }
 
     val finnyMessage = state.finnyPrompt?.let { prompt ->
-        stringResource(
-            when (prompt) {
-                FinnyPrompt.LowHealth -> R.string.low_health_hint
-                FinnyPrompt.LowHappiness -> R.string.low_happiness_hint
-                FinnyPrompt.LowEnergy -> R.string.low_energy_hint
-                FinnyPrompt.CycleEnergyBlocked -> R.string.cycle_energy_blocked
-                FinnyPrompt.DepositClosed -> R.string.deposit_closed_by_event
-                FinnyPrompt.RoutineReminder -> R.string.routine_reminder
-            },
-        )
+        when (prompt) {
+            FinnyPrompt.LowHealth -> stringResource(R.string.low_health_hint)
+            FinnyPrompt.LowHappiness -> stringResource(R.string.low_happiness_hint)
+            FinnyPrompt.LowEnergy -> stringResource(R.string.low_energy_hint)
+            FinnyPrompt.CycleEnergyBlocked -> stringResource(
+                R.string.cycle_energy_blocked,
+                state.resources.name,
+            )
+            FinnyPrompt.DepositClosed -> stringResource(R.string.deposit_closed_by_event)
+            FinnyPrompt.RoutineReminder -> stringResource(R.string.routine_reminder)
+        }
     }
-    finnyMessage?.takeIf { state.activeEvent == null }?.let { message ->
+    finnyMessage?.takeIf {
+        state.activeEvent == null && state.overlay == null && state.homeTutorialStep == null
+    }?.let { message ->
         FinnySpeechOverlay(
             message = message,
             onDismiss = { onAction(PetAction.DismissMessage) },
@@ -499,7 +499,6 @@ private fun FinnySpeechOverlay(
 @Composable
 private fun ItemAvailabilityAnnotation(
     message: String,
-    @DrawableRes petImageRes: Int,
     onDismiss: () -> Unit,
 ) {
     Box(
@@ -512,7 +511,7 @@ private fun ItemAvailabilityAnnotation(
             )
             .safeDrawingPadding()
             .padding(horizontal = 20.dp)
-            .padding(bottom = 274.dp),
+            .padding(bottom = 218.dp),
         contentAlignment = Alignment.BottomCenter,
     ) {
         Surface(
@@ -529,9 +528,9 @@ private fun ItemAvailabilityAnnotation(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Image(
-                    painter = painterResource(petImageRes),
+                    painter = painterResource(R.drawable.tip_pic),
                     contentDescription = null,
-                    modifier = Modifier.size(38.dp),
+                    modifier = Modifier.size(42.dp),
                     contentScale = ContentScale.Fit,
                 )
                 Text(
@@ -877,7 +876,7 @@ private fun InteractivePetImage(
         heartJob = animationScope.launch {
             showHeart = true
             heartProgress.snapTo(0f)
-            heartProgress.animateTo(1f, tween(700))
+            heartProgress.animateTo(1f, tween(1_350))
             showHeart = false
         }
     }
@@ -965,25 +964,36 @@ private fun InteractivePetImage(
                 },
         )
         if (showHeart) {
-            val progress = heartProgress.value
-            val heartAlpha = when {
-                progress < 0.18f -> progress / 0.18f
-                else -> ((1f - progress) / 0.82f).coerceIn(0f, 1f)
+            val heart = stringResource(R.string.pet_tap_reaction)
+            listOf(
+                Triple(-30f, 0f, 0f),
+                Triple(0f, -10f, 0.1f),
+                Triple(30f, 2f, 0.2f),
+            ).forEach { (xOffset, yOffset, delayFraction) ->
+                val progress = ((heartProgress.value - delayFraction) /
+                    (1f - delayFraction)).coerceIn(0f, 1f)
+                val heartAlpha = when {
+                    progress < 0.16f -> progress / 0.16f
+                    else -> ((1f - progress) / 0.84f).coerceIn(0f, 1f)
+                }
+                Text(
+                    text = heart,
+                    modifier = Modifier
+                        .padding(top = 18.dp)
+                        .offset(
+                            x = xOffset.dp,
+                            y = (yOffset - 66f * progress).dp,
+                        )
+                        .graphicsLayer {
+                            alpha = heartAlpha
+                            scaleX = 0.7f + progress * 0.3f
+                            scaleY = 0.7f + progress * 0.3f
+                        },
+                    color = Color(0xFFFF6C9D),
+                    fontSize = 27.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                )
             }
-            Text(
-                text = stringResource(R.string.pet_tap_reaction),
-                modifier = Modifier
-                    .padding(top = 18.dp)
-                    .offset(y = (-56f * progress).dp)
-                    .graphicsLayer {
-                        alpha = heartAlpha
-                        scaleX = 0.72f + progress * 0.28f
-                        scaleY = 0.72f + progress * 0.28f
-                    },
-                color = Color(0xFFFF6C9D),
-                fontSize = 30.sp,
-                fontWeight = FontWeight.ExtraBold,
-            )
         }
     }
 }
@@ -1459,7 +1469,6 @@ private fun HomeBottomPanel(
                     jobRemainingActions = state.resources.jobRemainingActions,
                     jobForTaskIds = state.resources.jobForTaskIds,
                     currentEnergy = state.resources.energy,
-                    restedAtPeriod = state.resources.restedAtPeriod,
                     purchasedItemIds = state.resources.purchasedShopItemIds,
                     onUnavailableClick = onUnavailableClick,
                 )
@@ -1715,7 +1724,6 @@ private fun CardRow(
     jobForTaskIds: Map<String, String> = emptyMap(),
     nextPurchaseHalfPrice: Boolean = false,
     currentEnergy: Int = 100,
-    restedAtPeriod: Int = 0,
     onUnavailableClick: (String, Boolean) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
 ) {
@@ -1784,7 +1792,6 @@ private fun CardRow(
                         workPreparationBlock(
                             currentPeriod = currentPeriod,
                             currentCyclePosition = cyclePosition,
-                            restedAtPeriod = restedAtPeriod,
                             getReadyUnlockCycle =
                                 cooldownUnlockCycles[TaskItem.GetReady.storageId] ?: 0.0,
                             lessonsUnlockCycle =
@@ -1794,13 +1801,14 @@ private fun CardRow(
                     } else {
                         null
                     }
+                    val workLacksEnergy = task?.earnings?.let { it > 0 } == true &&
+                        currentEnergy <= 10
                     val unavailableReason = when {
                         alreadyPurchased -> stringResource(R.string.item_already_purchased)
                         product.item is TaskItem && product.item.requiresEvent &&
                             product.item.storageId !in eventUnlockedTaskIds ->
                             stringResource(R.string.item_needs_event)
-                        preparationBlock == WorkPreparationBlock.Rest ->
-                            stringResource(R.string.work_sleepy)
+                        workLacksEnergy -> stringResource(R.string.work_low_energy)
                         preparationBlock == WorkPreparationBlock.GetReady ->
                             stringResource(R.string.work_get_ready)
                         preparationBlock == WorkPreparationBlock.Lessons ->

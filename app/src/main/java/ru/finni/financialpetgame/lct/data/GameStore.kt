@@ -683,7 +683,6 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 val preparationBlock = workPreparationBlock(
                     currentPeriod = currentCycle,
                     currentCyclePosition = currentCyclePosition,
-                    restedAtPeriod = preferences[restedAtPeriod] ?: 0,
                     getReadyUnlockCycle =
                         preferences[cooldownUnlockCycleKey(TaskItem.GetReady)] ?: 0.0,
                     lessonsUnlockCycle =

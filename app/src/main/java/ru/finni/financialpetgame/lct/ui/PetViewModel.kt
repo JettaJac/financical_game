@@ -38,6 +38,7 @@ internal const val TIMER_SECONDS = GameDefaults.CYCLE_DURATION_SECONDS
 internal const val DEMO_MODE_PASSWORD = "1234"
 internal const val PARENT_MODE_PASSWORD = "1234"
 internal const val HOME_TUTORIAL_STEP_COUNT = 11
+internal const val CYCLE_ENERGY_PROMPT_REPEAT_MILLIS = 15_000L
 private val HOME_TUTORIAL_EVENT_STEPS = setOf(
     "w1d1_login_bonus",
     "w1d1_budget_difference",
@@ -196,6 +197,7 @@ class PetViewModel @Inject constructor(
     private var goalPurchaseInProgress = false
     private var appearanceUpdateInProgress = false
     private var eventResolutionInProgress = false
+    private var lastCycleEnergyPromptAtMillis = 0L
     private val shownLowPrompts = mutableSetOf<String>()
     private val eventScheduler = EventScheduler(eventCatalog.data)
 
@@ -237,7 +239,39 @@ class PetViewModel @Inject constructor(
                                 isScheduledEventHandled(scheduled, resources)
                             } ?: false
                         }
-                        val lowPrompt = lowCharacteristicPrompts(resources).firstOrNull { prompt ->
+                        val nextOverlay = if (needsGoalSelection(resources)) {
+                            HomeOverlay.GoalSelection
+                        } else {
+                            it.overlay
+                        }
+                        val nextTutorialStep = when {
+                            resources.homeTutorialCompleted -> null
+                            it.homeTutorialStep != null -> it.homeTutorialStep
+                            HOME_TUTORIAL_EVENT_STEPS.all(
+                                resources.handledScenarioEntryIds::contains,
+                            ) -> 0
+                            else -> null
+                        }
+                        val cycleEnergyBlocked = cycleSecondsRemaining(
+                            resources.cycleEndsAtMillis,
+                            nowMillis,
+                        ) == 0 && resources.energy == 0
+                        val canShowLowPrompt = !cycleEnergyBlocked &&
+                            unresolvedActiveEvent == null &&
+                            scheduledEvent == null &&
+                            reachedGoalEvent == null &&
+                            nextOverlay == null &&
+                            nextTutorialStep == null &&
+                            it.finnyPrompt == null &&
+                            it.customMessage == null
+                        val lowPrompt = if (canShowLowPrompt) {
+                            lowCharacteristicPrompts(resources).firstOrNull { prompt ->
+                                "${resources.currentPeriod}:$prompt" !in shownLowPrompts
+                            }
+                        } else {
+                            null
+                        }
+                        lowPrompt?.let { prompt ->
                             shownLowPrompts.add("${resources.currentPeriod}:$prompt")
                         }
                         it.copy(
@@ -249,29 +283,10 @@ class PetViewModel @Inject constructor(
                             isInitialized = true,
                             isTestMode = resources.demoModeEnabled,
                             nowMillis = nowMillis,
-                            overlay = if (needsGoalSelection(resources)) {
-                                HomeOverlay.GoalSelection
-                            } else {
-                                it.overlay
-                            },
+                            overlay = nextOverlay,
                             activeEvent = unresolvedActiveEvent ?: scheduledEvent ?: reachedGoalEvent,
-                            homeTutorialStep = when {
-                                resources.homeTutorialCompleted -> null
-                                it.homeTutorialStep != null -> it.homeTutorialStep
-                                HOME_TUTORIAL_EVENT_STEPS.all(
-                                    resources.handledScenarioEntryIds::contains,
-                                ) -> 0
-                                else -> null
-                            },
-                            finnyPrompt = if (
-                                unresolvedActiveEvent == null &&
-                                scheduledEvent == null &&
-                                reachedGoalEvent == null
-                            ) {
-                                it.finnyPrompt ?: lowPrompt
-                            } else {
-                                it.finnyPrompt
-                            },
+                            homeTutorialStep = nextTutorialStep,
+                            finnyPrompt = it.finnyPrompt ?: lowPrompt,
                         )
                     }
                 }
@@ -302,20 +317,56 @@ class PetViewModel @Inject constructor(
             }
 
             val refreshedState = _state.value
-            val lowPrompt = lowCharacteristicPrompts(refreshedState.resources)
-                .firstOrNull { prompt ->
-                    shownLowPrompts.add(
-                        "${refreshedState.resources.currentPeriod}:$prompt",
-                    )
-                }
-            if (lowPrompt != null) {
+            val cycleEnergyBlocked = secondsRemaining == 0 &&
+                refreshedState.resources.energy == 0
+            if (!cycleEnergyBlocked) lastCycleEnergyPromptAtMillis = 0L
+
+            if (
+                cycleEnergyBlocked &&
+                shouldRepeatCycleEnergyPrompt(
+                    nowMillis = nowMillis,
+                    lastShownAtMillis = lastCycleEnergyPromptAtMillis,
+                ) &&
+                refreshedState.overlay == null &&
+                refreshedState.homeTutorialStep == null &&
+                refreshedState.finnyPrompt == null &&
+                refreshedState.customMessage == null
+            ) {
                 _state.update {
-                    if (it.finnyPrompt == null && it.customMessage == null) {
-                        it.copy(finnyPrompt = lowPrompt)
+                    if (
+                        it.overlay == null &&
+                        it.activeEvent == null &&
+                        it.homeTutorialStep == null &&
+                        it.finnyPrompt == null &&
+                        it.customMessage == null
+                    ) {
+                        it.copy(finnyPrompt = FinnyPrompt.CycleEnergyBlocked)
                     } else {
                         it
                     }
                 }
+                if (_state.value.finnyPrompt == FinnyPrompt.CycleEnergyBlocked) {
+                    lastCycleEnergyPromptAtMillis = nowMillis
+                }
+            }
+
+            val promptState = _state.value
+            val lowPrompt = if (
+                !cycleEnergyBlocked &&
+                promptState.overlay == null &&
+                promptState.homeTutorialStep == null &&
+                promptState.finnyPrompt == null &&
+                promptState.customMessage == null
+            ) {
+                lowCharacteristicPrompts(promptState.resources).firstOrNull { prompt ->
+                    "${promptState.resources.currentPeriod}:$prompt" !in shownLowPrompts
+                }
+            } else {
+                null
+            }
+            if (lowPrompt != null) {
+                shownLowPrompts.add("${promptState.resources.currentPeriod}:$lowPrompt")
+                _state.update { it.copy(finnyPrompt = lowPrompt) }
             }
             val scheduledEvent = eventScheduler.next(
                 snapshot = refreshedState.resources,
@@ -335,15 +386,6 @@ class PetViewModel @Inject constructor(
             }
 
             if (secondsRemaining == 0) repository.advanceExpiredCycles(nowMillis)
-            if (secondsRemaining == 0 && refreshedState.resources.energy == 0) {
-                _state.update {
-                    if (it.finnyPrompt == null && it.customMessage == null) {
-                        it.copy(finnyPrompt = FinnyPrompt.CycleEnergyBlocked)
-                    } else {
-                        it
-                    }
-                }
-            }
         }
     }
 
@@ -636,11 +678,17 @@ class PetViewModel @Inject constructor(
     }
 }
 
-private fun lowCharacteristicPrompts(resources: GameSnapshot): List<FinnyPrompt> = buildList {
-    if (resources.health < 15) add(FinnyPrompt.LowHealth)
-    if (resources.energy < 15) add(FinnyPrompt.LowEnergy)
-    if (resources.happiness < 15) add(FinnyPrompt.LowHappiness)
+internal fun lowCharacteristicPrompts(resources: GameSnapshot): List<FinnyPrompt> = buildList {
+    if (resources.health < 10) add(FinnyPrompt.LowHealth)
+    if (resources.energy < 10) add(FinnyPrompt.LowEnergy)
+    if (resources.happiness < 10) add(FinnyPrompt.LowHappiness)
 }
+
+internal fun shouldRepeatCycleEnergyPrompt(
+    nowMillis: Long,
+    lastShownAtMillis: Long,
+): Boolean = lastShownAtMillis == 0L ||
+    nowMillis - lastShownAtMillis >= CYCLE_ENERGY_PROMPT_REPEAT_MILLIS
 
 private val DEPOSIT_OFFER_EVENT_IDS = setOf(
     "deposit_offer",

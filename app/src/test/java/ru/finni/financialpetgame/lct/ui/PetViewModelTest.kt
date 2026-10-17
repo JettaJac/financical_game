@@ -52,6 +52,34 @@ import kotlin.math.roundToInt
 
 class PetViewModelTest {
     @Test
+    fun low_characteristic_prompts_start_below_ten() {
+        assertEquals(
+            emptyList<FinnyPrompt>(),
+            lowCharacteristicPrompts(GameSnapshot(health = 10, energy = 10, happiness = 10)),
+        )
+        assertEquals(
+            listOf(FinnyPrompt.LowHealth, FinnyPrompt.LowEnergy, FinnyPrompt.LowHappiness),
+            lowCharacteristicPrompts(GameSnapshot(health = 9, energy = 9, happiness = 9)),
+        )
+    }
+
+    @Test
+    fun cycle_energy_prompt_repeats_every_fifteen_seconds() {
+        assertEquals(
+            true,
+            shouldRepeatCycleEnergyPrompt(nowMillis = 1_000, lastShownAtMillis = 0),
+        )
+        assertEquals(
+            false,
+            shouldRepeatCycleEnergyPrompt(nowMillis = 15_999, lastShownAtMillis = 1_000),
+        )
+        assertEquals(
+            true,
+            shouldRepeatCycleEnergyPrompt(nowMillis = 16_000, lastShownAtMillis = 1_000),
+        )
+    }
+
+    @Test
     fun cycle_waits_until_energy_is_restored() {
         assertEquals(false, canCompleteCycle(0))
         assertEquals(true, canCompleteCycle(1))
@@ -672,27 +700,22 @@ class PetViewModelTest {
     }
 
     @Test
-    fun morning_automation_skips_daily_routine_but_not_rest() {
+    fun morning_automation_skips_daily_teeth_and_lessons_routine() {
         val cyclePosition = 3.5
 
         assertEquals(
-            WorkPreparationBlock.Rest,
-            workPreparationBlock(3, cyclePosition, 2, 0.0, 0.0, emptySet()),
-        )
-        assertEquals(
             WorkPreparationBlock.GetReady,
-            workPreparationBlock(3, cyclePosition, 3, 0.0, 0.0, emptySet()),
+            workPreparationBlock(3, cyclePosition, 0.0, 0.0, emptySet()),
         )
         assertEquals(
             WorkPreparationBlock.Lessons,
-            workPreparationBlock(3, cyclePosition, 3, 4.0, 0.0, emptySet()),
+            workPreparationBlock(3, cyclePosition, 4.0, 0.0, emptySet()),
         )
         assertEquals(
             null,
             workPreparationBlock(
                 currentPeriod = 3,
                 currentCyclePosition = cyclePosition,
-                restedAtPeriod = 3,
                 getReadyUnlockCycle = 0.0,
                 lessonsUnlockCycle = 0.0,
                 purchasedShopItemIds = setOf(ShopItem.MorningAutomation.storageId),
