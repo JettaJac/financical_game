@@ -92,6 +92,7 @@ import ru.finni.financialpetgame.lct.domain.TaskUsageLimit
 import ru.finni.financialpetgame.lct.domain.EnergyItem
 import ru.finni.financialpetgame.lct.domain.GameEvent
 import ru.finni.financialpetgame.lct.domain.GameEvents
+import ru.finni.financialpetgame.lct.domain.GameDefaults
 import ru.finni.financialpetgame.lct.domain.HappinessItem
 import ru.finni.financialpetgame.lct.domain.Goals
 import ru.finni.financialpetgame.lct.domain.cooldownRemaining
@@ -262,6 +263,7 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
             result = budgetPeriodResult(state.resources),
             plannedOptionalExpenses = state.resources.plannedOptionalExpenses,
             actualOptionalExpenses = state.resources.actualOptionalExpenses,
+            actualUnplannedExpenses = state.resources.actualUnplannedExpenses,
             actualAdditionalIncome = state.resources.actualAdditionalIncome,
             onComplete = { onAction(PetAction.CompleteBudgetReview) },
         )
@@ -299,6 +301,8 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
             onBack = { onAction(PetAction.CloseOverlay) },
             onOpen = { term, amount -> onAction(PetAction.OpenDepositAccount(term, amount)) },
             onClose = { onAction(PetAction.CloseDepositAccount) },
+            showEducationInitially = !state.resources.depositTutorialCompleted,
+            onEducationSeen = { onAction(PetAction.CompleteDepositTutorial) },
         )
         HomeOverlay.Goal -> {
             val isCustomGoal = state.resources.goalId == "custom"
@@ -610,10 +614,15 @@ private fun tutorialHighlightedSections(step: Int?): Set<HomeSection> = when (st
 
 @Composable
 private fun HomeTutorialOverlay(step: Int, onNext: () -> Unit) {
-    val text = stringResource(
-        when (step) {
+    val text = if (step == 1) {
+        stringResource(
+            R.string.home_tutorial_cycle,
+            gameCycleDurationText(GameDefaults.CYCLE_DURATION_SECONDS),
+        )
+    } else {
+        stringResource(
+            when (step) {
             0 -> R.string.home_tutorial_goal
-            1 -> R.string.home_tutorial_cycle
             2 -> R.string.home_tutorial_budget
             3 -> R.string.home_tutorial_deposit
             4 -> R.string.home_tutorial_food
@@ -623,8 +632,9 @@ private fun HomeTutorialOverlay(step: Int, onNext: () -> Unit) {
             8 -> R.string.home_tutorial_shop
             9 -> R.string.home_tutorial_tasks
             else -> R.string.home_tutorial_earnings
-        },
-    )
+            },
+        )
+    }
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()

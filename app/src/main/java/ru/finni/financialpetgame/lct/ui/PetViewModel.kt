@@ -151,6 +151,7 @@ sealed interface PetAction {
     data object AdvanceHomeTutorial : PetAction
     data class OpenDepositAccount(val term: DepositTerm, val amount: Int) : PetAction
     data object CloseDepositAccount : PetAction
+    data object CompleteDepositTutorial : PetAction
 
     data object Exit : PetAction
 }
@@ -476,6 +477,9 @@ class PetViewModel @Inject constructor(
                 if (repository.closeDeposit()) {
                     _state.update { it.copy(overlay = null) }
                 }
+            }
+            PetAction.CompleteDepositTutorial -> viewModelScope.launch {
+                repository.completeDepositTutorial()
             }
         }
     }

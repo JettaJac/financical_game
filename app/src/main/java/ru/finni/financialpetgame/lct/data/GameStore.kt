@@ -206,6 +206,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
     private val actualAdditionalIncome = intPreferencesKey("actual_additional_income")
     private val lastReviewedBudgetWeek = intPreferencesKey("last_reviewed_budget_week")
     private val budgetTutorialCompleted = booleanPreferencesKey("budget_tutorial_completed")
+    private val depositTutorialCompleted = booleanPreferencesKey("deposit_tutorial_completed")
     private val homeTutorialCompleted = booleanPreferencesKey("home_tutorial_completed")
     private val demoModeEnabled = booleanPreferencesKey("demo_mode_enabled")
     private val roomDirtLevel = intPreferencesKey("room_dirt_level")
@@ -280,6 +281,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 actualAdditionalIncome = checkNotNull(preferences[actualAdditionalIncome]),
                 lastReviewedBudgetWeek = checkNotNull(preferences[lastReviewedBudgetWeek]),
                 budgetTutorialCompleted = checkNotNull(preferences[budgetTutorialCompleted]),
+                depositTutorialCompleted = checkNotNull(preferences[depositTutorialCompleted]),
                 homeTutorialCompleted = checkNotNull(preferences[homeTutorialCompleted]),
                 demoModeEnabled = checkNotNull(preferences[demoModeEnabled]),
                 roomDirtLevel = checkNotNull(preferences[roomDirtLevel]),
@@ -395,6 +397,9 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             }
             if (preferences[budgetTutorialCompleted] == null) {
                 preferences[budgetTutorialCompleted] = false
+            }
+            if (preferences[depositTutorialCompleted] == null) {
+                preferences[depositTutorialCompleted] = false
             }
             if (preferences[homeTutorialCompleted] == null) {
                 preferences[homeTutorialCompleted] = false
@@ -516,6 +521,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             preferences[actualAdditionalIncome] = 0
             preferences[lastReviewedBudgetWeek] = 0
             preferences[budgetTutorialCompleted] = false
+            preferences[depositTutorialCompleted] = false
             preferences[homeTutorialCompleted] = false
             preferences[demoModeEnabled] = false
             preferences[roomDirtLevel] = 1
@@ -988,6 +994,13 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
         }
     }
 
+    override suspend fun completeDepositTutorial() {
+        context.gameDataStore.edit { preferences ->
+            preferences[depositTutorialCompleted] = true
+            appendAction(preferences, "Просмотрено обучение вкладам")
+        }
+    }
+
     override suspend fun setDemoMode(enabled: Boolean) {
         context.gameDataStore.edit { preferences ->
             preferences[demoModeEnabled] = enabled
@@ -1252,7 +1265,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             currentMoney + deltas.money
         }
         preferences[money] = resultingMoney
-        recordOptionalExpense(preferences, (currentMoney - resultingMoney).coerceAtLeast(0))
+        recordUnplannedExpense(preferences, (currentMoney - resultingMoney).coerceAtLeast(0))
         recordAdditionalIncome(preferences, deltas.money.coerceAtLeast(0))
         return resultingMoney == 0 && listOf(
             Resource.Health,

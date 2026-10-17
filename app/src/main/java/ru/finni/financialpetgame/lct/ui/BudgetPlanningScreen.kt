@@ -80,6 +80,7 @@ internal fun BudgetPlanningScreen(
     onComplete: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var showEducation by rememberSaveable { mutableStateOf(firstPlanning) }
     var screen by rememberSaveable { mutableIntStateOf(BUDGET_INTRO) }
     var entryIndex by rememberSaveable { mutableIntStateOf(0) }
     var classificationStep by rememberSaveable { mutableStateOf(ClassificationStep.Category) }
@@ -102,6 +103,17 @@ internal fun BudgetPlanningScreen(
     val maximumOptionalExpense = (recurringIncome - recurringExpense).coerceAtLeast(0)
     val optionalExpenseTooHigh = optionalExpenseAmount > maximumOptionalExpense
 
+    if (showEducation) {
+        FinancialEducationOverlay(
+            topic = FinancialEducationTopic.Budget,
+            recurringIncome = recurringIncome,
+            recurringExpense = recurringExpense,
+            plannedOptionalExpenses = optionalExpenseAmount.coerceAtMost(maximumOptionalExpense),
+            onDismiss = { showEducation = false },
+        )
+        return
+    }
+
     when (screen) {
         BUDGET_INTRO -> BudgetIntroScreen(
             petImageRes = petImageRes,
@@ -112,6 +124,28 @@ internal fun BudgetPlanningScreen(
         )
         BUDGET_CLASSIFY -> {
             val entry = budgetEntries[entryIndex]
+            val correctCategoryGuide = stringResource(
+                if (entry.category == BudgetCategory.Income) {
+                    R.string.budget_correct_income_explanation
+                } else {
+                    R.string.budget_correct_expense_explanation
+                },
+            )
+            val wrongCategoryGuide = stringResource(
+                if (entry.category == BudgetCategory.Income) {
+                    R.string.budget_wrong_income
+                } else {
+                    R.string.budget_wrong_expense
+                },
+            )
+            val correctFrequencyGuide = stringResource(
+                if (entry.category == BudgetCategory.Income) {
+                    R.string.budget_correct_recurring_income
+                } else {
+                    R.string.budget_correct_mandatory_expense
+                },
+            )
+            val wrongFrequencyGuide = stringResource(R.string.budget_wrong_recurring)
             BudgetClassificationScreen(
                 petImageRes = petImageRes,
                 entry = entry,
@@ -121,13 +155,9 @@ internal fun BudgetPlanningScreen(
                 onCategorySelected = { selected ->
                     if (selected == entry.category) {
                         classificationStep = ClassificationStep.Frequency
-                        guideText = null
+                        guideText = correctCategoryGuide
                     } else {
-                        guideText = if (entry.category == BudgetCategory.Income) {
-                            "Это доход — деньги, которые мы получаем. Попробуй ещё раз!"
-                        } else {
-                            "Это расход — деньги, которые мы тратим. Попробуй ещё раз!"
-                        }
+                        guideText = wrongCategoryGuide
                     }
                 },
                 onFrequencySelected = { selected ->
@@ -137,10 +167,10 @@ internal fun BudgetPlanningScreen(
                         } else {
                             entryIndex += 1
                             classificationStep = ClassificationStep.Category
-                            guideText = "Верно! Отлично получается — идём дальше."
+                            guideText = correctFrequencyGuide
                         }
                     } else {
-                        guideText = "Почти! Этот платёж повторяется каждую неделю."
+                        guideText = wrongFrequencyGuide
                     }
                 },
                 modifier = modifier,

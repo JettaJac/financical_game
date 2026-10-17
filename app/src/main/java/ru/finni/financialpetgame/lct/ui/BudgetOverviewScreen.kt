@@ -17,9 +17,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -57,6 +57,18 @@ internal fun BudgetOverviewScreen(
 ) {
     var view by rememberSaveable { mutableStateOf(BudgetView.Current) }
     var category by rememberSaveable { mutableStateOf(BudgetCategory.Income) }
+    var showEducation by rememberSaveable { mutableStateOf(false) }
+
+    if (showEducation) {
+        FinancialEducationOverlay(
+            topic = FinancialEducationTopic.Budget,
+            recurringIncome = state.income,
+            recurringExpense = state.budgetPlanRecurringExpense,
+            plannedOptionalExpenses = state.plannedOptionalExpenses,
+            onDismiss = { showEducation = false },
+        )
+        return
+    }
 
     Column(
         modifier = modifier
@@ -86,9 +98,20 @@ internal fun BudgetOverviewScreen(
                 fontSize = 20.sp,
                 fontWeight = FontWeight.ExtraBold,
             )
+            IconButton(
+                onClick = { showEducation = true },
+                modifier = Modifier.align(Alignment.CenterEnd),
+            ) {
+                Text(
+                    text = "?",
+                    color = OverviewPurpleDark,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                )
+            }
         }
 
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(8.dp))
         Text(
             text = state.money.toString(),
             modifier = Modifier.align(Alignment.CenterHorizontally),
@@ -98,32 +121,18 @@ internal fun BudgetOverviewScreen(
             fontWeight = FontWeight.ExtraBold,
         )
         Text(
-            text = stringResource(R.string.budget_coins),
+            text = stringResource(R.string.budget_available_now),
             modifier = Modifier.align(Alignment.CenterHorizontally),
             color = OverviewPurpleDark,
             fontFamily = NunitoFontFamily,
-            fontSize = 24.sp,
-            fontWeight = FontWeight.ExtraBold,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold,
         )
-        Spacer(Modifier.height(30.dp))
-        Button(
-            onClick = {
-                view = if (view == BudgetView.Current) BudgetView.Planned else BudgetView.Current
-            },
-            modifier = Modifier.align(Alignment.CenterHorizontally),
-            colors = ButtonDefaults.buttonColors(containerColor = OverviewPurple),
-            shape = RoundedCornerShape(9.dp),
-        ) {
-            Text(
-                stringResource(
-                    if (view == BudgetView.Current) R.string.budget_show_planned
-                    else R.string.budget_show_current,
-                ),
-                fontFamily = NunitoFontFamily,
-                fontWeight = FontWeight.Bold,
-            )
-        }
-        Spacer(Modifier.height(34.dp))
+        Spacer(Modifier.height(18.dp))
+        BudgetViewTabs(view = view, onSelected = { view = it })
+        Spacer(Modifier.height(14.dp))
+        BudgetSummaryCard(view = view, state = state)
+        Spacer(Modifier.height(18.dp))
         BudgetCategoryTabs(category = category, onSelected = { category = it })
         Spacer(Modifier.height(16.dp))
         BudgetDetails(
@@ -132,6 +141,92 @@ internal fun BudgetOverviewScreen(
             state = state,
             modifier = Modifier.weight(1f),
         )
+    }
+}
+
+@Composable
+private fun BudgetViewTabs(view: BudgetView, onSelected: (BudgetView) -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(12.dp)).background(OverviewLight),
+    ) {
+        BudgetView.entries.forEach { item ->
+            val selected = item == view
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(if (selected) OverviewPurple else Color.Transparent)
+                    .clickable { onSelected(item) },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = stringResource(
+                        if (item == BudgetView.Planned) R.string.budget_plan_tab
+                        else R.string.budget_actual_tab,
+                    ),
+                    color = if (selected) Color.White else OverviewPurpleDark,
+                    fontWeight = FontWeight.ExtraBold,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun BudgetSummaryCard(view: BudgetView, state: GameSnapshot) {
+    val income = if (view == BudgetView.Current) {
+        state.income + state.actualAdditionalIncome
+    } else {
+        state.income
+    }
+    val expenses = state.budgetPlanRecurringExpense + if (view == BudgetView.Current) {
+        state.actualOptionalExpenses + state.actualUnplannedExpenses
+    } else {
+        state.plannedOptionalExpenses
+    }
+    val balance = income - expenses
+    val balanceColor = when {
+        balance > 0 -> Color(0xFF21864B)
+        balance < 0 -> Color(0xFFC34141)
+        else -> OverviewPurpleDark
+    }
+    Surface(color = Color.White, shape = RoundedCornerShape(18.dp), shadowElevation = 2.dp) {
+        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                text = stringResource(R.string.budget_week_summary),
+                color = OverviewPurpleDark,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 18.sp,
+            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                SummaryAmount(stringResource(R.string.budget_income), income, Modifier.weight(1f))
+                Text("−", color = OverviewPurple, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                SummaryAmount(stringResource(R.string.budget_expenses), expenses, Modifier.weight(1f))
+                Text("=", color = OverviewPurple, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                SummaryAmount(stringResource(R.string.budget_total), balance, Modifier.weight(1f), balanceColor)
+            }
+            Text(
+                text = stringResource(
+                    when {
+                        balance > 0 -> R.string.budget_balance_positive
+                        balance < 0 -> R.string.budget_balance_negative
+                        else -> R.string.budget_balance_zero
+                    },
+                ),
+                color = balanceColor,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SummaryAmount(label: String, amount: Int, modifier: Modifier, color: Color = OverviewPurpleDark) {
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(amount.toString(), color = color, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
+        Text(label, color = OverviewPurpleDark.copy(alpha = 0.72f), fontSize = 10.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
     }
 }
 
@@ -216,31 +311,57 @@ private fun BudgetDetails(
                     ),
                     amount = irregularAmount,
                 )
+                if (category == BudgetCategory.Expense && view == BudgetView.Current) {
+                    val plan = state.plannedOptionalExpenses
+                    Text(
+                        text = if (plan > 0) {
+                            stringResource(R.string.budget_optional_progress, irregularAmount, plan)
+                        } else {
+                            stringResource(R.string.budget_optional_progress_no_plan, irregularAmount)
+                        },
+                        color = OverviewPurpleDark,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    if (plan > 0) {
+                        LinearProgressIndicator(
+                            progress = { (irregularAmount.toFloat() / plan).coerceIn(0f, 1f) },
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
+                            color = OverviewPurple,
+                            trackColor = OverviewLight,
+                        )
+                    }
+                }
             } else {
                 Text(
-                    text = stringResource(R.string.budget_no_operations),
+                    text = stringResource(
+                        if (category == BudgetCategory.Income) R.string.budget_income_empty_hint
+                        else R.string.budget_optional_empty_hint,
+                    ),
                     color = OverviewPurpleDark.copy(alpha = 0.6f),
                     fontFamily = NunitoFontFamily,
                     modifier = Modifier.padding(vertical = 10.dp),
                 )
             }
         }
-        BudgetGroup(
-            title = stringResource(R.string.budget_unplanned),
-            initiallyExpanded = state.actualUnplannedExpenses > 0,
-        ) {
-            if (view == BudgetView.Current && state.actualUnplannedExpenses > 0) {
-                BudgetAmountRow(
-                    title = stringResource(R.string.budget_deposit_penalty),
-                    amount = state.actualUnplannedExpenses,
-                )
-            } else {
-                Text(
-                    text = stringResource(R.string.budget_no_operations),
-                    color = OverviewPurpleDark.copy(alpha = 0.6f),
-                    fontFamily = NunitoFontFamily,
-                    modifier = Modifier.padding(vertical = 10.dp),
-                )
+        if (category == BudgetCategory.Expense) {
+            BudgetGroup(
+                title = stringResource(R.string.budget_unplanned),
+                initiallyExpanded = state.actualUnplannedExpenses > 0,
+            ) {
+                if (view == BudgetView.Current && state.actualUnplannedExpenses > 0) {
+                    BudgetAmountRow(
+                        title = stringResource(R.string.budget_unplanned),
+                        amount = state.actualUnplannedExpenses,
+                    )
+                } else {
+                    Text(
+                        text = stringResource(R.string.budget_unplanned_empty_hint),
+                        color = OverviewPurpleDark.copy(alpha = 0.6f),
+                        fontFamily = NunitoFontFamily,
+                        modifier = Modifier.padding(vertical = 10.dp),
+                    )
+                }
             }
         }
         Spacer(Modifier.height(20.dp))

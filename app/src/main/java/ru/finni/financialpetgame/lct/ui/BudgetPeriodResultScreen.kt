@@ -53,6 +53,7 @@ internal fun BudgetPeriodResultScreen(
     result: BudgetPeriodResult,
     plannedOptionalExpenses: Int,
     actualOptionalExpenses: Int,
+    actualUnplannedExpenses: Int,
     actualAdditionalIncome: Int,
     onComplete: () -> Unit,
     modifier: Modifier = Modifier,
@@ -71,6 +72,7 @@ internal fun BudgetPeriodResultScreen(
             result = result,
             plannedOptionalExpenses = plannedOptionalExpenses,
             actualOptionalExpenses = actualOptionalExpenses,
+            actualUnplannedExpenses = actualUnplannedExpenses,
             actualAdditionalIncome = actualAdditionalIncome,
             onContinue = {
                 if (result.isSuccessful) showSuccess = true else onComplete()
@@ -86,6 +88,7 @@ private fun BudgetComparisonScreen(
     result: BudgetPeriodResult,
     plannedOptionalExpenses: Int,
     actualOptionalExpenses: Int,
+    actualUnplannedExpenses: Int,
     actualAdditionalIncome: Int,
     onContinue: () -> Unit,
     modifier: Modifier,
@@ -158,12 +161,17 @@ private fun BudgetComparisonScreen(
                 ResultComparisonRow(
                     title = stringResource(R.string.budget_recurring_expenses),
                     planned = result.plannedExpenses - plannedOptionalExpenses,
-                    actual = result.actualExpenses - actualOptionalExpenses,
+                    actual = result.plannedExpenses - plannedOptionalExpenses,
                 )
                 ResultComparisonRow(
                     title = stringResource(R.string.budget_optional_expenses),
                     planned = plannedOptionalExpenses,
                     actual = actualOptionalExpenses,
+                )
+                ResultComparisonRow(
+                    title = stringResource(R.string.budget_unplanned),
+                    planned = 0,
+                    actual = actualUnplannedExpenses,
                 )
                 ResultTotalRow(
                     title = stringResource(R.string.budget_period_expense_total),

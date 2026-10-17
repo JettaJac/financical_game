@@ -44,6 +44,7 @@ data class GameSnapshot(
     val actualAdditionalIncome: Int = 0,
     val lastReviewedBudgetWeek: Int = 0,
     val budgetTutorialCompleted: Boolean = false,
+    val depositTutorialCompleted: Boolean = false,
     val homeTutorialCompleted: Boolean = false,
     val demoModeEnabled: Boolean = false,
     val roomDirtLevel: Int = 1,
