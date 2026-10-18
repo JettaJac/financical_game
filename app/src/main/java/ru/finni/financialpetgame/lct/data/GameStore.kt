@@ -22,6 +22,7 @@ import ru.finni.financialpetgame.lct.domain.EnergyItem
 import ru.finni.financialpetgame.lct.domain.Goals
 import ru.finni.financialpetgame.lct.domain.HairColour
 import ru.finni.financialpetgame.lct.domain.HairStyle
+import ru.finni.financialpetgame.lct.domain.HappinessItem
 import ru.finni.financialpetgame.lct.domain.PetAppearance
 import ru.finni.financialpetgame.lct.domain.PET_APPEARANCE_CHANGE_PRICE
 import ru.finni.financialpetgame.lct.domain.PET_TAP_HAPPINESS_REWARD
@@ -87,6 +88,7 @@ private const val JOB_ENERGY_PREFIX = "job_energy_"
 private const val JOB_ALLOWED_CYCLES_PREFIX = "job_allowed_cycles_"
 private const val JOB_PERIOD_LIMIT_PREFIX = "job_period_limit_"
 private const val EVENT_RETRY_PERIOD_PREFIX = "event_retry_period_"
+private const val CHANGE_MONEY_BEST_TIME_PREFIX = "change_money_best_time_"
 private const val NEXT_PURCHASE_DISCOUNT_FLAG = "nextPurchaseHalfPrice"
 private const val BRAIDED_BRACELETS_FLAG = "braidedBracelets"
 private const val LEGACY_CYCLE_DURATION_SECONDS = 20 * 60
@@ -194,6 +196,8 @@ private fun jobPeriodLimitKey(jobId: String) =
     intPreferencesKey("$JOB_PERIOD_LIMIT_PREFIX$jobId")
 private fun eventRetryPeriodKey(eventId: String) =
     intPreferencesKey("$EVENT_RETRY_PERIOD_PREFIX$eventId")
+private fun changeMoneyBestTimeKey(challengeId: Int) =
+    intPreferencesKey("$CHANGE_MONEY_BEST_TIME_PREFIX$challengeId")
 
 @Singleton
 class GameStore @Inject constructor(@ApplicationContext private val context: Context) : GameRepository {
@@ -240,6 +244,11 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
     private val homeTutorialCompleted = booleanPreferencesKey("home_tutorial_completed")
     private val morningRoutineTutorialCompleted =
         booleanPreferencesKey("morning_routine_tutorial_completed")
+    private val budgetMasterTutorialCompleted =
+        booleanPreferencesKey("budget_master_tutorial_completed")
+    private val budgetMasterBestScore = intPreferencesKey("budget_master_best_score")
+    private val changeMoneyTutorialCompleted =
+        booleanPreferencesKey("change_money_tutorial_completed")
     private val demoModeEnabled = booleanPreferencesKey("demo_mode_enabled")
     private val roomDirtLevel = intPreferencesKey("room_dirt_level")
     private val eventFlags = stringSetPreferencesKey("event_flags")
@@ -277,6 +286,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             val jobRemainingActions = preferences.intMap(JOB_REMAINING_ACTIONS_PREFIX)
             val jobForTaskIds = preferences.stringMap(JOB_FOR_TASK_PREFIX)
             val eventRetryPeriods = preferences.intMap(EVENT_RETRY_PERIOD_PREFIX)
+            val changeMoneyBestTimes = preferences.intMap(CHANGE_MONEY_BEST_TIME_PREFIX)
 
             val secondsRemaining = cycleSecondsRemaining(
                 cycleEndsAtMillis = checkNotNull(preferences[cycleEndsAtMillis]),
@@ -324,6 +334,16 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 morningRoutineTutorialCompleted = checkNotNull(
                     preferences[morningRoutineTutorialCompleted],
                 ),
+                budgetMasterTutorialCompleted = checkNotNull(
+                    preferences[budgetMasterTutorialCompleted],
+                ),
+                budgetMasterBestScore = checkNotNull(preferences[budgetMasterBestScore]),
+                changeMoneyTutorialCompleted = checkNotNull(
+                    preferences[changeMoneyTutorialCompleted],
+                ),
+                changeMoneyBestTimesMillis = changeMoneyBestTimes.mapKeys { (key, _) ->
+                    key.toIntOrNull() ?: -1
+                }.filterKeys { it > 0 },
                 demoModeEnabled = checkNotNull(preferences[demoModeEnabled]),
                 roomDirtLevel = checkNotNull(preferences[roomDirtLevel]),
                 cooldownUnlockCycles = cooldownUnlockCycles,
@@ -456,6 +476,15 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             if (preferences[morningRoutineTutorialCompleted] == null) {
                 preferences[morningRoutineTutorialCompleted] = false
             }
+            if (preferences[budgetMasterTutorialCompleted] == null) {
+                preferences[budgetMasterTutorialCompleted] = false
+            }
+            if (preferences[budgetMasterBestScore] == null) {
+                preferences[budgetMasterBestScore] = 0
+            }
+            if (preferences[changeMoneyTutorialCompleted] == null) {
+                preferences[changeMoneyTutorialCompleted] = false
+            }
             if (preferences[demoModeEnabled] == null) preferences[demoModeEnabled] = false
             if (preferences[roomDirtLevel] == null) {
                 preferences[roomDirtLevel] =
@@ -545,7 +574,8 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                         it.name.startsWith(JOB_ENERGY_PREFIX) ||
                         it.name.startsWith(JOB_ALLOWED_CYCLES_PREFIX) ||
                         it.name.startsWith(JOB_PERIOD_LIMIT_PREFIX) ||
-                        it.name.startsWith(EVENT_RETRY_PERIOD_PREFIX)
+                        it.name.startsWith(EVENT_RETRY_PERIOD_PREFIX) ||
+                        it.name.startsWith(CHANGE_MONEY_BEST_TIME_PREFIX)
                 }
                 .forEach { preferences.remove(it) }
 
@@ -594,6 +624,9 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             preferences[depositTutorialCompleted] = false
             preferences[homeTutorialCompleted] = false
             preferences[morningRoutineTutorialCompleted] = false
+            preferences[budgetMasterTutorialCompleted] = false
+            preferences[budgetMasterBestScore] = 0
+            preferences[changeMoneyTutorialCompleted] = false
             preferences[demoModeEnabled] = false
             preferences[roomDirtLevel] = 1
             preferences[cycleEndsAtMillis] =
@@ -900,6 +933,133 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 else "Использовано: ${item.storageId}",
                 incomeChange - effectivePrice,
             )
+        }
+    }
+
+    override suspend fun startBudgetMasterAttempt(): Boolean {
+        var started = false
+        context.gameDataStore.edit { preferences ->
+            val item = HappinessItem.BudgetMaster
+            val currentCycle = checkNotNull(preferences[currentPeriod])
+            val secondsRemaining = cycleSecondsRemaining(
+                cycleEndsAtMillis = checkNotNull(preferences[cycleEndsAtMillis]),
+                nowMillis = System.currentTimeMillis(),
+            )
+            val cyclePosition = currentCyclePosition(
+                currentPeriod = currentCycle,
+                cycleSecondsRemaining = secondsRemaining,
+            )
+            val unlockCycle = preferences[cooldownUnlockCycleKey(item)] ?: 0.0
+            if (unlockCycle > cyclePosition) return@edit
+            if (checkNotNull(preferences[level]) < item.level) return@edit
+
+            val currentMoney = checkNotNull(preferences[money])
+            if (currentMoney < item.price) return@edit
+
+            preferences[money] = currentMoney - item.price
+            recordOptionalExpense(preferences, item.price)
+            preferences[cooldownUnlockCycleKey(item)] = when (val cooldown = item.cooldown) {
+                Cooldown.None -> cyclePosition
+                is Cooldown.Cycles -> cooldownUnlockCycle(cyclePosition, cooldown.value)
+            }
+            preferences[budgetMasterTutorialCompleted] = true
+            appendAction(preferences, "Начата мини-игра «Мастер Бюджета»", -item.price)
+            started = true
+        }
+        return started
+    }
+
+    override suspend fun completeBudgetMasterAttempt(score: Int, successful: Boolean) {
+        context.gameDataStore.edit { preferences ->
+            val safeScore = score.coerceAtLeast(0)
+            if (safeScore > checkNotNull(preferences[budgetMasterBestScore])) {
+                preferences[budgetMasterBestScore] = safeScore
+            }
+            if (successful) {
+                HappinessItem.BudgetMaster.careEffects.forEach { effect ->
+                    when (effect.resource) {
+                        Resource.Health,
+                        Resource.Happiness,
+                        Resource.Energy,
+                        -> applyCharacteristicEffect(
+                            preferences = preferences,
+                            resource = effect.resource,
+                            change = effect.increase,
+                            permanent = false,
+                        )
+                        Resource.Money -> preferences[money] =
+                            checkNotNull(preferences[money]) + effect.increase
+                    }
+                }
+            }
+            appendAction(
+                preferences,
+                if (successful) {
+                    "Пройдена мини-игра «Мастер Бюджета»: $safeScore карточек"
+                } else {
+                    "Мини-игра «Мастер Бюджета» не пройдена: $safeScore карточек"
+                },
+            )
+        }
+    }
+
+    override suspend fun startChangeMoneyAttempt(): Boolean {
+        var started = false
+        context.gameDataStore.edit { preferences ->
+            val item = HappinessItem.ChangeMoney
+            val currentCycle = checkNotNull(preferences[currentPeriod])
+            val secondsRemaining = cycleSecondsRemaining(
+                cycleEndsAtMillis = checkNotNull(preferences[cycleEndsAtMillis]),
+                nowMillis = System.currentTimeMillis(),
+            )
+            val cyclePosition = currentCyclePosition(
+                currentPeriod = currentCycle,
+                cycleSecondsRemaining = secondsRemaining,
+            )
+            val unlockCycle = preferences[cooldownUnlockCycleKey(item)] ?: 0.0
+            if (unlockCycle > cyclePosition) return@edit
+            if (checkNotNull(preferences[level]) < item.level) return@edit
+
+            val currentMoney = checkNotNull(preferences[money])
+            if (currentMoney < item.price) return@edit
+
+            preferences[money] = currentMoney - item.price
+            recordOptionalExpense(preferences, item.price)
+            preferences[cooldownUnlockCycleKey(item)] = when (val cooldown = item.cooldown) {
+                Cooldown.None -> cyclePosition
+                is Cooldown.Cycles -> cooldownUnlockCycle(cyclePosition, cooldown.value)
+            }
+            preferences[changeMoneyTutorialCompleted] = true
+            appendAction(preferences, "Начата мини-игра «Разменяй!»", -item.price)
+            started = true
+        }
+        return started
+    }
+
+    override suspend fun completeChangeMoneyAttempt(challengeId: Int, elapsedMillis: Long) {
+        context.gameDataStore.edit { preferences ->
+            HappinessItem.ChangeMoney.careEffects.forEach { effect ->
+                when (effect.resource) {
+                    Resource.Health,
+                    Resource.Happiness,
+                    Resource.Energy,
+                    -> applyCharacteristicEffect(
+                        preferences = preferences,
+                        resource = effect.resource,
+                        change = effect.increase,
+                        permanent = false,
+                    )
+                    Resource.Money -> preferences[money] =
+                        checkNotNull(preferences[money]) + effect.increase
+                }
+            }
+            val safeElapsedMillis = elapsedMillis.coerceIn(1L, Int.MAX_VALUE.toLong()).toInt()
+            val bestTimeKey = changeMoneyBestTimeKey(challengeId)
+            val previousBest = preferences[bestTimeKey]
+            if (previousBest == null || safeElapsedMillis < previousBest) {
+                preferences[bestTimeKey] = safeElapsedMillis
+            }
+            appendAction(preferences, "Пройдена мини-игра «Разменяй!»")
         }
     }
 

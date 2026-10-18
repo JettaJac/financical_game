@@ -272,34 +272,40 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
         onAction(PetAction.CloseOverlay)
     }
     val handleSystemBack = {
-        val now = SystemClock.elapsedRealtime()
-        when (
-            backPressAction(
-                previousPressAt = lastBackPressAt,
-                currentPressAt = now,
-                hasDemoHint = state.demoModeHintVisible,
-                hasActiveEvent = state.activeEvent != null,
-                activeEventCanClose = state.activeEvent?.showCloseButton == true,
-                hasOverlay = state.overlay != null,
-            )
-        ) {
-            BackPressAction.DismissDemoHint -> {
-                lastBackPressAt = 0L
-                onAction(PetAction.DismissDemoModeHint)
-            }
-            BackPressAction.SkipEvent -> {
-                lastBackPressAt = 0L
-                onAction(PetAction.SkipEvent)
-            }
-            BackPressAction.Ignore -> lastBackPressAt = 0L
-            BackPressAction.CloseOverlay -> closeOverlay()
-            BackPressAction.Exit -> {
-                lastBackPressAt = 0L
-                onAction(PetAction.Exit)
-            }
-            BackPressAction.PromptExit -> {
-                lastBackPressAt = now
-                Toast.makeText(context, backMessage, Toast.LENGTH_SHORT).show()
+        if (state.budgetMasterGame != null) {
+            onAction(PetAction.PauseBudgetMaster)
+        } else if (state.changeMoneyGame != null) {
+            onAction(PetAction.PauseChangeMoney)
+        } else {
+            val now = SystemClock.elapsedRealtime()
+            when (
+                backPressAction(
+                    previousPressAt = lastBackPressAt,
+                    currentPressAt = now,
+                    hasDemoHint = state.demoModeHintVisible,
+                    hasActiveEvent = state.activeEvent != null,
+                    activeEventCanClose = state.activeEvent?.showCloseButton == true,
+                    hasOverlay = state.overlay != null,
+                )
+            ) {
+                BackPressAction.DismissDemoHint -> {
+                    lastBackPressAt = 0L
+                    onAction(PetAction.DismissDemoModeHint)
+                }
+                BackPressAction.SkipEvent -> {
+                    lastBackPressAt = 0L
+                    onAction(PetAction.SkipEvent)
+                }
+                BackPressAction.Ignore -> lastBackPressAt = 0L
+                BackPressAction.CloseOverlay -> closeOverlay()
+                BackPressAction.Exit -> {
+                    lastBackPressAt = 0L
+                    onAction(PetAction.Exit)
+                }
+                BackPressAction.PromptExit -> {
+                    lastBackPressAt = now
+                    Toast.makeText(context, backMessage, Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }
@@ -314,6 +320,24 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
         OnboardingScreen(
             initialState = state.resources,
             onComplete = { onAction(PetAction.CompleteOnboarding(it)) },
+        )
+        return
+    }
+
+    state.budgetMasterGame?.let { game ->
+        BudgetMasterGameScreen(
+            game = game,
+            bestScore = state.resources.budgetMasterBestScore,
+            onAction = onAction,
+        )
+        return
+    }
+
+    state.changeMoneyGame?.let { game ->
+        ChangeMoneyGameScreen(
+            game = game,
+            bestTimeMillis = state.resources.changeMoneyBestTimesMillis[game.challenge.id],
+            onAction = onAction,
         )
         return
     }

@@ -6,6 +6,13 @@ import ru.finni.financialpetgame.lct.R
 import ru.finni.financialpetgame.lct.data.GameSnapshot
 import ru.finni.financialpetgame.lct.data.EventCatalog
 import ru.finni.financialpetgame.lct.domain.CardItem
+import ru.finni.financialpetgame.lct.domain.BUDGET_MASTER_ROUND_SECONDS
+import ru.finni.financialpetgame.lct.domain.BUDGET_MASTER_SUCCESS_SCORE
+import ru.finni.financialpetgame.lct.domain.BudgetDirection
+import ru.finni.financialpetgame.lct.domain.BudgetMasterCard
+import ru.finni.financialpetgame.lct.domain.BudgetMasterCategory
+import ru.finni.financialpetgame.lct.domain.ChangeMoneyChallenge
+import ru.finni.financialpetgame.lct.domain.ChangeMoneyValidation
 import ru.finni.financialpetgame.lct.domain.Effect
 import ru.finni.financialpetgame.lct.domain.DepositTerm
 import ru.finni.financialpetgame.lct.domain.GameEvent
@@ -13,6 +20,7 @@ import ru.finni.financialpetgame.lct.domain.GameDefaults
 import ru.finni.financialpetgame.lct.domain.GameRepository
 import ru.finni.financialpetgame.lct.domain.GoalPurchase
 import ru.finni.financialpetgame.lct.domain.Goals
+import ru.finni.financialpetgame.lct.domain.HappinessItem
 import ru.finni.financialpetgame.lct.domain.PetAppearance
 import ru.finni.financialpetgame.lct.domain.PetSetup
 import ru.finni.financialpetgame.lct.domain.Resource
@@ -21,6 +29,11 @@ import ru.finni.financialpetgame.lct.domain.canApplyEffects
 import ru.finni.financialpetgame.lct.domain.cycleSecondsRemaining
 import ru.finni.financialpetgame.lct.domain.needsBudgetPlanning
 import ru.finni.financialpetgame.lct.domain.needsBudgetReview
+import ru.finni.financialpetgame.lct.domain.randomChangeMoneyChallenge
+import ru.finni.financialpetgame.lct.domain.randomBudgetMasterCard
+import ru.finni.financialpetgame.lct.domain.isCorrectBudgetCategory
+import ru.finni.financialpetgame.lct.domain.isCorrectBudgetDirection
+import ru.finni.financialpetgame.lct.domain.validateChangeMoneySelection
 import ru.finni.financialpetgame.lct.domain.withCharacteristicsAt
 import ru.finni.financialpetgame.lct.domain.weekForPeriod
 import ru.finni.financialpetgame.lct.domain.dayForPeriod
@@ -118,6 +131,32 @@ enum class HomeOverlay { Menu, Budget, Deposit, Goal, GoalSelection, PersonalAcc
 
 enum class HomeSection { Food, Happiness, Energy, Shop, Tasks }
 
+enum class ChangeMoneyStage { Intro, Rules, Ready, Playing, Success, Result }
+
+enum class BudgetMasterStage { Intro, Rules, Playing, Result }
+
+enum class BudgetMasterStep { Direction, Category }
+
+data class BudgetMasterGameState(
+    val card: BudgetMasterCard,
+    val stage: BudgetMasterStage,
+    val step: BudgetMasterStep = BudgetMasterStep.Direction,
+    val score: Int = 0,
+    val secondsRemaining: Int = BUDGET_MASTER_ROUND_SECONDS,
+    val usedCardIds: Set<String> = emptySet(),
+    val errorCategory: BudgetMasterCategory? = null,
+    val pauseDialogVisible: Boolean = false,
+)
+
+data class ChangeMoneyGameState(
+    val challenge: ChangeMoneyChallenge,
+    val stage: ChangeMoneyStage,
+    val selectedCounts: Map<Int, Int> = emptyMap(),
+    val validation: ChangeMoneyValidation? = null,
+    val elapsedMillis: Long = 0L,
+    val pauseDialogVisible: Boolean = false,
+)
+
 enum class FinnyPrompt {
     LowHealth,
     LowHappiness,
@@ -148,6 +187,8 @@ data class PetState(
     val customMessage: String? = null,
     val moneyAttentionNonce: Int = 0,
     val petTapReactionNonce: Int = 0,
+    val budgetMasterGame: BudgetMasterGameState? = null,
+    val changeMoneyGame: ChangeMoneyGameState? = null,
 )
 
 sealed interface PetAction {
@@ -165,6 +206,23 @@ sealed interface PetAction {
     data object DeclineEvent : PetAction
     data object SkipEvent : PetAction
     data class BuyCareItem(val item: CardItem) : PetAction
+    data object AdvanceBudgetMaster : PetAction
+    data object StartBudgetMasterRound : PetAction
+    data class SelectBudgetDirection(val direction: BudgetDirection) : PetAction
+    data class SelectBudgetCategory(val category: BudgetMasterCategory) : PetAction
+    data object TickBudgetMaster : PetAction
+    data object FinishBudgetMaster : PetAction
+    data object PauseBudgetMaster : PetAction
+    data object ResumeBudgetMaster : PetAction
+    data object ExitBudgetMaster : PetAction
+    data object AdvanceChangeMoney : PetAction
+    data object StartChangeMoneyRound : PetAction
+    data class ChangeMoneyNoteCount(val denomination: Int, val delta: Int) : PetAction
+    data class CheckChangeMoney(val elapsedMillis: Long) : PetAction
+    data object ShowChangeMoneyResult : PetAction
+    data object PauseChangeMoney : PetAction
+    data object ResumeChangeMoney : PetAction
+    data object ExitChangeMoney : PetAction
     data object PetTapped : PetAction
     data object ShowRoutineReminder : PetAction
     data class ShowMessage(val message: String, val emphasizeMoney: Boolean = false) : PetAction
@@ -206,6 +264,10 @@ class PetViewModel @Inject constructor(
     private var goalPurchaseInProgress = false
     private var appearanceUpdateInProgress = false
     private var eventResolutionInProgress = false
+    private var budgetMasterStartInProgress = false
+    private var budgetMasterCompletionInProgress = false
+    private var changeMoneyStartInProgress = false
+    private var changeMoneyCompletionInProgress = false
     private var lastCycleEnergyPromptAtMillis = 0L
     private val shownLowPrompts = mutableSetOf<String>()
     private val eventScheduler = EventScheduler(eventCatalog.data)
@@ -442,6 +504,8 @@ class PetViewModel @Inject constructor(
                     parentModePasswordError = false,
                     homeTutorialStep = null,
                     morningRoutineTutorialStep = null,
+                    budgetMasterGame = null,
+                    changeMoneyGame = null,
                     demoModeHintVisible = false,
                 )
             }
@@ -508,7 +572,108 @@ class PetViewModel @Inject constructor(
                 }
             }
             PetAction.Exit -> _state.update { it.copy(exitRequested = true) }
-            is PetAction.BuyCareItem -> viewModelScope.launch { repository.buyCareItem(action.item) }
+            is PetAction.BuyCareItem -> when (action.item) {
+                HappinessItem.BudgetMaster -> startBudgetMasterGame()
+                HappinessItem.ChangeMoney -> startChangeMoneyGame()
+                else -> viewModelScope.launch { repository.buyCareItem(action.item) }
+            }
+            PetAction.AdvanceBudgetMaster -> _state.update { current ->
+                val game = current.budgetMasterGame ?: return@update current
+                current.copy(
+                    budgetMasterGame = game.copy(
+                        stage = when (game.stage) {
+                            BudgetMasterStage.Intro -> BudgetMasterStage.Rules
+                            else -> game.stage
+                        },
+                    ),
+                )
+            }
+            PetAction.StartBudgetMasterRound -> _state.update { current ->
+                val game = current.budgetMasterGame ?: return@update current
+                current.copy(
+                    budgetMasterGame = game.copy(
+                        stage = BudgetMasterStage.Playing,
+                        step = BudgetMasterStep.Direction,
+                        secondsRemaining = BUDGET_MASTER_ROUND_SECONDS,
+                        score = 0,
+                        errorCategory = null,
+                    ),
+                )
+            }
+            is PetAction.SelectBudgetDirection -> selectBudgetDirection(action.direction)
+            is PetAction.SelectBudgetCategory -> selectBudgetCategory(action.category)
+            PetAction.TickBudgetMaster -> tickBudgetMaster()
+            PetAction.FinishBudgetMaster -> finishBudgetMaster()
+            PetAction.PauseBudgetMaster -> _state.update { current ->
+                val game = current.budgetMasterGame ?: return@update current
+                if (game.stage == BudgetMasterStage.Result) {
+                    promotePendingEvent(current.copy(budgetMasterGame = null))
+                } else {
+                    current.copy(budgetMasterGame = game.copy(pauseDialogVisible = true))
+                }
+            }
+            PetAction.ResumeBudgetMaster -> _state.update { current ->
+                val game = current.budgetMasterGame ?: return@update current
+                current.copy(budgetMasterGame = game.copy(pauseDialogVisible = false))
+            }
+            PetAction.ExitBudgetMaster -> _state.update {
+                promotePendingEvent(it.copy(budgetMasterGame = null))
+            }
+            PetAction.AdvanceChangeMoney -> _state.update { current ->
+                val game = current.changeMoneyGame ?: return@update current
+                current.copy(
+                    changeMoneyGame = game.copy(
+                        stage = when (game.stage) {
+                            ChangeMoneyStage.Intro -> ChangeMoneyStage.Rules
+                            ChangeMoneyStage.Rules -> ChangeMoneyStage.Ready
+                            else -> game.stage
+                        },
+                    ),
+                )
+            }
+            PetAction.StartChangeMoneyRound -> _state.update { current ->
+                val game = current.changeMoneyGame ?: return@update current
+                current.copy(
+                    changeMoneyGame = game.copy(
+                        stage = ChangeMoneyStage.Playing,
+                        selectedCounts = emptyMap(),
+                        validation = null,
+                        elapsedMillis = 0L,
+                    ),
+                )
+            }
+            is PetAction.ChangeMoneyNoteCount -> _state.update { current ->
+                val game = current.changeMoneyGame ?: return@update current
+                if (game.stage != ChangeMoneyStage.Playing) return@update current
+                val nextCount = ((game.selectedCounts[action.denomination] ?: 0) + action.delta)
+                    .coerceIn(0, game.challenge.requiredNotes)
+                current.copy(
+                    changeMoneyGame = game.copy(
+                        selectedCounts = game.selectedCounts + (action.denomination to nextCount),
+                        validation = null,
+                    ),
+                )
+            }
+            is PetAction.CheckChangeMoney -> checkChangeMoney(action.elapsedMillis)
+            PetAction.ShowChangeMoneyResult -> _state.update { current ->
+                val game = current.changeMoneyGame ?: return@update current
+                current.copy(changeMoneyGame = game.copy(stage = ChangeMoneyStage.Result))
+            }
+            PetAction.PauseChangeMoney -> _state.update { current ->
+                val game = current.changeMoneyGame ?: return@update current
+                if (game.stage == ChangeMoneyStage.Result) {
+                    promotePendingEvent(current.copy(changeMoneyGame = null))
+                } else {
+                    current.copy(changeMoneyGame = game.copy(pauseDialogVisible = true))
+                }
+            }
+            PetAction.ResumeChangeMoney -> _state.update { current ->
+                val game = current.changeMoneyGame ?: return@update current
+                current.copy(changeMoneyGame = game.copy(pauseDialogVisible = false))
+            }
+            PetAction.ExitChangeMoney -> _state.update {
+                promotePendingEvent(it.copy(changeMoneyGame = null))
+            }
             PetAction.PetTapped -> viewModelScope.launch {
                 if (repository.rewardPetTap()) {
                     _state.update { it.copy(petTapReactionNonce = it.petTapReactionNonce + 1) }
@@ -619,6 +784,217 @@ class PetViewModel @Inject constructor(
             }
             PetAction.CompleteDepositTutorial -> viewModelScope.launch {
                 repository.completeDepositTutorial()
+            }
+        }
+    }
+
+    private fun startBudgetMasterGame() {
+        if (_state.value.budgetMasterGame != null || budgetMasterStartInProgress) return
+        budgetMasterStartInProgress = true
+        val showTutorial = !_state.value.resources.budgetMasterTutorialCompleted
+        viewModelScope.launch {
+            try {
+                if (!repository.startBudgetMasterAttempt()) return@launch
+                val firstCard = randomBudgetMasterCard()
+                _state.update { current ->
+                    current.copy(
+                        overlay = null,
+                        finnyPrompt = null,
+                        customMessage = null,
+                        budgetMasterGame = BudgetMasterGameState(
+                            card = firstCard,
+                            stage = if (showTutorial) {
+                                BudgetMasterStage.Intro
+                            } else {
+                                BudgetMasterStage.Playing
+                            },
+                            usedCardIds = setOf(firstCard.id),
+                        ),
+                    )
+                }
+            } finally {
+                budgetMasterStartInProgress = false
+            }
+        }
+    }
+
+    private fun selectBudgetDirection(direction: BudgetDirection) {
+        val game = _state.value.budgetMasterGame ?: return
+        if (
+            game.stage != BudgetMasterStage.Playing ||
+            game.step != BudgetMasterStep.Direction ||
+            game.errorCategory != null
+        ) return
+        if (isCorrectBudgetDirection(game.card, direction)) {
+            _state.update { current ->
+                current.copy(
+                    budgetMasterGame = current.budgetMasterGame?.copy(
+                        step = BudgetMasterStep.Category,
+                    ),
+                )
+            }
+        } else {
+            showBudgetMasterError(game)
+        }
+    }
+
+    private fun selectBudgetCategory(category: BudgetMasterCategory) {
+        val game = _state.value.budgetMasterGame ?: return
+        if (
+            game.stage != BudgetMasterStage.Playing ||
+            game.step != BudgetMasterStep.Category ||
+            game.errorCategory != null
+        ) return
+        if (isCorrectBudgetCategory(game.card, category)) {
+            _state.update { current ->
+                val activeGame = current.budgetMasterGame ?: return@update current
+                current.copy(budgetMasterGame = activeGame.nextBudgetMasterCard(scoreDelta = 1))
+            }
+        } else {
+            showBudgetMasterError(game)
+        }
+    }
+
+    private fun showBudgetMasterError(game: BudgetMasterGameState) {
+        _state.update { current ->
+            val activeGame = current.budgetMasterGame ?: return@update current
+            if (activeGame.card.id != game.card.id) return@update current
+            current.copy(
+                budgetMasterGame = activeGame.copy(errorCategory = activeGame.card.category),
+            )
+        }
+        viewModelScope.launch {
+            delay(2_200L)
+            _state.update { current ->
+                val activeGame = current.budgetMasterGame ?: return@update current
+                if (
+                    activeGame.stage != BudgetMasterStage.Playing ||
+                    activeGame.card.id != game.card.id ||
+                    activeGame.errorCategory == null
+                ) return@update current
+                current.copy(budgetMasterGame = activeGame.nextBudgetMasterCard())
+            }
+        }
+    }
+
+    private fun tickBudgetMaster() {
+        val game = _state.value.budgetMasterGame ?: return
+        if (
+            game.stage != BudgetMasterStage.Playing ||
+            game.pauseDialogVisible ||
+            budgetMasterCompletionInProgress
+        ) return
+        if (game.secondsRemaining <= 1) {
+            _state.update { current ->
+                current.copy(
+                    budgetMasterGame = current.budgetMasterGame?.copy(secondsRemaining = 0),
+                )
+            }
+            finishBudgetMaster()
+        } else {
+            _state.update { current ->
+                current.copy(
+                    budgetMasterGame = current.budgetMasterGame?.copy(
+                        secondsRemaining = game.secondsRemaining - 1,
+                    ),
+                )
+            }
+        }
+    }
+
+    private fun finishBudgetMaster() {
+        if (budgetMasterCompletionInProgress) return
+        val game = _state.value.budgetMasterGame ?: return
+        if (game.stage != BudgetMasterStage.Playing) return
+        budgetMasterCompletionInProgress = true
+        viewModelScope.launch {
+            try {
+                repository.completeBudgetMasterAttempt(
+                    score = game.score,
+                    successful = game.score >= BUDGET_MASTER_SUCCESS_SCORE,
+                )
+                _state.update { current ->
+                    current.copy(
+                        budgetMasterGame = current.budgetMasterGame?.copy(
+                            stage = BudgetMasterStage.Result,
+                            pauseDialogVisible = false,
+                            errorCategory = null,
+                        ),
+                    )
+                }
+            } finally {
+                budgetMasterCompletionInProgress = false
+            }
+        }
+    }
+
+    private fun BudgetMasterGameState.nextBudgetMasterCard(
+        scoreDelta: Int = 0,
+    ): BudgetMasterGameState {
+        val next = randomBudgetMasterCard(excludedIds = usedCardIds)
+        return copy(
+            card = next,
+            step = BudgetMasterStep.Direction,
+            score = score + scoreDelta,
+            usedCardIds = usedCardIds + next.id,
+            errorCategory = null,
+        )
+    }
+
+    private fun startChangeMoneyGame() {
+        if (_state.value.changeMoneyGame != null || changeMoneyStartInProgress) return
+        changeMoneyStartInProgress = true
+        val showTutorial = !_state.value.resources.changeMoneyTutorialCompleted
+        viewModelScope.launch {
+            try {
+                if (!repository.startChangeMoneyAttempt()) return@launch
+                _state.update { current ->
+                    current.copy(
+                        overlay = null,
+                        finnyPrompt = null,
+                        customMessage = null,
+                        changeMoneyGame = ChangeMoneyGameState(
+                            challenge = randomChangeMoneyChallenge(),
+                            stage = if (showTutorial) {
+                                ChangeMoneyStage.Intro
+                            } else {
+                                ChangeMoneyStage.Ready
+                            },
+                        ),
+                    )
+                }
+            } finally {
+                changeMoneyStartInProgress = false
+            }
+        }
+    }
+
+    private fun checkChangeMoney(elapsedMillis: Long) {
+        if (changeMoneyCompletionInProgress) return
+        val game = _state.value.changeMoneyGame ?: return
+        if (game.stage != ChangeMoneyStage.Playing) return
+        val validation = validateChangeMoneySelection(game.challenge, game.selectedCounts)
+        if (validation != ChangeMoneyValidation.Success) {
+            _state.update { current ->
+                current.copy(changeMoneyGame = current.changeMoneyGame?.copy(validation = validation))
+            }
+            return
+        }
+        changeMoneyCompletionInProgress = true
+        viewModelScope.launch {
+            try {
+                repository.completeChangeMoneyAttempt(game.challenge.id, elapsedMillis)
+                _state.update { current ->
+                    current.copy(
+                        changeMoneyGame = current.changeMoneyGame?.copy(
+                            stage = ChangeMoneyStage.Success,
+                            validation = null,
+                            elapsedMillis = elapsedMillis,
+                        ),
+                    )
+                }
+            } finally {
+                changeMoneyCompletionInProgress = false
             }
         }
     }
@@ -756,6 +1132,8 @@ internal fun canPresentQueuedEvent(state: PetState): Boolean =
         !needsBudgetPlanning(state.resources) &&
         state.overlay == null &&
         !state.demoModeHintVisible &&
+        state.budgetMasterGame == null &&
+        state.changeMoneyGame == null &&
         state.homeTutorialStep == null &&
         state.morningRoutineTutorialStep == null
 

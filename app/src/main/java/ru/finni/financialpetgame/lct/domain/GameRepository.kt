@@ -17,6 +17,14 @@ interface GameRepository {
 
     suspend fun buyCareItem(item: CardItem)
 
+    suspend fun startBudgetMasterAttempt(): Boolean
+
+    suspend fun completeBudgetMasterAttempt(score: Int, successful: Boolean)
+
+    suspend fun startChangeMoneyAttempt(): Boolean
+
+    suspend fun completeChangeMoneyAttempt(challengeId: Int, elapsedMillis: Long)
+
     suspend fun buyGoal(goal: Goals, price: Int): Boolean
 
     suspend fun buyCustomGoal(price: Int): Boolean
