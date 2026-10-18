@@ -260,7 +260,6 @@ enum class TaskItem(
         earnings = 0,
         level = 1,
         cooldown = Cooldown.Cycles(3.0),
-        activeDays = 6..7,
         careEffects = taskEffects(health = 0, happiness = -5, energy = -10),
     ),
     BeadCrafts(
@@ -290,7 +289,7 @@ enum class TaskItem(
     RecyclePaper(
         earnings = 20,
         level = 2,
-        cooldown = OncePerCycleTaskCooldown,
+        cooldown = Cooldown.Cycles(7.0),
         requiresEvent = true,
         careEffects = taskEffects(health = -5, happiness = 0, energy = -5, money = 20),
     ),
@@ -369,6 +368,7 @@ internal fun workPreparationBlock(
     lessonsUnlockCycle: Double,
     purchasedShopItemIds: Set<String>,
 ): WorkPreparationBlock? {
+    if (currentPeriod == 1) return null
     if (ShopItem.MorningAutomation.storageId in purchasedShopItemIds) return null
     if (getReadyUnlockCycle <= currentCyclePosition) return WorkPreparationBlock.GetReady
     if (dayForPeriod(currentPeriod) in TaskItem.Lessons.activeDays &&
@@ -423,3 +423,6 @@ enum class ShopItem(
     override val storageId: String
         get() = "shop_$name"
 }
+
+internal fun ShopItem.isUnlockedAtPeriod(currentPeriod: Int): Boolean =
+    this != ShopItem.MorningAutomation || currentPeriod >= 5

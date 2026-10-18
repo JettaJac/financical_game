@@ -9,5 +9,5 @@
   {"id":"berries","payout":30,"statCost":{"health":-7,"happiness":0,"energy":-7},"remainingActions":-1,"allowedCycles":"any","periodLimit":3,"taskStorageId":null},
   {"id":"marketplace_sale","payout":40,"statCost":{"health":-10,"happiness":10,"energy":-10},"remainingActions":1,"allowedCycles":"any","periodLimit":1,"taskStorageId":null},
   {"id":"handmade","payout":30,"statCost":{"health":0,"happiness":10,"energy":0},"remainingActions":-1,"allowedCycles":"any","periodLimit":3,"taskStorageId":"task_BeadCrafts"},
-  {"id":"recycle_paper","payout":20,"statCost":{"health":-5,"happiness":0,"energy":-5},"remainingActions":-1,"allowedCycles":"any","periodLimit":1,"taskStorageId":"task_RecyclePaper"}
+  {"id":"recycle_paper","payout":20,"statCost":{"health":-5,"happiness":0,"energy":-5},"remainingActions":-1,"allowedCycles":"any","periodLimit":null,"taskStorageId":"task_RecyclePaper"}
 ]

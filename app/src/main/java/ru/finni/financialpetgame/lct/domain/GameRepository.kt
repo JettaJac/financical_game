@@ -31,11 +31,13 @@ interface GameRepository {
 
     suspend fun updatePetAppearance(appearance: PetAppearance): Boolean
 
-    suspend fun saveBudgetPlan(optionalExpenses: Int)
+    suspend fun saveBudgetPlan(optionalExpenses: Int, goalExpenses: Int)
 
     suspend fun completeBudgetReview()
 
     suspend fun completeHomeTutorial()
+
+    suspend fun completeMorningRoutineTutorial()
 
     suspend fun completeDepositTutorial()
 

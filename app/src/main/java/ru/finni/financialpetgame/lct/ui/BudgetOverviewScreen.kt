@@ -181,9 +181,9 @@ private fun BudgetSummaryCard(view: BudgetView, state: GameSnapshot) {
         state.income
     }
     val expenses = state.budgetPlanRecurringExpense + if (view == BudgetView.Current) {
-        state.actualOptionalExpenses + state.actualUnplannedExpenses
+        state.actualOptionalExpenses + state.actualUnplannedExpenses + state.actualGoalExpenses
     } else {
-        state.plannedOptionalExpenses
+        state.plannedOptionalExpenses + state.plannedGoalExpenses
     }
     val balance = income - expenses
     val balanceColor = when {
@@ -345,15 +345,54 @@ private fun BudgetDetails(
             }
         }
         if (category == BudgetCategory.Expense) {
+            val goalAmount = if (view == BudgetView.Current) {
+                state.actualGoalExpenses
+            } else {
+                state.plannedGoalExpenses
+            }
+            BudgetGroup(
+                title = stringResource(R.string.budget_goal_expenses),
+                initiallyExpanded = goalAmount > 0,
+            ) {
+                if (goalAmount > 0) {
+                    BudgetAmountRow(
+                        title = stringResource(R.string.budget_goal_expenses),
+                        amount = goalAmount,
+                    )
+                    if (view == BudgetView.Current && state.plannedGoalExpenses > 0) {
+                        Text(
+                            text = stringResource(
+                                R.string.budget_goal_progress,
+                                goalAmount,
+                                state.plannedGoalExpenses,
+                            ),
+                            color = OverviewPurpleDark,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                } else {
+                    Text(
+                        text = stringResource(R.string.budget_no_operations),
+                        color = OverviewPurpleDark.copy(alpha = 0.6f),
+                        modifier = Modifier.padding(vertical = 10.dp),
+                    )
+                }
+            }
             BudgetGroup(
                 title = stringResource(R.string.budget_unplanned),
                 initiallyExpanded = state.actualUnplannedExpenses > 0,
             ) {
                 if (view == BudgetView.Current && state.actualUnplannedExpenses > 0) {
-                    BudgetAmountRow(
-                        title = stringResource(R.string.budget_unplanned),
-                        amount = state.actualUnplannedExpenses,
-                    )
+                    state.unplannedExpenseRecords.forEach { record ->
+                        BudgetAmountRow(title = record.title, amount = record.amount)
+                    }
+                    if (state.unplannedExpenseRecords.isEmpty()) {
+                        BudgetAmountRow(
+                            title = stringResource(R.string.budget_unplanned),
+                            amount = state.actualUnplannedExpenses,
+                        )
+                    }
                 } else {
                     Text(
                         text = stringResource(R.string.budget_unplanned_empty_hint),

@@ -120,30 +120,36 @@ class EventScheduler(private val catalog: EventCatalogData) {
     fun next(
         snapshot: GameSnapshot,
         elapsedCycleSeconds: Int = GameDefaults.CYCLE_DURATION_SECONDS,
-    ): ScheduledEvent? {
-        if (!snapshot.onboardingCompleted) return null
+    ): ScheduledEvent? = due(snapshot, elapsedCycleSeconds).firstOrNull()
+
+    fun due(
+        snapshot: GameSnapshot,
+        elapsedCycleSeconds: Int = GameDefaults.CYCLE_DURATION_SECONDS,
+    ): List<ScheduledEvent> {
+        if (!snapshot.onboardingCompleted) return emptyList()
         val week = weekForPeriod(snapshot.currentPeriod) + 1
         val day = dayForPeriod(snapshot.currentPeriod)
 
-        snapshot.eventRetryPeriods
+        val retryEvents = snapshot.eventRetryPeriods
             .asSequence()
             .filter { (_, retryPeriod) -> retryPeriod <= snapshot.currentPeriod }
             .mapNotNull { (eventId, _) -> catalog.eventsById[eventId] }
             .filter { it.id !in snapshot.completedEventIds }
             .sortedBy(EventDef::id)
-            .firstOrNull()
-            ?.let { definition ->
-                return ScheduledEvent(
+            .map { definition ->
+                ScheduledEvent(
                     definition = definition,
                     scenarioStepId = null,
                     isScripted = true,
                     appliedDeltas = definition.deltas.withMoney(definition.moneyFromCard),
                 )
             }
+            .toList()
+        if (retryEvents.isNotEmpty()) return retryEvents
 
         val cycleEvents = catalog.scenario
             .filter { it.week == week && it.day == day && it.eventId != null }
-        cycleEvents
+        val dueScenarioEvents = cycleEvents
             .withIndex()
             .asSequence()
             .filter { (_, step) -> step.id !in snapshot.handledScenarioEntryIds }
@@ -152,11 +158,11 @@ class EventScheduler(private val catalog: EventCatalogData) {
                     elapsedCycleSeconds >= eventTriggerSecond(index, cycleEvents.size)
             }
             .map(IndexedValue<ScenarioStep>::value)
-            .firstOrNull { step -> step.isEligible(snapshot) }
-            ?.let { step ->
+            .filter { step -> step.isEligible(snapshot) }
+            .map { step ->
                 val definition = catalog.eventsById.getValue(checkNotNull(step.eventId))
                 val scriptedMoney = step.moneyOverride ?: definition.moneyFromScript
-                return ScheduledEvent(
+                ScheduledEvent(
                     definition = definition,
                     scenarioStepId = step.id,
                     isScripted = true,
@@ -165,24 +171,26 @@ class EventScheduler(private val catalog: EventCatalogData) {
                     ),
                 )
         }
+            .toList()
+        if (dueScenarioEvents.isNotEmpty()) return dueScenarioEvents
 
-        if (week < 3 || (week == 3 && day == 1)) return null
-        if (elapsedCycleSeconds < eventTriggerSecond(index = 0, eventCount = 1)) return null
-        if (snapshot.currentPeriod.toString() in snapshot.eventPoolHandledCycles) return null
+        if (week < 3 || (week == 3 && day == 1)) return emptyList()
+        if (elapsedCycleSeconds < eventTriggerSecond(index = 0, eventCount = 1)) return emptyList()
+        if (snapshot.currentPeriod.toString() in snapshot.eventPoolHandledCycles) return emptyList()
 
         val eligible = catalog.events
             .asSequence()
             .filter(EventDef::poolEligible)
             .filter { it.isEligible(snapshot, week) }
             .toList()
-        if (eligible.isEmpty()) return null
+        if (eligible.isEmpty()) return emptyList()
         val definition = eligible[(snapshot.currentPeriod - 1).mod(eligible.size)]
-        return ScheduledEvent(
+        return listOf(ScheduledEvent(
             definition = definition,
             scenarioStepId = null,
             isScripted = false,
             appliedDeltas = definition.deltas.withMoney(definition.moneyFromCard),
-        )
+        ))
     }
 
     fun jobFor(event: ScheduledEvent): JobDef? =

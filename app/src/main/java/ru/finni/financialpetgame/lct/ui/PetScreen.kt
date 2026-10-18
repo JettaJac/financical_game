@@ -114,6 +114,7 @@ import ru.finni.financialpetgame.lct.domain.Goals
 import ru.finni.financialpetgame.lct.domain.cooldownRemaining
 import ru.finni.financialpetgame.lct.domain.dayForPeriod
 import ru.finni.financialpetgame.lct.domain.isAvailable
+import ru.finni.financialpetgame.lct.domain.isUnlockedAtPeriod
 import ru.finni.financialpetgame.lct.domain.weekForPeriod
 import ru.finni.financialpetgame.lct.domain.WorkPreparationBlock
 import ru.finni.financialpetgame.lct.domain.workPreparationBlock
@@ -324,8 +325,10 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
             ),
             result = budgetPeriodResult(state.resources),
             plannedOptionalExpenses = state.resources.plannedOptionalExpenses,
+            plannedGoalExpenses = state.resources.plannedGoalExpenses,
             actualOptionalExpenses = state.resources.actualOptionalExpenses,
             actualUnplannedExpenses = state.resources.actualUnplannedExpenses,
+            actualGoalExpenses = state.resources.actualGoalExpenses,
             actualAdditionalIncome = state.resources.actualAdditionalIncome,
             onComplete = { onAction(PetAction.CompleteBudgetReview) },
         )
@@ -339,9 +342,12 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
             ),
             firstPlanning = !state.resources.budgetTutorialCompleted,
             previousOptionalExpenses = state.resources.plannedOptionalExpenses,
+            previousGoalExpenses = state.resources.plannedGoalExpenses,
             recurringIncome = state.resources.income,
             recurringExpense = state.resources.expense,
-            onComplete = { onAction(PetAction.CompleteBudgetPlanning(it)) },
+            onComplete = { optional, goal ->
+                onAction(PetAction.CompleteBudgetPlanning(optional, goal))
+            },
         )
         return
     }
@@ -463,10 +469,13 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
             )
             FinnyPrompt.DepositClosed -> stringResource(R.string.deposit_closed_by_event)
             FinnyPrompt.RoutineReminder -> stringResource(R.string.routine_reminder)
+            FinnyPrompt.RoutineReminderWeekend ->
+                stringResource(R.string.routine_reminder_weekend)
         }
     }
     finnyMessage?.takeIf {
         state.activeEvent == null && state.overlay == null && state.homeTutorialStep == null
+            && state.morningRoutineTutorialStep == null
     }?.let { message ->
         FinnySpeechOverlay(
             message = message,
@@ -595,18 +604,35 @@ private fun HomePage(state: PetState, onAction: (PetAction) -> Unit) {
     }
     val morningRoutineAutomated =
         ShopItem.MorningAutomation.storageId in state.resources.purchasedShopItemIds
+    val cyclePosition = currentCyclePosition(
+        currentPeriod = state.resources.currentPeriod,
+        cycleSecondsRemaining = state.secondsRemaining,
+    )
+    val getReadyCompleted =
+        (state.resources.cooldownUnlockCycles[TaskItem.GetReady.storageId] ?: 0.0) >
+            cyclePosition
+    val lessonsCompleted =
+        dayForPeriod(state.resources.currentPeriod) in 6..7 ||
+            (state.resources.cooldownUnlockCycles[TaskItem.Lessons.storageId] ?: 0.0) >
+            cyclePosition
+    val morningRoutineCompleted = getReadyCompleted && lessonsCompleted
 
     LaunchedEffect(
         state.resources.currentPeriod,
         morningRoutineAutomated,
         state.activeEvent,
         state.homeTutorialStep,
+        state.morningRoutineTutorialStep,
+        morningRoutineCompleted,
     ) {
         if (
             !routinePromptShown &&
+            state.resources.currentPeriod > 1 &&
             !morningRoutineAutomated &&
+            !morningRoutineCompleted &&
             state.activeEvent == null &&
-            state.homeTutorialStep == null
+            state.homeTutorialStep == null &&
+            state.morningRoutineTutorialStep == null
         ) {
             routinePromptShown = true
             onAction(PetAction.ShowRoutineReminder)
@@ -666,10 +692,6 @@ private fun HomePage(state: PetState, onAction: (PetAction) -> Unit) {
             colour = state.resources.hairColour,
             style = state.resources.hairStyle,
         )
-        val cyclePosition = currentCyclePosition(
-            currentPeriod = state.resources.currentPeriod,
-            cycleSecondsRemaining = state.secondsRemaining,
-        )
         val teethBrushed =
             (state.resources.cooldownUnlockCycles[TaskItem.GetReady.storageId] ?: 0.0) >
                 cyclePosition
@@ -702,7 +724,12 @@ private fun HomePage(state: PetState, onAction: (PetAction) -> Unit) {
 
         HomeBottomPanel(
             state = state,
-            tutorialHighlightedSections = tutorialHighlightedSections(state.homeTutorialStep),
+            tutorialHighlightedSections = tutorialHighlightedSections(state.homeTutorialStep) +
+                if (state.morningRoutineTutorialStep != null) {
+                    setOf(HomeSection.Tasks)
+                } else {
+                    emptySet()
+                },
             onSectionClick = { onAction(PetAction.SelectSection(it)) },
             onBuyClick = { item ->
                 oneShotPetAnimation = when (item) {
@@ -726,6 +753,12 @@ private fun HomePage(state: PetState, onAction: (PetAction) -> Unit) {
         HomeTutorialOverlay(
             step = step,
             onNext = { onAction(PetAction.AdvanceHomeTutorial) },
+        )
+    }
+    state.morningRoutineTutorialStep?.let { step ->
+        MorningRoutineTutorialOverlay(
+            step = step,
+            onNext = { onAction(PetAction.AdvanceMorningRoutineTutorial) },
         )
     }
     if (state.demoModeHintVisible) {
@@ -966,10 +999,10 @@ private fun InteractivePetImage(
         if (showHeart) {
             val heart = stringResource(R.string.pet_tap_reaction)
             listOf(
-                Triple(-30f, 0f, 0f),
-                Triple(0f, -10f, 0.1f),
-                Triple(30f, 2f, 0.2f),
-            ).forEach { (xOffset, yOffset, delayFraction) ->
+                floatArrayOf(-30f, 0f, 0f, 0.82f),
+                floatArrayOf(0f, -10f, 0.1f, 1.08f),
+                floatArrayOf(30f, 2f, 0.2f, 0.94f),
+            ).forEach { (xOffset, yOffset, delayFraction, sizeFactor) ->
                 val progress = ((heartProgress.value - delayFraction) /
                     (1f - delayFraction)).coerceIn(0f, 1f)
                 val heartAlpha = when {
@@ -986,8 +1019,8 @@ private fun InteractivePetImage(
                         )
                         .graphicsLayer {
                             alpha = heartAlpha
-                            scaleX = 0.7f + progress * 0.3f
-                            scaleY = 0.7f + progress * 0.3f
+                            scaleX = sizeFactor * (0.7f + progress * 0.3f)
+                            scaleY = sizeFactor * (0.7f + progress * 0.3f)
                         },
                     color = Color(0xFFFF6C9D),
                     fontSize = 27.sp,
@@ -1047,6 +1080,32 @@ private fun HomeTutorialOverlay(step: Int, onNext: () -> Unit) {
                     end = 24.dp,
                     bottom = bottomPanelHeight + 12.dp,
                 )
+                .widthIn(max = 320.dp),
+        )
+    }
+}
+
+@Composable
+private fun MorningRoutineTutorialOverlay(step: Int, onNext: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .then(if (step == 0) Modifier.clickable(onClick = onNext) else Modifier),
+    ) {
+        PetSpeechBubble(
+            text = stringResource(
+                when (step) {
+                    0 -> R.string.morning_tutorial_intro
+                    1 -> R.string.morning_tutorial_get_ready
+                    else -> R.string.morning_tutorial_lessons
+                },
+            ),
+            smallerText = true,
+            tailAtTopCenter = true,
+            modifier = Modifier
+                .align(Alignment.Center)
+                .padding(horizontal = 24.dp)
+                .offset(y = (-72).dp)
                 .widthIn(max = 320.dp),
         )
     }
@@ -1470,6 +1529,11 @@ private fun HomeBottomPanel(
                     jobForTaskIds = state.resources.jobForTaskIds,
                     currentEnergy = state.resources.energy,
                     purchasedItemIds = state.resources.purchasedShopItemIds,
+                    tutorialTargetItemId = when (state.morningRoutineTutorialStep) {
+                        1 -> TaskItem.GetReady.storageId
+                        2 -> TaskItem.Lessons.storageId
+                        else -> null
+                    },
                     onUnavailableClick = onUnavailableClick,
                 )
             }
@@ -1724,6 +1788,7 @@ private fun CardRow(
     jobForTaskIds: Map<String, String> = emptyMap(),
     nextPurchaseHalfPrice: Boolean = false,
     currentEnergy: Int = 100,
+    tutorialTargetItemId: String? = null,
     onUnavailableClick: (String, Boolean) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
 ) {
@@ -1787,6 +1852,8 @@ private fun CardRow(
                         product.item.price
                     }
                     val task = product.item as? TaskItem
+                    val shopPeriodUnlocked = (product.item as? ShopItem)
+                        ?.isUnlockedAtPeriod(currentPeriod) ?: true
                     val cyclePosition = currentCyclePosition(currentPeriod, cycleSecondsRemaining)
                     val preparationBlock = if (task?.earnings?.let { it > 0 } == true) {
                         workPreparationBlock(
@@ -1805,6 +1872,8 @@ private fun CardRow(
                         currentEnergy <= 10
                     val unavailableReason = when {
                         alreadyPurchased -> stringResource(R.string.item_already_purchased)
+                        !shopPeriodUnlocked ->
+                            stringResource(R.string.shop_morning_automation_day_locked)
                         product.item is TaskItem && product.item.requiresEvent &&
                             product.item.storageId !in eventUnlockedTaskIds ->
                             stringResource(R.string.item_needs_event)
@@ -1845,6 +1914,7 @@ private fun CardRow(
                         taskAvailable &&
                         preparationBlock == null &&
                         (product.item !is TaskItem || currentEnergy > 10) &&
+                        shopPeriodUnlocked &&
                         !alreadyPurchased
                     ProductCard(
                         product = product,
@@ -1857,6 +1927,7 @@ private fun CardRow(
                             ?.let { jobForTaskIds[it.storageId] }
                             ?.let(jobRemainingActions::get)
                             ?.takeIf { it >= 0 },
+                        tutorialHighlighted = product.item.storageId == tutorialTargetItemId,
                         onBuyClick = {
                             if (canBuy) onBuyClick(product.item)
                             else onUnavailableClick(
@@ -1913,6 +1984,7 @@ private fun ProductCard(
     weeklyTaskLimitReached: Boolean,
     effectivePrice: Int,
     remainingActions: Int?,
+    tutorialHighlighted: Boolean,
     onBuyClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -1926,7 +1998,11 @@ private fun ProductCard(
             .fillMaxHeight()
             .clip(RoundedCornerShape(10.dp))
             .background(Color.White)
-            .border(1.dp, HomePurpleDark, RoundedCornerShape(10.dp))
+            .border(
+                if (tutorialHighlighted) 3.dp else 1.dp,
+                if (tutorialHighlighted) Color(0xFFFFC928) else HomePurpleDark,
+                RoundedCornerShape(10.dp),
+            )
             .then(
                 if (showsMorningAutomationDetails) {
                     Modifier.clickable { showMorningAutomationDetails = true }
@@ -2284,12 +2360,6 @@ private fun MenuOverlay(
                             },
                         ),
                     )
-                }
-                TextButton(
-                    onClick = {},
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(stringResource(R.string.support_action))
                 }
                 TextButton(
                     onClick = { onAction(PetAction.Exit) },

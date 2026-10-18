@@ -24,6 +24,8 @@ import ru.finni.financialpetgame.lct.domain.HairStyle
 import ru.finni.financialpetgame.lct.domain.canApplyEffects
 import ru.finni.financialpetgame.lct.domain.canDeclineEvent
 import ru.finni.financialpetgame.lct.domain.characteristicValue
+import ru.finni.financialpetgame.lct.domain.characteristicCycleAdjustmentForValue
+import ru.finni.financialpetgame.lct.domain.isUnlockedAtPeriod
 import ru.finni.financialpetgame.lct.domain.cycleSecondsRemaining
 import ru.finni.financialpetgame.lct.domain.hasCycleExpired
 import ru.finni.financialpetgame.lct.domain.canCompleteCycle
@@ -150,6 +152,23 @@ class PetViewModelTest {
 
         assertEquals(70, characteristicValue(60, 10, 0, duration, duration))
         assertEquals(20, characteristicValue(60, 10, 0, 0, duration))
+    }
+
+    @Test
+    fun characteristic_effects_recover_immediately_from_displayed_zero() {
+        val duration = GameDefaults.CYCLE_DURATION_SECONDS
+        val hiddenNegativeAdjustment = -20
+        val current = characteristicValue(60, 0, hiddenNegativeAdjustment, 0, duration)
+        val normalizedAdjustment = characteristicCycleAdjustmentForValue(
+            baseValue = 60,
+            permanentModifier = 0,
+            targetValue = current + 5,
+            secondsRemaining = 0,
+            cycleDurationSeconds = duration,
+        )
+
+        assertEquals(0, current)
+        assertEquals(5, characteristicValue(60, 0, normalizedAdjustment, 0, duration))
     }
 
     @Test
@@ -551,14 +570,16 @@ class PetViewModelTest {
             currentPeriod = 8,
             budgetPlanWeek = 1,
             plannedOptionalExpenses = 20,
+            plannedGoalExpenses = 10,
             actualOptionalExpenses = 15,
+            actualGoalExpenses = 10,
             actualAdditionalIncome = 25,
         )
 
         assertEquals(true, needsBudgetReview(successfulSnapshot))
         assertEquals(true, budgetPeriodResult(successfulSnapshot).isSuccessful)
         assertEquals(110, budgetPeriodResult(successfulSnapshot).actualIncome)
-        assertEquals(70, budgetPeriodResult(successfulSnapshot).actualExpenses)
+        assertEquals(65, budgetPeriodResult(successfulSnapshot).actualExpenses)
         assertEquals(
             false,
             budgetPeriodResult(
@@ -572,10 +593,38 @@ class PetViewModelTest {
     }
 
     @Test
+    fun events_wait_in_order_while_a_non_home_screen_is_open() {
+        val first = GameEvent(
+            descriptionRes = R.string.app_name,
+            descriptionText = "first",
+            illustrationRes = R.drawable.goal_pillow,
+            acceptEffects = emptyList(),
+        )
+        val second = first.copy(descriptionText = "second")
+        val awayState = PetState(
+            resources = GameSnapshot(
+                onboardingCompleted = true,
+                currentPeriod = 1,
+                budgetPlanWeek = 1,
+                budgetTutorialCompleted = true,
+            ),
+            overlay = HomeOverlay.Budget,
+        )
+
+        val queued = enqueueEvents(awayState, listOf(first, second))
+        assertEquals(null, queued.activeEvent)
+        assertEquals(listOf(first, second), queued.pendingEvents)
+
+        val returnedHome = promotePendingEvent(queued.copy(overlay = null))
+        assertEquals(first, returnedHome.activeEvent)
+        assertEquals(listOf(second), returnedHome.pendingEvents)
+    }
+
+    @Test
     fun budget_planning_is_required_at_the_start_of_each_week() {
         assertEquals(85, MandatoryBudget.income)
-        assertEquals(55, MandatoryBudget.expense)
-        assertEquals(30, MandatoryBudget.maximumOptionalExpense)
+        assertEquals(40, MandatoryBudget.expense)
+        assertEquals(45, MandatoryBudget.maximumOptionalExpense)
         assertEquals(
             true,
             needsBudgetPlanning(
@@ -673,11 +722,15 @@ class PetViewModelTest {
     }
 
     @Test
-    fun regular_tasks_have_one_cycle_cooldown_and_cleaning_has_three() {
-        TaskItem.entries.filterNot { it == TaskItem.Cleaning }.forEach { task ->
+    fun task_cooldowns_match_daily_cleaning_and_recycling_rules() {
+        TaskItem.entries.filterNot {
+            it == TaskItem.Cleaning || it == TaskItem.RecyclePaper
+        }.forEach { task ->
             assertEquals(Cooldown.Cycles(1.0), task.cooldown)
         }
         assertEquals(Cooldown.Cycles(3.0), TaskItem.Cleaning.cooldown)
+        assertEquals(Cooldown.Cycles(7.0), TaskItem.RecyclePaper.cooldown)
+        assertEquals(1..7, TaskItem.Cleaning.activeDays)
     }
 
     @Test
@@ -704,6 +757,10 @@ class PetViewModelTest {
         val cyclePosition = 3.5
 
         assertEquals(
+            null,
+            workPreparationBlock(1, 1.5, 0.0, 0.0, emptySet()),
+        )
+        assertEquals(
             WorkPreparationBlock.GetReady,
             workPreparationBlock(3, cyclePosition, 0.0, 0.0, emptySet()),
         )
@@ -721,6 +778,12 @@ class PetViewModelTest {
                 purchasedShopItemIds = setOf(ShopItem.MorningAutomation.storageId),
             ),
         )
+    }
+
+    @Test
+    fun morning_automation_unlocks_on_fifth_cycle() {
+        assertEquals(false, ShopItem.MorningAutomation.isUnlockedAtPeriod(4))
+        assertEquals(true, ShopItem.MorningAutomation.isUnlockedAtPeriod(5))
     }
 
     @Test
@@ -745,34 +808,34 @@ class PetViewModelTest {
         assertEquals(10, GameDefaults.MOBILE_SERVICE_EXPENSE)
         assertEquals(5, GameDefaults.VITAMINS_EXPENSE)
         assertEquals(10, GameDefaults.SPORTS_SECTION_EXPENSE)
-        assertEquals(55, GameDefaults.EXPENSE)
+        assertEquals(40, GameDefaults.EXPENSE)
 
         assertEquals(
             100,
             moneyAfterCompletedCycles(
                 money = 100,
                 income = 85,
-                expense = 55,
+                expense = 40,
                 currentPeriod = 1,
                 completedCycles = 6,
             ),
         )
         assertEquals(
-            130,
+            145,
             moneyAfterCompletedCycles(
                 money = 100,
                 income = 85,
-                expense = 55,
+                expense = 40,
                 currentPeriod = 7,
                 completedCycles = 1,
             ),
         )
         assertEquals(
-            160,
+            190,
             moneyAfterCompletedCycles(
                 money = 100,
                 income = 85,
-                expense = 55,
+                expense = 40,
                 currentPeriod = 1,
                 completedCycles = 14,
             ),

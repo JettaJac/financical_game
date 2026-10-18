@@ -75,12 +75,13 @@ internal fun BudgetPlanningScreen(
     @DrawableRes petImageRes: Int,
     firstPlanning: Boolean,
     previousOptionalExpenses: Int,
+    previousGoalExpenses: Int,
     recurringIncome: Int = MandatoryBudget.income,
     recurringExpense: Int = MandatoryBudget.expense,
-    onComplete: (Int) -> Unit,
+    onComplete: (Int, Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var showEducation by rememberSaveable { mutableStateOf(firstPlanning) }
+    var showEducation by rememberSaveable { mutableStateOf(false) }
     var screen by rememberSaveable { mutableIntStateOf(BUDGET_INTRO) }
     var entryIndex by rememberSaveable { mutableIntStateOf(0) }
     var classificationStep by rememberSaveable { mutableStateOf(ClassificationStep.Category) }
@@ -90,7 +91,11 @@ internal fun BudgetPlanningScreen(
             (if (previousOptionalExpenses > 0) previousOptionalExpenses else 20).toString(),
         )
     }
+    var goalExpenses by rememberSaveable {
+        mutableStateOf(previousGoalExpenses.coerceAtLeast(0).toString())
+    }
     val optionalExpenseAmount = optionalExpenses.toIntOrNull() ?: 0
+    val goalExpenseAmount = goalExpenses.toIntOrNull() ?: 0
     val budgetEntries = remember(recurringExpense) {
         MandatoryBudget.entries.map { entry ->
             if (entry.id == "school_lunch") {
@@ -101,7 +106,7 @@ internal fun BudgetPlanningScreen(
         }
     }
     val maximumOptionalExpense = (recurringIncome - recurringExpense).coerceAtLeast(0)
-    val optionalExpenseTooHigh = optionalExpenseAmount > maximumOptionalExpense
+    val optionalExpenseTooHigh = optionalExpenseAmount + goalExpenseAmount > maximumOptionalExpense
 
     if (showEducation) {
         FinancialEducationOverlay(
@@ -109,7 +114,10 @@ internal fun BudgetPlanningScreen(
             recurringIncome = recurringIncome,
             recurringExpense = recurringExpense,
             plannedOptionalExpenses = optionalExpenseAmount.coerceAtMost(maximumOptionalExpense),
-            onDismiss = { showEducation = false },
+            onDismiss = {
+                showEducation = false
+                screen = BUDGET_CLASSIFY
+            },
         )
         return
     }
@@ -118,7 +126,7 @@ internal fun BudgetPlanningScreen(
         BUDGET_INTRO -> BudgetIntroScreen(
             petImageRes = petImageRes,
             onContinue = {
-                screen = if (firstPlanning) BUDGET_CLASSIFY else BUDGET_OPTIONAL
+                if (firstPlanning) showEducation = true else screen = BUDGET_OPTIONAL
             },
             modifier = modifier,
         )
@@ -186,6 +194,8 @@ internal fun BudgetPlanningScreen(
             petImageRes = petImageRes,
             value = optionalExpenses,
             onValueChange = { value -> optionalExpenses = value.filter(Char::isDigit).take(6) },
+            goalValue = goalExpenses,
+            onGoalValueChange = { value -> goalExpenses = value.filter(Char::isDigit).take(6) },
             maximumOptionalExpenses = maximumOptionalExpense,
             entries = budgetEntries,
             showBalanceError = optionalExpenseTooHigh,
@@ -197,10 +207,11 @@ internal fun BudgetPlanningScreen(
         BUDGET_REVIEW -> BudgetReviewScreen(
             petImageRes = petImageRes,
             optionalExpenses = optionalExpenseAmount,
+            goalExpenses = goalExpenseAmount,
             entries = budgetEntries,
             recurringIncome = recurringIncome,
             recurringExpense = recurringExpense,
-            onComplete = { onComplete(optionalExpenseAmount) },
+            onComplete = { onComplete(optionalExpenseAmount, goalExpenseAmount) },
             modifier = modifier,
         )
     }
@@ -338,9 +349,12 @@ private fun BudgetMandatorySummaryScreen(
     onContinue: () -> Unit,
     modifier: Modifier,
 ) {
+    val recurringIncome = entries.filter { it.category == BudgetCategory.Income }.sumOf { it.amount }
+    val mandatoryExpenses = entries.filter { it.category == BudgetCategory.Expense }.sumOf { it.amount }
+    val remainder = recurringIncome - mandatoryExpenses
     BudgetPage(
         petImageRes = petImageRes,
-        guide = stringResource(R.string.budget_mandatory_success),
+        guide = stringResource(R.string.budget_formula_guide),
         modifier = modifier,
         bottom = {
             BudgetPrimaryButton(
@@ -349,7 +363,33 @@ private fun BudgetMandatorySummaryScreen(
             )
         },
     ) {
-        BudgetSections(entries = entries, showFrequency = true)
+        BudgetValueRow(stringResource(R.string.budget_recurring_income_total), recurringIncome)
+        Text(
+            text = "−",
+            modifier = Modifier.fillMaxWidth(),
+            color = BudgetPurpleDark,
+            fontSize = 28.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+        )
+        BudgetValueRow(stringResource(R.string.budget_mandatory_expense_total), mandatoryExpenses)
+        Text(
+            text = "=",
+            modifier = Modifier.fillMaxWidth(),
+            color = BudgetPurpleDark,
+            fontSize = 28.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+        )
+        BudgetValueRow(stringResource(R.string.budget_formula_remainder), remainder)
+        Spacer(Modifier.height(12.dp))
+        Text(
+            text = stringResource(R.string.budget_formula_explanation),
+            color = BudgetPurpleDark,
+            fontSize = 14.sp,
+            lineHeight = 18.sp,
+            fontWeight = FontWeight.Bold,
+        )
     }
 }
 
@@ -358,6 +398,8 @@ private fun BudgetOptionalExpensesScreen(
     @DrawableRes petImageRes: Int,
     value: String,
     onValueChange: (String) -> Unit,
+    goalValue: String,
+    onGoalValueChange: (String) -> Unit,
     maximumOptionalExpenses: Int,
     entries: List<BudgetEntry>,
     showBalanceError: Boolean,
@@ -407,6 +449,33 @@ private fun BudgetOptionalExpensesScreen(
                     errorBorderColor = Color(0xFFB3261E),
                 ),
             )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.budget_goal_plan_guide),
+                color = BudgetPurpleDark,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.ExtraBold,
+            )
+            Spacer(Modifier.height(6.dp))
+            OutlinedTextField(
+                value = goalValue,
+                onValueChange = onGoalValueChange,
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                isError = showBalanceError,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                textStyle = TextStyle(
+                    color = BudgetPurpleDark,
+                    fontFamily = NunitoFontFamily,
+                    fontSize = 18.sp,
+                ),
+                shape = RoundedCornerShape(10.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = BudgetPurpleDark,
+                    unfocusedBorderColor = BudgetPurpleDark,
+                    errorBorderColor = Color(0xFFB3261E),
+                ),
+            )
             Spacer(Modifier.height(12.dp))
             BudgetPrimaryButton(
                 text = stringResource(R.string.onboarding_next),
@@ -425,13 +494,14 @@ private fun BudgetOptionalExpensesScreen(
 private fun BudgetReviewScreen(
     @DrawableRes petImageRes: Int,
     optionalExpenses: Int,
+    goalExpenses: Int,
     entries: List<BudgetEntry>,
     recurringIncome: Int,
     recurringExpense: Int,
     onComplete: () -> Unit,
     modifier: Modifier,
 ) {
-    val totalExpenses = recurringExpense + optionalExpenses
+    val totalExpenses = recurringExpense + optionalExpenses + goalExpenses
     val balance = recurringIncome - totalExpenses
     BudgetPage(
         petImageRes = petImageRes,
@@ -483,6 +553,12 @@ private fun BudgetReviewScreen(
             BudgetValueRow(
                 title = stringResource(R.string.budget_optional_expenses),
                 amount = optionalExpenses,
+            )
+        }
+        if (goalExpenses > 0) {
+            BudgetValueRow(
+                title = stringResource(R.string.budget_goal_expenses),
+                amount = goalExpenses,
             )
         }
         Spacer(Modifier.height(8.dp))
@@ -574,7 +650,7 @@ private fun BudgetSections(entries: List<BudgetEntry>, showFrequency: Boolean = 
     Spacer(Modifier.height(24.dp))
     BudgetSectionTitle(stringResource(R.string.budget_expenses))
     if (showFrequency && entries.any { it.category == BudgetCategory.Expense }) {
-        BudgetSubheading(stringResource(R.string.budget_recurring))
+        BudgetSubheading(stringResource(R.string.budget_mandatory))
     }
     entries.filter { it.category == BudgetCategory.Expense }.forEach { BudgetEntryRow(it) }
 }
@@ -693,7 +769,7 @@ private fun BudgetFrequency.labelRes(category: BudgetCategory): Int = when (cate
         BudgetFrequency.Savings -> R.string.budget_savings
     }
     BudgetCategory.Expense -> when (this) {
-        BudgetFrequency.Recurring -> R.string.budget_recurring
+        BudgetFrequency.Recurring -> R.string.budget_mandatory
         BudgetFrequency.Irregular -> R.string.budget_optional_short
         BudgetFrequency.Savings -> R.string.budget_unplanned
     }

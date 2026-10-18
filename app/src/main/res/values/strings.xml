@@ -26,7 +26,7 @@
     <string name="timer">Таймер</string>
 
     <!-- Weekly budget planning -->
-    <string name="budget_intro_message">Давай составим план бюджета, чтобы мне хватило на всё!</string>
+    <string name="budget_intro_message">Давай спланируем бюджет так, чтобы мне хватило на все!</string>
     <string name="budget_make_plan">Составить план</string>
     <string name="budget_choose_category_guide">Куда отнесем это: к доходам или расходам?</string>
     <string name="budget_choose_frequency_guide">Отличный выбор! Теперь уточни, к какому виду она относится</string>
@@ -45,6 +45,11 @@
     <string name="budget_irregular">Нерегулярные</string>
     <string name="budget_savings">Накопления (вклад)</string>
     <string name="budget_mandatory_success">Отлично! Все обязательные доходы и расходы распределены правильно</string>
+    <string name="budget_formula_guide">Из постоянных доходов вычитай обязательные расходы</string>
+    <string name="budget_recurring_income_total">Постоянные доходы</string>
+    <string name="budget_mandatory_expense_total">Обязательные расходы</string>
+    <string name="budget_formula_remainder">Остаток</string>
+    <string name="budget_formula_explanation">Эта сумма придет к тебе в начале периода. Свободные монеты можно оставить в кошельке, копить на цель или положить на вклад.</string>
     <string name="budget_optional_guide">Теперь запланируем необязательные расходы на неделю. Предлагаю начать с 20 монет</string>
     <string name="budget_optional_too_high">Так расходов получится больше доходов. Запланируй не больше %1$d монет, чтобы итоговый баланс был не ниже нуля.</string>
     <string name="budget_optional_maximum">Максимум при текущем бюджете: %1$d</string>
@@ -55,6 +60,9 @@
     <string name="budget_balance_hint">Разница между доходами и расходами</string>
     <string name="budget_to_game">К игре</string>
     <string name="budget_optional_expenses">Необязательные расходы</string>
+    <string name="budget_goal_expenses">Цели</string>
+    <string name="budget_goal_plan_guide">Сколько монет ты хочешь запланировать на цель?</string>
+    <string name="budget_goal_progress">Потрачено на цели %1$d из %2$d</string>
     <string name="budget_pocket_money">Деньги на базовые потребности</string>
     <string name="budget_school_lunch">Школьные обеды</string>
     <string name="budget_mobile_service">Связь</string>
@@ -120,18 +128,27 @@
     <string name="education_budget_step_compare">В конце недели сравниваем план и факт.</string>
     <string name="education_budget_categories_title">Доходы и расходы бывают разными</string>
     <string name="education_budget_categories_body">Категория помогает понять, откуда пришли деньги и на что они ушли.</string>
+    <string name="education_budget_income_explanation">Доходы — это деньги, которые мы получаем.</string>
+    <string name="education_budget_income_groups">Постоянные — деньги, которые мы получаем регулярно, например карманные деньги. Нерегулярные — деньги за выполнение заданий, бонусы и проценты по вкладу.</string>
+    <string name="education_budget_expense_explanation">Расходы — деньги, которые мы тратим.</string>
+    <string name="education_budget_expense_groups">Обязательные — то, за что нужно платить. Необязательные — то, без чего можно обойтись. Непредвиденные — незапланированные траты. Цели — запланированные накопления на выбранную цель.</string>
     <string name="education_income_recurring">Постоянные: карманные деньги</string>
     <string name="education_income_additional">Дополнительные: задания, бонусы, прибыль по вкладу</string>
     <string name="education_expense_mandatory">Обязательные: обеды, связь, витамины, секция</string>
     <string name="education_expense_optional">Необязательные: еда, развлечения и магазин</string>
     <string name="education_expense_unplanned">Непредвиденные: случайные траты и штрафы</string>
+    <string name="education_expense_goal">Цели: запланированные траты на выбранную цель</string>
+    <string name="education_budget_needs_title">Доходы и расходы бывают разными</string>
+    <string name="education_budget_needs_speech">В игре у тебя есть деньги на базовые потребности: обед, проезд, перекус</string>
+    <string name="education_budget_needs_body">Часть денег всегда уходит на важные нужды. Так ты учишься распоряжаться деньгами</string>
+    <string name="education_budget_needs_tip">В жизни эти потребности обычно закрывают родители, поэтому свободных денег у тебя может быть меньше</string>
     <string name="education_budget_formula_title">Главная формула бюджета</string>
     <string name="education_budget_formula_body">Из доходов вычитаем обязательные и запланированные необязательные расходы.</string>
     <string name="education_formula_income">Доходы</string>
     <string name="education_formula_mandatory">Обязательные расходы</string>
     <string name="education_formula_optional">Необязательные расходы</string>
     <string name="education_formula_free">Свободный остаток</string>
-    <string name="education_budget_free_money">Свободные монеты можно оставить в кошельке, копить на цель или положить во вклад. Покупка цели в расходы бюджета не записывается.</string>
+    <string name="education_budget_free_money">Свободные монеты можно оставить в кошельке, запланировать на цель или положить во вклад. Покупка цели записывается в расходы на цели.</string>
     <string name="education_deposit_flow_title">Деньги приносят прибыль</string>
     <string name="education_deposit_game_day">Срок указан в игровых днях. Один игровой день длится %1$s.</string>
     <string name="education_deposit_put">Кладёшь во вклад %1$d монет</string>
@@ -142,6 +159,7 @@
     <string name="education_deposit_early_amount">Во вкладе: %1$d монет</string>
     <string name="education_deposit_early_result">Штраф: %1$d · вернётся: %2$d</string>
     <string name="education_deposit_budget_link">Основная сумма вклада не считается доходом или расходом. Прибыль попадёт в дополнительные доходы, а штраф — в непредвиденные расходы.</string>
+    <string name="education_deposit_game_rule">В нашей игре банк даёт очень-очень большой процент — как волшебный супер-бонус, чтобы ты понял, как работает вклад. Но чтобы игра была честной, банк добавляет штраф, если ты забираешь деньги раньше обещанного. Это только игровое правило, в настоящей жизни такого нет.</string>
 
     <!-- Deposits -->
     <string name="deposit_title">Вклад</string>
@@ -189,7 +207,7 @@
     <string name="section_placeholder">Здесь скоро появится содержимое</string>
 
     <!-- Tasks and jobs -->
-    <string name="task_get_ready">Почистить зубы</string>
+    <string name="task_get_ready">Привести себя в порядок</string>
     <string name="task_lessons">Сделать уроки</string>
     <string name="task_cleaning">Убраться</string>
     <string name="task_bead_crafts">Сделать поделки из бисера</string>
@@ -204,7 +222,7 @@
     <string name="task_do_with_reward">Выполнить · +%1$d</string>
     <string name="task_unavailable">Недоступно</string>
     <string name="task_available_next_week">На следующей неделе</string>
-    <string name="goal_level_hint">Выбери цель моего уровня. Когда мы её достигнем, я стану на уровень выше!</string>
+    <string name="goal_level_hint">Выбери цель моего уровня: Когда мы ее достигнем, я перейду на следующий уровень!</string>
     <string name="cycle_energy_blocked">Кажется, у %1$s закончились силы, отправь его отдыхать</string>
     <string name="low_health_hint">Покорми меня</string>
     <string name="low_energy_hint">Я устал, давай отдохнем</string>
@@ -219,9 +237,13 @@
     <string name="item_limit_reached">Эту работу больше нельзя выполнить: попытки закончились.</string>
     <string name="item_low_energy">Сначала отдохни: для этого действия пока мало энергии.</string>
     <string name="work_low_energy">Я устал, пойдем отдохнем немного</string>
-    <string name="work_get_ready">Сначала почисти зубы, потом можно работать.</string>
+    <string name="work_get_ready">Сначала приведи себя в порядок, потом можно работать.</string>
     <string name="work_lessons">Сначала сделай уроки, потом можно работать.</string>
-    <string name="routine_reminder">Сначала уроки и чистка зубов — потом остальные дела!</string>
+    <string name="routine_reminder">Сначала сделай уроки и приведи себя в порядок — потом остальные дела!</string>
+    <string name="routine_reminder_weekend">Сначала приведи себя в порядок — потом остальные дела!</string>
+    <string name="morning_tutorial_intro">Настало второе утро! Давай вместе пройдём утренний ритуал. Откроем список дел.</string>
+    <string name="morning_tutorial_get_ready">Сначала помоги мне привести себя в порядок.</string>
+    <string name="morning_tutorial_lessons">Отлично! Теперь сделаем уроки.</string>
     <string name="item_already_purchased">Этот предмет уже куплен.</string>
     <string name="finny_ok">Хорошо</string>
 
@@ -266,7 +288,6 @@
     <string name="demo_mode_password_label">Пароль</string>
     <string name="demo_mode_password_error">Неверный пароль</string>
     <string name="demo_mode_enable">Включить</string>
-    <string name="support_action">Поддержка</string>
     <string name="exit_action">Выход</string>
 
     <!-- Personal account -->
@@ -301,7 +322,8 @@
     <string name="shop_stylish_scarf">Стильный шарф</string>
     <string name="shop_glowing_orb">Светящийся шар</string>
     <string name="shop_morning_automation">Автоматизация утреннего ритуала</string>
-    <string name="shop_morning_automation_description">Каждый игровой день автоматически выполняет утренний ритуал: больше не нужно отдельно чистить зубы и делать уроки перед работой.</string>
+    <string name="shop_morning_automation_description">Каждый игровой день автоматически выполняет утренний ритуал: больше не нужно отдельно приводить себя в порядок и делать уроки перед работой.</string>
+    <string name="shop_morning_automation_day_locked">Автоматизация станет доступна на 5-й игровой день.</string>
 
     <!-- Events -->
     <string name="event_sports_section_description">Друг предложил пойти\nна спортивную секцию</string>
@@ -365,11 +387,11 @@
     <string name="goal_reached">Цель достигнута!</string>
     <string name="goal_purchased">Куплено</string>
 
-    <string name="goal_pillow_title">Подушка питомцу</string>
+    <string name="goal_pillow_title">Мягкая новая лежанка</string>
     <string name="goal_pillow_description">Питомец устаёт. Если купить ему уютную подушку, он будет отдыхать лучше и реже грустить. Добавляется +10 к энергии на постоянной основе.</string>
     <string name="goal_ball_title">Мяч для игры</string>
     <string name="goal_ball_description">Твоя цель — мячик для друга. Копи понемногу, и скоро питомец будет весело прыгать! +10 радости</string>
-    <string name="goal_treat_title">Любимая вкусняшку питомца</string>
+    <string name="goal_treat_title">Набор любимых вкусняшек</string>
     <string name="goal_treat_description">Твой питомец любит вкусняшки. Порадуй его!! +10 еда Потом цель ставиться при достижение каждого нового уровня</string>
     <string name="goal_money_box_title">Копилка-сейф</string>
     <string name="goal_money_box_description">Копилка не делает питомца счастливее сразу, но каждый цикл приносит монетки. Это твой первый помощник в накоплениях.</string>

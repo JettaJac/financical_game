@@ -52,8 +52,10 @@ internal fun BudgetPeriodResultScreen(
     @DrawableRes petImageRes: Int,
     result: BudgetPeriodResult,
     plannedOptionalExpenses: Int,
+    plannedGoalExpenses: Int,
     actualOptionalExpenses: Int,
     actualUnplannedExpenses: Int,
+    actualGoalExpenses: Int,
     actualAdditionalIncome: Int,
     onComplete: () -> Unit,
     modifier: Modifier = Modifier,
@@ -71,8 +73,10 @@ internal fun BudgetPeriodResultScreen(
             petImageRes = petImageRes,
             result = result,
             plannedOptionalExpenses = plannedOptionalExpenses,
+            plannedGoalExpenses = plannedGoalExpenses,
             actualOptionalExpenses = actualOptionalExpenses,
             actualUnplannedExpenses = actualUnplannedExpenses,
+            actualGoalExpenses = actualGoalExpenses,
             actualAdditionalIncome = actualAdditionalIncome,
             onContinue = {
                 if (result.isSuccessful) showSuccess = true else onComplete()
@@ -87,8 +91,10 @@ private fun BudgetComparisonScreen(
     @DrawableRes petImageRes: Int,
     result: BudgetPeriodResult,
     plannedOptionalExpenses: Int,
+    plannedGoalExpenses: Int,
     actualOptionalExpenses: Int,
     actualUnplannedExpenses: Int,
+    actualGoalExpenses: Int,
     actualAdditionalIncome: Int,
     onContinue: () -> Unit,
     modifier: Modifier,
@@ -160,13 +166,20 @@ private fun BudgetComparisonScreen(
                 ResultSectionTitle(stringResource(R.string.budget_expenses))
                 ResultComparisonRow(
                     title = stringResource(R.string.budget_recurring_expenses),
-                    planned = result.plannedExpenses - plannedOptionalExpenses,
-                    actual = result.plannedExpenses - plannedOptionalExpenses,
+                    planned = result.plannedExpenses - plannedOptionalExpenses -
+                        plannedGoalExpenses,
+                    actual = result.plannedExpenses - plannedOptionalExpenses -
+                        plannedGoalExpenses,
                 )
                 ResultComparisonRow(
                     title = stringResource(R.string.budget_optional_expenses),
                     planned = plannedOptionalExpenses,
                     actual = actualOptionalExpenses,
+                )
+                ResultComparisonRow(
+                    title = stringResource(R.string.budget_goal_expenses),
+                    planned = plannedGoalExpenses,
+                    actual = actualGoalExpenses,
                 )
                 ResultComparisonRow(
                     title = stringResource(R.string.budget_unplanned),

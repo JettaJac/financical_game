@@ -16,12 +16,14 @@ import ru.finni.financialpetgame.lct.domain.Goals
 import ru.finni.financialpetgame.lct.domain.PetAppearance
 import ru.finni.financialpetgame.lct.domain.PetSetup
 import ru.finni.financialpetgame.lct.domain.Resource
+import ru.finni.financialpetgame.lct.domain.TaskItem
 import ru.finni.financialpetgame.lct.domain.canApplyEffects
 import ru.finni.financialpetgame.lct.domain.cycleSecondsRemaining
 import ru.finni.financialpetgame.lct.domain.needsBudgetPlanning
 import ru.finni.financialpetgame.lct.domain.needsBudgetReview
 import ru.finni.financialpetgame.lct.domain.withCharacteristicsAt
 import ru.finni.financialpetgame.lct.domain.weekForPeriod
+import ru.finni.financialpetgame.lct.domain.dayForPeriod
 import ru.finni.financialpetgame.lct.domain.events.EventScheduler
 import ru.finni.financialpetgame.lct.domain.events.EventFrequency
 import ru.finni.financialpetgame.lct.domain.events.ScheduledEvent
@@ -123,6 +125,7 @@ enum class FinnyPrompt {
     CycleEnergyBlocked,
     DepositClosed,
     RoutineReminder,
+    RoutineReminderWeekend,
 }
 
 data class PetState(
@@ -131,12 +134,14 @@ data class PetState(
     val selectedSection: HomeSection = HomeSection.Food,
     val overlay: HomeOverlay? = null,
     val activeEvent: GameEvent? = null,
+    val pendingEvents: List<GameEvent> = emptyList(),
     val exitRequested: Boolean = false,
     val isInitialized: Boolean = false,
     val isTestMode: Boolean = false,
     val demoModePasswordError: Boolean = false,
     val parentModePasswordError: Boolean = false,
     val homeTutorialStep: Int? = null,
+    val morningRoutineTutorialStep: Int? = null,
     val demoModeHintVisible: Boolean = false,
     val nowMillis: Long = System.currentTimeMillis(),
     val finnyPrompt: FinnyPrompt? = null,
@@ -177,9 +182,13 @@ sealed interface PetAction {
     data object Restart : PetAction
     data class CompleteOnboarding(val setup: PetSetup) : PetAction
     data class ApplyPetAppearance(val appearance: PetAppearance) : PetAction
-    data class CompleteBudgetPlanning(val optionalExpenses: Int) : PetAction
+    data class CompleteBudgetPlanning(
+        val optionalExpenses: Int,
+        val goalExpenses: Int,
+    ) : PetAction
     data object CompleteBudgetReview : PetAction
     data object AdvanceHomeTutorial : PetAction
+    data object AdvanceMorningRoutineTutorial : PetAction
     data class OpenDepositAccount(val term: DepositTerm, val amount: Int) : PetAction
     data object CloseDepositAccount : PetAction
     data object CompleteDepositTutorial : PetAction
@@ -210,22 +219,22 @@ class PetViewModel @Inject constructor(
             launch {
                 repository.snapshot.collect { resources ->
                     val previous = _state.value.resources.takeIf { _state.value.isInitialized }
-                    val scheduledEvent = if (
+                    val scheduledEvents = if (
                         !needsBudgetReview(resources) && !needsBudgetPlanning(resources)
                     ) {
                         val remainingSeconds = cycleSecondsRemaining(
                             resources.cycleEndsAtMillis,
                             System.currentTimeMillis(),
                         )
-                        eventScheduler.next(
+                        eventScheduler.due(
                             snapshot = resources,
                             elapsedCycleSeconds = eventElapsedCycleSeconds(
                                 remainingSeconds = remainingSeconds,
                                 isTestMode = _state.value.isTestMode,
                             ),
-                        )?.asGameEvent()
+                        ).map(ScheduledEvent::asGameEvent)
                     } else {
-                        null
+                        emptyList()
                     }
                     val reachedGoalEvent = if (hasJustReachedGoal(previous, resources)) {
                         goalPurchaseEvent(resources)
@@ -252,16 +261,43 @@ class PetViewModel @Inject constructor(
                             ) -> 0
                             else -> null
                         }
+                        val remainingSeconds = cycleSecondsRemaining(
+                            resources.cycleEndsAtMillis,
+                            nowMillis,
+                        )
+                        val getReadyCompleted =
+                            (resources.cooldownUnlockCycles[TaskItem.GetReady.storageId] ?: 0.0) >
+                                resources.currentPeriod
+                        val lessonsCompleted =
+                            (resources.cooldownUnlockCycles[TaskItem.Lessons.storageId] ?: 0.0) >
+                                resources.currentPeriod
+                        val nextMorningTutorialStep = when {
+                            resources.morningRoutineTutorialCompleted -> null
+                            resources.currentPeriod != 2 -> null
+                            !resources.homeTutorialCompleted -> null
+                            it.morningRoutineTutorialStep == null -> 0
+                            it.morningRoutineTutorialStep == 1 && getReadyCompleted -> 2
+                            it.morningRoutineTutorialStep == 2 && lessonsCompleted -> null
+                            else -> it.morningRoutineTutorialStep
+                        }
+                        if (
+                            it.morningRoutineTutorialStep == 2 &&
+                            lessonsCompleted &&
+                            !resources.morningRoutineTutorialCompleted
+                        ) {
+                            viewModelScope.launch { repository.completeMorningRoutineTutorial() }
+                        }
                         val cycleEnergyBlocked = cycleSecondsRemaining(
                             resources.cycleEndsAtMillis,
                             nowMillis,
                         ) == 0 && resources.energy == 0
                         val canShowLowPrompt = !cycleEnergyBlocked &&
                             unresolvedActiveEvent == null &&
-                            scheduledEvent == null &&
+                            scheduledEvents.isEmpty() &&
                             reachedGoalEvent == null &&
                             nextOverlay == null &&
                             nextTutorialStep == null &&
+                            nextMorningTutorialStep == null &&
                             it.finnyPrompt == null &&
                             it.customMessage == null
                         val lowPrompt = if (canShowLowPrompt) {
@@ -274,19 +310,21 @@ class PetViewModel @Inject constructor(
                         lowPrompt?.let { prompt ->
                             shownLowPrompts.add("${resources.currentPeriod}:$prompt")
                         }
-                        it.copy(
+                        val baseState = it.copy(
                             resources = resources,
-                            secondsRemaining = cycleSecondsRemaining(
-                                resources.cycleEndsAtMillis,
-                                nowMillis,
-                            ),
+                            secondsRemaining = remainingSeconds,
                             isInitialized = true,
                             isTestMode = resources.demoModeEnabled,
                             nowMillis = nowMillis,
                             overlay = nextOverlay,
-                            activeEvent = unresolvedActiveEvent ?: scheduledEvent ?: reachedGoalEvent,
+                            activeEvent = unresolvedActiveEvent,
                             homeTutorialStep = nextTutorialStep,
+                            morningRoutineTutorialStep = nextMorningTutorialStep,
                             finnyPrompt = it.finnyPrompt ?: lowPrompt,
+                        )
+                        enqueueEvents(
+                            state = baseState,
+                            candidates = scheduledEvents + listOfNotNull(reachedGoalEvent),
                         )
                     }
                 }
@@ -301,6 +339,7 @@ class PetViewModel @Inject constructor(
             val currentState = _state.value
             if (!currentState.resources.onboardingCompleted) continue
             if (currentState.activeEvent != null) continue
+            if (currentState.morningRoutineTutorialStep != null) continue
             if (needsBudgetReview(currentState.resources)) continue
             if (needsBudgetPlanning(currentState.resources)) continue
 
@@ -329,6 +368,7 @@ class PetViewModel @Inject constructor(
                 ) &&
                 refreshedState.overlay == null &&
                 refreshedState.homeTutorialStep == null &&
+                refreshedState.morningRoutineTutorialStep == null &&
                 refreshedState.finnyPrompt == null &&
                 refreshedState.customMessage == null
             ) {
@@ -337,6 +377,7 @@ class PetViewModel @Inject constructor(
                         it.overlay == null &&
                         it.activeEvent == null &&
                         it.homeTutorialStep == null &&
+                        it.morningRoutineTutorialStep == null &&
                         it.finnyPrompt == null &&
                         it.customMessage == null
                     ) {
@@ -355,6 +396,7 @@ class PetViewModel @Inject constructor(
                 !cycleEnergyBlocked &&
                 promptState.overlay == null &&
                 promptState.homeTutorialStep == null &&
+                promptState.morningRoutineTutorialStep == null &&
                 promptState.finnyPrompt == null &&
                 promptState.customMessage == null
             ) {
@@ -368,21 +410,15 @@ class PetViewModel @Inject constructor(
                 shownLowPrompts.add("${promptState.resources.currentPeriod}:$lowPrompt")
                 _state.update { it.copy(finnyPrompt = lowPrompt) }
             }
-            val scheduledEvent = eventScheduler.next(
+            val scheduledEvents = eventScheduler.due(
                 snapshot = refreshedState.resources,
                 elapsedCycleSeconds = eventElapsedCycleSeconds(
                     remainingSeconds = secondsRemaining,
                     isTestMode = refreshedState.isTestMode,
                 ),
-            )?.asGameEvent()
-            if (scheduledEvent != null) {
-                _state.update {
-                    if (it.activeEvent == null) {
-                        it.copy(activeEvent = scheduledEvent)
-                    } else {
-                        it
-                    }
-                }
+            ).map(ScheduledEvent::asGameEvent)
+            if (scheduledEvents.isNotEmpty()) {
+                _state.update { enqueueEvents(it, scheduledEvents) }
             }
 
             if (secondsRemaining == 0) repository.advanceExpiredCycles(nowMillis)
@@ -399,11 +435,13 @@ class PetViewModel @Inject constructor(
                     selectedSection = HomeSection.Food,
                     overlay = null,
                     activeEvent = null,
+                    pendingEvents = emptyList(),
                     exitRequested = false,
                     isTestMode = false,
                     demoModePasswordError = false,
                     parentModePasswordError = false,
                     homeTutorialStep = null,
+                    morningRoutineTutorialStep = null,
                     demoModeHintVisible = false,
                 )
             }
@@ -412,12 +450,12 @@ class PetViewModel @Inject constructor(
 
     private fun nextCycle() {
         val currentState = _state.value
-        val pendingEvent = eventScheduler.next(
+        val pendingEvents = eventScheduler.due(
             snapshot = currentState.resources,
             elapsedCycleSeconds = GameDefaults.CYCLE_DURATION_SECONDS,
-        )?.asGameEvent()
-        if (pendingEvent != null) {
-            _state.update { it.copy(activeEvent = pendingEvent) }
+        ).map(ScheduledEvent::asGameEvent)
+        if (pendingEvents.isNotEmpty()) {
+            _state.update { enqueueEvents(it, pendingEvents) }
             return
         }
 
@@ -454,14 +492,20 @@ class PetViewModel @Inject constructor(
             PetAction.ClearParentModePasswordError -> _state.update {
                 it.copy(parentModePasswordError = false)
             }
-            PetAction.CloseOverlay -> _state.update { it.copy(overlay = null) }
+            PetAction.CloseOverlay -> _state.update {
+                promotePendingEvent(it.copy(overlay = null))
+            }
             is PetAction.ShowEvent -> _state.update {
                 it.copy(overlay = null, activeEvent = action.event)
             }
             PetAction.AcceptEvent -> resolveEvent(accept = true)
             PetAction.DeclineEvent -> resolveEvent(accept = false)
             PetAction.SkipEvent -> _state.update {
-                if (it.activeEvent?.showCloseButton == true) it.copy(activeEvent = null) else it
+                if (it.activeEvent?.showCloseButton == true) {
+                    promotePendingEvent(it.copy(activeEvent = null))
+                } else {
+                    it
+                }
             }
             PetAction.Exit -> _state.update { it.copy(exitRequested = true) }
             is PetAction.BuyCareItem -> viewModelScope.launch { repository.buyCareItem(action.item) }
@@ -471,7 +515,14 @@ class PetViewModel @Inject constructor(
                 }
             }
             PetAction.ShowRoutineReminder -> _state.update {
-                it.copy(finnyPrompt = FinnyPrompt.RoutineReminder, customMessage = null)
+                it.copy(
+                    finnyPrompt = if (dayForPeriod(it.resources.currentPeriod) in 6..7) {
+                        FinnyPrompt.RoutineReminderWeekend
+                    } else {
+                        FinnyPrompt.RoutineReminder
+                    },
+                    customMessage = null,
+                )
             }
             is PetAction.ShowMessage -> _state.update {
                 it.copy(
@@ -488,11 +539,11 @@ class PetViewModel @Inject constructor(
             is PetAction.BuyCustomGoal -> purchaseCustomGoal(action.price)
             is PetAction.SelectGoal -> viewModelScope.launch {
                 repository.selectGoal(action.goal)
-                _state.update { it.copy(overlay = null) }
+                _state.update { promotePendingEvent(it.copy(overlay = null)) }
             }
             PetAction.SelectCustomGoal -> viewModelScope.launch {
                 repository.selectCustomGoal()
-                _state.update { it.copy(overlay = null) }
+                _state.update { promotePendingEvent(it.copy(overlay = null)) }
             }
             is PetAction.AddCustomGoal -> viewModelScope.launch {
                 repository.addCustomGoal(action.title, action.target, action.illustrationRes)
@@ -505,10 +556,12 @@ class PetViewModel @Inject constructor(
                     viewModelScope.launch {
                         repository.setDemoMode(true)
                         _state.update {
-                            it.copy(
-                                demoModePasswordError = false,
-                                demoModeHintVisible = true,
-                                overlay = null,
+                            promotePendingEvent(
+                                it.copy(
+                                    demoModePasswordError = false,
+                                    demoModeHintVisible = true,
+                                    overlay = null,
+                                ),
                             )
                         }
                     }
@@ -519,15 +572,17 @@ class PetViewModel @Inject constructor(
             PetAction.DisableTestMode -> viewModelScope.launch {
                 repository.setDemoMode(false)
                 _state.update {
-                    it.copy(
-                        isTestMode = false,
-                        demoModeHintVisible = false,
-                        overlay = null,
+                    promotePendingEvent(
+                        it.copy(
+                            isTestMode = false,
+                            demoModeHintVisible = false,
+                            overlay = null,
+                        ),
                     )
                 }
             }
             PetAction.DismissDemoModeHint -> _state.update {
-                it.copy(demoModeHintVisible = false)
+                promotePendingEvent(it.copy(demoModeHintVisible = false))
             }
             PetAction.ClearDemoModePasswordError -> _state.update {
                 it.copy(demoModePasswordError = false)
@@ -538,18 +593,28 @@ class PetViewModel @Inject constructor(
             }
             is PetAction.ApplyPetAppearance -> updatePetAppearance(action.appearance)
             is PetAction.CompleteBudgetPlanning -> viewModelScope.launch {
-                repository.saveBudgetPlan(action.optionalExpenses)
+                repository.saveBudgetPlan(action.optionalExpenses, action.goalExpenses)
             }
             PetAction.CompleteBudgetReview -> viewModelScope.launch {
                 repository.completeBudgetReview()
             }
             PetAction.AdvanceHomeTutorial -> advanceHomeTutorial()
+            PetAction.AdvanceMorningRoutineTutorial -> _state.update { current ->
+                if (current.morningRoutineTutorialStep == 0) {
+                    current.copy(
+                        selectedSection = HomeSection.Tasks,
+                        morningRoutineTutorialStep = 1,
+                    )
+                } else {
+                    current
+                }
+            }
             is PetAction.OpenDepositAccount -> viewModelScope.launch {
                 repository.openDeposit(action.term, action.amount)
             }
             PetAction.CloseDepositAccount -> viewModelScope.launch {
                 if (repository.closeDeposit()) {
-                    _state.update { it.copy(overlay = null) }
+                    _state.update { promotePendingEvent(it.copy(overlay = null)) }
                 }
             }
             PetAction.CompleteDepositTutorial -> viewModelScope.launch {
@@ -606,6 +671,8 @@ class PetViewModel @Inject constructor(
                     }
                     if (opensDepositAfterEvent(scheduled.definition.id, accept)) {
                         _state.update { it.copy(overlay = HomeOverlay.Deposit) }
+                    } else {
+                        _state.update(::promotePendingEvent)
                     }
                 } finally {
                     eventResolutionInProgress = false
@@ -624,7 +691,7 @@ class PetViewModel @Inject constructor(
         val effects = if (accept) event.acceptEffects else event.declineEffects
         if (!canApplyEffects(currentState.resources.money, effects)) return
 
-        _state.update { it.copy(activeEvent = null) }
+        _state.update { promotePendingEvent(it.copy(activeEvent = null)) }
         viewModelScope.launch { repository.applyEffects(effects) }
     }
 
@@ -669,13 +736,46 @@ class PetViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 if (repository.updatePetAppearance(appearance)) {
-                    _state.update { it.copy(overlay = null) }
+                    _state.update { promotePendingEvent(it.copy(overlay = null)) }
                 }
             } finally {
                 appearanceUpdateInProgress = false
             }
         }
     }
+}
+
+private fun GameEvent.queueKey(): String = scheduledEvent?.let { scheduled ->
+    scheduled.scenarioStepId ?: "event:${scheduled.definition.id}"
+} ?: goalPurchase?.let { "goal:${it.goal.name}" }
+    ?: if (customGoalPurchase) "goal:custom" else "event:${descriptionText}:${descriptionRes}"
+
+internal fun canPresentQueuedEvent(state: PetState): Boolean =
+    state.resources.onboardingCompleted &&
+        !needsBudgetReview(state.resources) &&
+        !needsBudgetPlanning(state.resources) &&
+        state.overlay == null &&
+        !state.demoModeHintVisible &&
+        state.homeTutorialStep == null &&
+        state.morningRoutineTutorialStep == null
+
+internal fun enqueueEvents(state: PetState, candidates: List<GameEvent>): PetState {
+    val activeKey = state.activeEvent?.queueKey()
+    val retainedPending = state.pendingEvents.filterNot { event ->
+        event.scheduledEvent?.let { isScheduledEventHandled(it, state.resources) } ?: false
+    }
+    val knownKeys = buildSet {
+        activeKey?.let(::add)
+        retainedPending.forEach { add(it.queueKey()) }
+    }
+    val additions = candidates.filter { it.queueKey() !in knownKeys }.distinctBy(GameEvent::queueKey)
+    return promotePendingEvent(state.copy(pendingEvents = retainedPending + additions))
+}
+
+internal fun promotePendingEvent(state: PetState): PetState {
+    if (state.activeEvent != null || !canPresentQueuedEvent(state)) return state
+    val next = state.pendingEvents.firstOrNull() ?: return state
+    return state.copy(activeEvent = next, pendingEvents = state.pendingEvents.drop(1))
 }
 
 internal fun lowCharacteristicPrompts(resources: GameSnapshot): List<FinnyPrompt> = buildList {

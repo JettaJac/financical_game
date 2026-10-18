@@ -40,13 +40,17 @@ data class GameSnapshot(
     val budgetPlanWeek: Int = 0,
     val budgetPlanRecurringExpense: Int = GameDefaults.EXPENSE,
     val plannedOptionalExpenses: Int = 0,
+    val plannedGoalExpenses: Int = 0,
     val actualOptionalExpenses: Int = 0,
     val actualUnplannedExpenses: Int = 0,
+    val actualGoalExpenses: Int = 0,
+    val unplannedExpenseRecords: List<BudgetExpenseRecord> = emptyList(),
     val actualAdditionalIncome: Int = 0,
     val lastReviewedBudgetWeek: Int = 0,
     val budgetTutorialCompleted: Boolean = false,
     val depositTutorialCompleted: Boolean = false,
     val homeTutorialCompleted: Boolean = false,
+    val morningRoutineTutorialCompleted: Boolean = false,
     val demoModeEnabled: Boolean = false,
     val roomDirtLevel: Int = 1,
     val cooldownUnlockCycles: Map<String, Double> = emptyMap(),
@@ -75,6 +79,11 @@ data class GameActionRecord(
     val cycle: Int,
     val description: String,
     val moneyDelta: Int = 0,
+)
+
+data class BudgetExpenseRecord(
+    val title: String,
+    val amount: Int,
 )
 
 data class CustomGoal(

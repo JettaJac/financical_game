@@ -39,20 +39,6 @@ object MandatoryBudget {
             category = BudgetCategory.Expense,
             frequency = BudgetFrequency.Recurring,
         ),
-        BudgetEntry(
-            id = "vitamins",
-            titleRes = R.string.budget_vitamins,
-            amount = GameDefaults.VITAMINS_EXPENSE,
-            category = BudgetCategory.Expense,
-            frequency = BudgetFrequency.Recurring,
-        ),
-        BudgetEntry(
-            id = "sports_section",
-            titleRes = R.string.budget_sports_section,
-            amount = GameDefaults.SPORTS_SECTION_EXPENSE,
-            category = BudgetCategory.Expense,
-            frequency = BudgetFrequency.Recurring,
-        ),
     )
 
     val income: Int = entries.filter { it.category == BudgetCategory.Income }.sumOf { it.amount }
@@ -75,9 +61,10 @@ internal fun budgetWeekForPeriod(currentPeriod: Int): Int = weekForPeriod(curren
 internal fun budgetPeriodResult(snapshot: GameSnapshot): BudgetPeriodResult = BudgetPeriodResult(
     plannedIncome = snapshot.income,
     actualIncome = snapshot.income + snapshot.actualAdditionalIncome,
-    plannedExpenses = snapshot.budgetPlanRecurringExpense + snapshot.plannedOptionalExpenses,
+    plannedExpenses = snapshot.budgetPlanRecurringExpense + snapshot.plannedOptionalExpenses +
+        snapshot.plannedGoalExpenses,
     actualExpenses = snapshot.budgetPlanRecurringExpense + snapshot.actualOptionalExpenses +
-        snapshot.actualUnplannedExpenses,
+        snapshot.actualUnplannedExpenses + snapshot.actualGoalExpenses,
 )
 
 internal fun needsBudgetReview(snapshot: GameSnapshot): Boolean {

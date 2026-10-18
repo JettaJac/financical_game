@@ -18,6 +18,21 @@ internal fun characteristicValue(
     return (baseValue + permanentModifier + cycleAdjustment - decrease).coerceIn(0, 100)
 }
 
+internal fun characteristicCycleAdjustmentForValue(
+    baseValue: Int,
+    permanentModifier: Int,
+    targetValue: Int,
+    secondsRemaining: Int,
+    cycleDurationSeconds: Int = GameDefaults.CYCLE_DURATION_SECONDS,
+): Int {
+    if (cycleDurationSeconds <= 0) return targetValue - baseValue - permanentModifier
+    val elapsedSeconds = (cycleDurationSeconds - secondsRemaining)
+        .coerceIn(0, cycleDurationSeconds)
+    val decrease = (GameDefaults.CHARACTERISTIC_DECREASE_PER_CYCLE.toLong() * elapsedSeconds /
+        cycleDurationSeconds).toInt()
+    return targetValue.coerceIn(0, 100) - baseValue - permanentModifier + decrease
+}
+
 internal fun GameSnapshot.withCharacteristicsAt(secondsRemaining: Int): GameSnapshot = copy(
     health = characteristicValue(
         GameDefaults.HEALTH, healthModifier, healthCycleAdjustment, secondsRemaining,

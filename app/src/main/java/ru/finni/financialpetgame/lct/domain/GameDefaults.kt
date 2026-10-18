@@ -4,7 +4,7 @@ object GameDefaults {
     const val CYCLE_DURATION_SECONDS = 7 * 60
     const val CYCLE_DURATION_MILLIS = CYCLE_DURATION_SECONDS * 1_000L
     const val NAME = "Финник"
-    const val MONEY = 30
+    const val MONEY = 0
     const val HEALTH = 60
     const val HAPPINESS = 60
     const val ENERGY = 60
@@ -15,10 +15,9 @@ object GameDefaults {
     const val VITAMINS_EXPENSE = 5
     const val SPORTS_SECTION_EXPENSE = 10
     const val INCOME = POCKET_MONEY_INCOME
-    const val EXPENSE = SCHOOL_LUNCH_EXPENSE + MOBILE_SERVICE_EXPENSE +
-        VITAMINS_EXPENSE + SPORTS_SECTION_EXPENSE
+    const val EXPENSE = SCHOOL_LUNCH_EXPENSE + MOBILE_SERVICE_EXPENSE
     const val LEVEL = 1
     const val CURRENT_PERIOD = 1
-    const val GOAL = "Подушка"
-    const val GOAL_TARGET = 120
+    const val GOAL = "Мягкая новая лежанка"
+    const val GOAL_TARGET = 100
 }

@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -66,11 +67,14 @@ internal fun FinancialEducationOverlay(
     depositAmount: Int = 0,
     depositTerm: DepositTerm? = null,
 ) {
-    val pageCount = if (topic == FinancialEducationTopic.Budget) 3 else 2
+    val pageCount = 3
     var page by rememberSaveable(topic) { mutableIntStateOf(0) }
+    var categoryRevealStep by rememberSaveable(topic) { mutableIntStateOf(0) }
     val scrollState = rememberScrollState()
     LaunchedEffect(topic, page) { scrollState.scrollTo(0) }
-    BackHandler(onBack = onDismiss)
+    BackHandler {
+        if (page > 0) page -= 1 else onDismiss()
+    }
 
     Box(
         Modifier
@@ -84,9 +88,16 @@ internal fun FinancialEducationOverlay(
     ) {
         Column(Modifier.fillMaxSize()) {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(start = 22.dp, end = 10.dp, top = 8.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                if (page > 0) {
+                    IconButton(onClick = { page -= 1 }) {
+                        Text("‹", color = EducationDark, fontSize = 34.sp)
+                    }
+                } else {
+                    Spacer(Modifier.size(48.dp))
+                }
                 Text(
                     text = stringResource(
                         if (topic == FinancialEducationTopic.Budget) {
@@ -100,6 +111,7 @@ internal fun FinancialEducationOverlay(
                     fontFamily = NunitoFontFamily,
                     fontSize = 25.sp,
                     fontWeight = FontWeight.ExtraBold,
+                    textAlign = TextAlign.Center,
                 )
                 IconButton(onClick = onDismiss) {
                     Text("×", color = EducationDark, fontSize = 34.sp)
@@ -110,6 +122,17 @@ internal fun FinancialEducationOverlay(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
+                    .then(
+                        if (
+                            topic == FinancialEducationTopic.Budget &&
+                            page == 1 &&
+                            categoryRevealStep < 3
+                        ) {
+                            Modifier.clickable { categoryRevealStep += 1 }
+                        } else {
+                            Modifier
+                        },
+                    )
                     .verticalScroll(scrollState)
                     .padding(horizontal = 20.dp, vertical = 10.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -120,6 +143,7 @@ internal fun FinancialEducationOverlay(
                         recurringIncome = recurringIncome,
                         recurringExpense = recurringExpense,
                         plannedOptionalExpenses = plannedOptionalExpenses,
+                        categoryRevealStep = categoryRevealStep,
                     )
                 } else {
                     DepositEducationPage(
@@ -152,7 +176,17 @@ internal fun FinancialEducationOverlay(
                 Spacer(Modifier.height(14.dp))
                 Button(
                     onClick = {
-                        if (page == pageCount - 1) onDismiss() else page += 1
+                        if (
+                            topic == FinancialEducationTopic.Budget &&
+                            page == 1 &&
+                            categoryRevealStep < 3
+                        ) {
+                            categoryRevealStep += 1
+                        } else if (page == pageCount - 1) {
+                            onDismiss()
+                        } else {
+                            page += 1
+                        }
                     },
                     modifier = Modifier.fillMaxWidth().height(52.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = EducationPurple),
@@ -178,6 +212,7 @@ private fun BudgetEducationPage(
     recurringIncome: Int,
     recurringExpense: Int,
     plannedOptionalExpenses: Int,
+    categoryRevealStep: Int,
 ) {
     when (page) {
         0 -> {
@@ -197,66 +232,79 @@ private fun BudgetEducationPage(
         1 -> {
             EducationLead(
                 title = stringResource(R.string.education_budget_categories_title),
-                body = stringResource(R.string.education_budget_categories_body),
+                body = stringResource(
+                    when (categoryRevealStep) {
+                        0 -> R.string.education_budget_income_explanation
+                        1 -> R.string.education_budget_income_groups
+                        2 -> R.string.education_budget_expense_explanation
+                        else -> R.string.education_budget_expense_groups
+                    },
+                ),
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(
+                text = stringResource(R.string.budget_income),
+                color = EducationDark,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.ExtraBold,
+            )
+            if (categoryRevealStep >= 1) {
                 CategoryCard(
-                    title = stringResource(R.string.budget_income),
+                    title = "",
                     lines = listOf(
                         stringResource(R.string.education_income_recurring),
                         stringResource(R.string.education_income_additional),
                     ),
                     color = EducationGreen,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.fillMaxWidth(),
                 )
+            }
+            if (categoryRevealStep >= 2) {
+                Text(
+                    text = stringResource(R.string.budget_expenses),
+                    color = EducationDark,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                )
+            }
+            if (categoryRevealStep >= 3) {
                 CategoryCard(
-                    title = stringResource(R.string.budget_expenses),
+                    title = "",
                     lines = listOf(
                         stringResource(R.string.education_expense_mandatory),
                         stringResource(R.string.education_expense_optional),
                         stringResource(R.string.education_expense_unplanned),
+                        stringResource(R.string.education_expense_goal),
                     ),
                     color = EducationOrange,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         }
         else -> {
-            val safeOptional = plannedOptionalExpenses.coerceAtLeast(0)
-            val balance = recurringIncome - recurringExpense - safeOptional
             EducationLead(
-                title = stringResource(R.string.education_budget_formula_title),
-                body = stringResource(R.string.education_budget_formula_body),
-            )
-            FormulaValue(
-                label = stringResource(R.string.education_formula_income),
-                amount = recurringIncome,
-                color = EducationGreen,
-            )
-            FormulaOperator("−")
-            FormulaValue(
-                label = stringResource(R.string.education_formula_mandatory),
-                amount = recurringExpense,
-                color = EducationOrange,
-            )
-            FormulaOperator("−")
-            FormulaValue(
-                label = stringResource(R.string.education_formula_optional),
-                amount = safeOptional,
-                color = EducationOrange,
-            )
-            FormulaOperator("=")
-            FormulaValue(
-                label = stringResource(R.string.education_formula_free),
-                amount = balance,
-                color = EducationBlue,
-                emphasized = true,
+                title = stringResource(R.string.education_budget_needs_title),
+                body = stringResource(R.string.education_budget_needs_speech),
             )
             Text(
-                text = stringResource(R.string.education_budget_free_money),
+                text = stringResource(R.string.education_budget_needs_body),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(EducationLavender, RoundedCornerShape(16.dp))
+                    .padding(16.dp),
                 color = EducationDark,
-                fontSize = 15.sp,
-                lineHeight = 20.sp,
+                fontSize = 16.sp,
+                lineHeight = 21.sp,
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                text = stringResource(R.string.education_budget_needs_tip),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.White, RoundedCornerShape(16.dp))
+                    .padding(18.dp),
+                color = EducationDark,
+                fontSize = 16.sp,
+                lineHeight = 21.sp,
                 textAlign = TextAlign.Center,
             )
         }
@@ -297,7 +345,7 @@ private fun DepositEducationPage(page: Int, amount: Int, term: DepositTerm?) {
             stringResource(R.string.education_deposit_receive, safeAmount, profit, payout),
             EducationGreen,
         )
-    } else {
+    } else if (page == 1) {
         EducationLead(
             title = stringResource(R.string.education_deposit_early_title),
             body = stringResource(R.string.education_deposit_early_body),
@@ -319,6 +367,11 @@ private fun DepositEducationPage(page: Int, amount: Int, term: DepositTerm?) {
             fontSize = 15.sp,
             lineHeight = 20.sp,
             textAlign = TextAlign.Center,
+        )
+    } else {
+        EducationLead(
+            title = stringResource(R.string.education_deposit_early_title),
+            body = stringResource(R.string.education_deposit_game_rule),
         )
     }
 }
