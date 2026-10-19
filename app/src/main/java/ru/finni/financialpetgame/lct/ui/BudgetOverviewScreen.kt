@@ -183,7 +183,7 @@ private fun BudgetSummaryCard(view: BudgetView, state: GameSnapshot) {
     val expenses = state.budgetPlanRecurringExpense + if (view == BudgetView.Current) {
         state.actualOptionalExpenses + state.actualUnplannedExpenses + state.actualGoalExpenses
     } else {
-        state.plannedOptionalExpenses + state.plannedGoalExpenses
+        state.plannedOptionalExpenses
     }
     val balance = income - expenses
     val balanceColor = when {
@@ -344,12 +344,8 @@ private fun BudgetDetails(
                 )
             }
         }
-        if (category == BudgetCategory.Expense) {
-            val goalAmount = if (view == BudgetView.Current) {
-                state.actualGoalExpenses
-            } else {
-                state.plannedGoalExpenses
-            }
+        if (category == BudgetCategory.Expense && view == BudgetView.Current) {
+            val goalAmount = state.actualGoalExpenses
             BudgetGroup(
                 title = stringResource(R.string.budget_goal_expenses),
                 initiallyExpanded = goalAmount > 0,
@@ -359,18 +355,6 @@ private fun BudgetDetails(
                         title = stringResource(R.string.budget_goal_expenses),
                         amount = goalAmount,
                     )
-                    if (view == BudgetView.Current && state.plannedGoalExpenses > 0) {
-                        Text(
-                            text = stringResource(
-                                R.string.budget_goal_progress,
-                                goalAmount,
-                                state.plannedGoalExpenses,
-                            ),
-                            color = OverviewPurpleDark,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                        )
-                    }
                 } else {
                     Text(
                         text = stringResource(R.string.budget_no_operations),

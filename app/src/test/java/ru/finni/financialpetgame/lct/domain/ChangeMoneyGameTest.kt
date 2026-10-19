@@ -82,4 +82,18 @@ class ChangeMoneyGameTest {
             ),
         )
     }
+
+    @Test
+    fun challenges_progress_from_easiest_to_hardest_and_then_repeat() {
+        val levels = mutableListOf<Int>()
+        var lastChallengeId = 0
+
+        repeat(ChangeMoneyChallenges.size + 1) {
+            val challenge = nextChangeMoneyChallenge(lastChallengeId)
+            levels += challenge.level
+            lastChallengeId = challenge.id
+        }
+
+        assertEquals((1..10).toList() + 1, levels)
+    }
 }

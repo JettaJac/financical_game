@@ -336,7 +336,7 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
     state.changeMoneyGame?.let { game ->
         ChangeMoneyGameScreen(
             game = game,
-            bestTimeMillis = state.resources.changeMoneyBestTimesMillis[game.challenge.id],
+            bestTimeMillis = state.resources.changeMoneyBestTimesMillis.values.minOrNull(),
             onAction = onAction,
         )
         return
@@ -349,10 +349,8 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
             ),
             result = budgetPeriodResult(state.resources),
             plannedOptionalExpenses = state.resources.plannedOptionalExpenses,
-            plannedGoalExpenses = state.resources.plannedGoalExpenses,
             actualOptionalExpenses = state.resources.actualOptionalExpenses,
             actualUnplannedExpenses = state.resources.actualUnplannedExpenses,
-            actualGoalExpenses = state.resources.actualGoalExpenses,
             actualAdditionalIncome = state.resources.actualAdditionalIncome,
             onComplete = { onAction(PetAction.CompleteBudgetReview) },
         )
@@ -366,11 +364,10 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
             ),
             firstPlanning = !state.resources.budgetTutorialCompleted,
             previousOptionalExpenses = state.resources.plannedOptionalExpenses,
-            previousGoalExpenses = state.resources.plannedGoalExpenses,
             recurringIncome = state.resources.income,
             recurringExpense = state.resources.expense,
-            onComplete = { optional, goal ->
-                onAction(PetAction.CompleteBudgetPlanning(optional, goal))
+            onComplete = { optional ->
+                onAction(PetAction.CompleteBudgetPlanning(optional))
             },
         )
         return

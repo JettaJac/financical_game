@@ -1,11 +1,10 @@
 package ru.finni.financialpetgame.lct.domain
 
-import kotlin.random.Random
-
 internal val ChangeMoneyDenominations = listOf(10, 50, 100, 500, 1_000, 5_000)
 
 data class ChangeMoneyChallenge(
     val id: Int,
+    val level: Int = id,
     val amount: Int,
     val requiredNotes: Int,
     val forbiddenDenominations: Set<Int> = emptySet(),
@@ -57,8 +56,11 @@ internal val ChangeMoneyChallenges = listOf(
     ),
 )
 
-internal fun randomChangeMoneyChallenge(random: Random = Random.Default): ChangeMoneyChallenge =
-    ChangeMoneyChallenges.random(random)
+internal fun nextChangeMoneyChallenge(lastChallengeId: Int): ChangeMoneyChallenge {
+    val challengesByLevel = ChangeMoneyChallenges.sortedBy(ChangeMoneyChallenge::level)
+    val lastIndex = challengesByLevel.indexOfFirst { it.id == lastChallengeId }
+    return challengesByLevel[(lastIndex + 1).mod(challengesByLevel.size)]
+}
 
 enum class ChangeMoneyValidation {
     Success,

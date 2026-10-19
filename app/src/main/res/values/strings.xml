@@ -61,8 +61,6 @@
     <string name="budget_to_game">К игре</string>
     <string name="budget_optional_expenses">Необязательные расходы</string>
     <string name="budget_goal_expenses">Цели</string>
-    <string name="budget_goal_plan_guide">Сколько монет ты хочешь запланировать на цель?</string>
-    <string name="budget_goal_progress">Потрачено на цели %1$d из %2$d</string>
     <string name="budget_pocket_money">Деньги на базовые потребности</string>
     <string name="budget_school_lunch">Школьные обеды</string>
     <string name="budget_mobile_service">Связь</string>

@@ -17,11 +17,11 @@ interface GameRepository {
 
     suspend fun buyCareItem(item: CardItem)
 
-    suspend fun startBudgetMasterAttempt(): Boolean
+    suspend fun startBudgetMasterAttempt(): MiniGameStartResult?
 
     suspend fun completeBudgetMasterAttempt(score: Int, successful: Boolean)
 
-    suspend fun startChangeMoneyAttempt(): Boolean
+    suspend fun startChangeMoneyAttempt(): ChangeMoneyStartResult?
 
     suspend fun completeChangeMoneyAttempt(challengeId: Int, elapsedMillis: Long)
 
@@ -39,7 +39,7 @@ interface GameRepository {
 
     suspend fun updatePetAppearance(appearance: PetAppearance): Boolean
 
-    suspend fun saveBudgetPlan(optionalExpenses: Int, goalExpenses: Int)
+    suspend fun saveBudgetPlan(optionalExpenses: Int)
 
     suspend fun completeBudgetReview()
 
@@ -69,6 +69,13 @@ interface GameRepository {
 
     suspend fun reset()
 }
+
+data class MiniGameStartResult(val showTutorial: Boolean)
+
+data class ChangeMoneyStartResult(
+    val showTutorial: Boolean,
+    val challenge: ChangeMoneyChallenge,
+)
 
 internal const val PET_TAP_REWARD_LIMIT = 3
 internal const val PET_TAP_HAPPINESS_REWARD = 5

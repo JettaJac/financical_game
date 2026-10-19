@@ -579,11 +579,11 @@ class PetViewModelTest {
         assertEquals(true, needsBudgetReview(successfulSnapshot))
         assertEquals(true, budgetPeriodResult(successfulSnapshot).isSuccessful)
         assertEquals(110, budgetPeriodResult(successfulSnapshot).actualIncome)
-        assertEquals(65, budgetPeriodResult(successfulSnapshot).actualExpenses)
+        assertEquals(55, budgetPeriodResult(successfulSnapshot).actualExpenses)
         assertEquals(
             false,
             budgetPeriodResult(
-                successfulSnapshot.copy(actualOptionalExpenses = 21),
+                successfulSnapshot.copy(actualOptionalExpenses = 31),
             ).isSuccessful,
         )
         assertEquals(

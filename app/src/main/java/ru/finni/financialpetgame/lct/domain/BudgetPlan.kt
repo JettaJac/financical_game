@@ -61,10 +61,9 @@ internal fun budgetWeekForPeriod(currentPeriod: Int): Int = weekForPeriod(curren
 internal fun budgetPeriodResult(snapshot: GameSnapshot): BudgetPeriodResult = BudgetPeriodResult(
     plannedIncome = snapshot.income,
     actualIncome = snapshot.income + snapshot.actualAdditionalIncome,
-    plannedExpenses = snapshot.budgetPlanRecurringExpense + snapshot.plannedOptionalExpenses +
-        snapshot.plannedGoalExpenses,
+    plannedExpenses = snapshot.budgetPlanRecurringExpense + snapshot.plannedOptionalExpenses,
     actualExpenses = snapshot.budgetPlanRecurringExpense + snapshot.actualOptionalExpenses +
-        snapshot.actualUnplannedExpenses + snapshot.actualGoalExpenses,
+        snapshot.actualUnplannedExpenses,
 )
 
 internal fun needsBudgetReview(snapshot: GameSnapshot): Boolean {

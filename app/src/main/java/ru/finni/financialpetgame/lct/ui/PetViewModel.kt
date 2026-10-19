@@ -29,7 +29,6 @@ import ru.finni.financialpetgame.lct.domain.canApplyEffects
 import ru.finni.financialpetgame.lct.domain.cycleSecondsRemaining
 import ru.finni.financialpetgame.lct.domain.needsBudgetPlanning
 import ru.finni.financialpetgame.lct.domain.needsBudgetReview
-import ru.finni.financialpetgame.lct.domain.randomChangeMoneyChallenge
 import ru.finni.financialpetgame.lct.domain.randomBudgetMasterCard
 import ru.finni.financialpetgame.lct.domain.isCorrectBudgetCategory
 import ru.finni.financialpetgame.lct.domain.isCorrectBudgetDirection
@@ -242,7 +241,6 @@ sealed interface PetAction {
     data class ApplyPetAppearance(val appearance: PetAppearance) : PetAction
     data class CompleteBudgetPlanning(
         val optionalExpenses: Int,
-        val goalExpenses: Int,
     ) : PetAction
     data object CompleteBudgetReview : PetAction
     data object AdvanceHomeTutorial : PetAction
@@ -758,7 +756,7 @@ class PetViewModel @Inject constructor(
             }
             is PetAction.ApplyPetAppearance -> updatePetAppearance(action.appearance)
             is PetAction.CompleteBudgetPlanning -> viewModelScope.launch {
-                repository.saveBudgetPlan(action.optionalExpenses, action.goalExpenses)
+                repository.saveBudgetPlan(action.optionalExpenses)
             }
             PetAction.CompleteBudgetReview -> viewModelScope.launch {
                 repository.completeBudgetReview()
@@ -791,10 +789,9 @@ class PetViewModel @Inject constructor(
     private fun startBudgetMasterGame() {
         if (_state.value.budgetMasterGame != null || budgetMasterStartInProgress) return
         budgetMasterStartInProgress = true
-        val showTutorial = !_state.value.resources.budgetMasterTutorialCompleted
         viewModelScope.launch {
             try {
-                if (!repository.startBudgetMasterAttempt()) return@launch
+                val start = repository.startBudgetMasterAttempt() ?: return@launch
                 val firstCard = randomBudgetMasterCard()
                 _state.update { current ->
                     current.copy(
@@ -803,7 +800,7 @@ class PetViewModel @Inject constructor(
                         customMessage = null,
                         budgetMasterGame = BudgetMasterGameState(
                             card = firstCard,
-                            stage = if (showTutorial) {
+                            stage = if (start.showTutorial) {
                                 BudgetMasterStage.Intro
                             } else {
                                 BudgetMasterStage.Playing
@@ -944,18 +941,17 @@ class PetViewModel @Inject constructor(
     private fun startChangeMoneyGame() {
         if (_state.value.changeMoneyGame != null || changeMoneyStartInProgress) return
         changeMoneyStartInProgress = true
-        val showTutorial = !_state.value.resources.changeMoneyTutorialCompleted
         viewModelScope.launch {
             try {
-                if (!repository.startChangeMoneyAttempt()) return@launch
+                val start = repository.startChangeMoneyAttempt() ?: return@launch
                 _state.update { current ->
                     current.copy(
                         overlay = null,
                         finnyPrompt = null,
                         customMessage = null,
                         changeMoneyGame = ChangeMoneyGameState(
-                            challenge = randomChangeMoneyChallenge(),
-                            stage = if (showTutorial) {
+                            challenge = start.challenge,
+                            stage = if (start.showTutorial) {
                                 ChangeMoneyStage.Intro
                             } else {
                                 ChangeMoneyStage.Ready

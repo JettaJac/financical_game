@@ -55,6 +55,7 @@ data class GameSnapshot(
     val budgetMasterBestScore: Int = 0,
     val changeMoneyTutorialCompleted: Boolean = false,
     val changeMoneyBestTimesMillis: Map<Int, Int> = emptyMap(),
+    val changeMoneyLastChallengeId: Int = 0,
     val demoModeEnabled: Boolean = false,
     val roomDirtLevel: Int = 1,
     val cooldownUnlockCycles: Map<String, Double> = emptyMap(),
