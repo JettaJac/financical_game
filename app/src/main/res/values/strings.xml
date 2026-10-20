@@ -147,28 +147,23 @@
     <string name="education_formula_optional">Необязательные расходы</string>
     <string name="education_formula_free">Свободный остаток</string>
     <string name="education_budget_free_money">Свободные монеты можно оставить в кошельке, запланировать на цель или положить во вклад. Покупка цели записывается в расходы на цели.</string>
-    <string name="education_deposit_flow_title">Деньги приносят прибыль</string>
-    <string name="education_deposit_game_day">Срок указан в игровых днях. Один игровой день длится %1$s</string>
-    <string name="education_deposit_put">Кладёшь во вклад %1$d монет</string>
-    <string name="education_deposit_wait">Ждёшь %1$d игровых дней</string>
-    <string name="education_deposit_receive">Получаешь %1$d своих + %2$d прибыли = %3$d</string>
-    <string name="education_deposit_early_title">Досрочное закрытие</string>
     <string name="education_deposit_early_body">Если забрать деньги раньше срока, прибыли не будет, а банк удержит штраф</string>
-    <string name="education_deposit_early_amount">Во вкладе: %1$d монет</string>
-    <string name="education_deposit_early_result">Штраф: %1$d · вернётся: %2$d</string>
-    <string name="education_deposit_budget_link">Основная сумма вклада не считается доходом или расходом. Прибыль попадёт в дополнительные доходы, а штраф — в непредвиденные расходы</string>
     <string name="education_deposit_game_rule">В нашей игре банк даёт очень-очень большой процент — как волшебный супер-бонус, чтобы ты понял, как работает вклад. Но чтобы игра была честной, банк добавляет штраф, если ты забираешь деньги раньше обещанного. Это только игровое правило, в настоящей жизни такого нет</string>
+    <string name="education_deposit_week">В неделе 7 игровых дней. Один день длится %1$s</string>
+    <string name="education_deposit_reference_put">Положи на вклад определенную сумму</string>
+    <string name="education_deposit_reference_wait">Жди определенное количество дней</string>
+    <string name="education_deposit_reference_receive">Получи сумму и прибыль с вклада</string>
+    <string name="education_deposit_reference_example">Например, ты положил %1$d монет, но решил закрыть вклад раньше</string>
+    <string name="education_deposit_reference_result">Тебе придёт штраф %1$d монет, и в итоге к тебе вернется %2$d</string>
 
     <!-- Deposits -->
     <string name="deposit_title">Вклад</string>
     <string name="deposit_intro">Ты можешь открыть вклад, и в конце срока получишь приятную надбавку! Но если закроешь его раньше срока, тогда будет штраф</string>
     <string name="deposit_terms">Условия</string>
     <string name="deposit_term_format">на %1$d дней (ставка %2$d%%, штраф %3$d%%)</string>
-    <string name="deposit_term_result">Прибыль +%1$d · досрочная потеря −%2$d</string>
     <string name="deposit_enter_amount">Введи сумму</string>
+    <string name="deposit_current_balance">Текущий баланс</string>
     <string name="deposit_not_enough_money">На балансе доступно %1$d монет</string>
-    <string name="deposit_income">Доход</string>
-    <string name="deposit_remaining_amount">Сумма, которая останется</string>
     <string name="deposit_maturity_caption">Сумма, которую ты получишь после %1$d дней игры</string>
     <string name="deposit_early_caption">Сумма, которую ты получишь, если закроешь вклад раньше %1$d дней</string>
     <string name="deposit_open">Открыть</string>
@@ -177,23 +172,10 @@
     <string name="deposit_until_end">До окончания срока:</string>
     <string name="deposit_game_days">%1$d игровых дней</string>
     <string name="deposit_maturity_caption_short">По истечению времени ты получишь:</string>
-    <string name="deposit_close">Закрыть</string>
+    <string name="deposit_close_account">Закрыть вклад</string>
     <string name="deposit_close_confirmation">Ты уверен, что хочешь закрыть вклад?</string>
     <string name="deposit_success">Молодец! \nТы заработал %1$d монет!</string>
     <string name="deposit_collect">Забрать</string>
-    <string name="deposit_quick_amount">Быстрый выбор</string>
-    <string name="deposit_all_money">Все</string>
-    <string name="deposit_own_money">Твои деньги</string>
-    <string name="deposit_profit">Прибыль</string>
-    <string name="deposit_total_return">Вернётся всего</string>
-    <string name="deposit_penalty">Штраф</string>
-    <string name="deposit_wallet_after">Останется в кошельке</string>
-    <string name="deposit_progress">Прошло %1$d из %2$d игровых дней</string>
-    <string name="deposit_confirm_title">Проверим вклад</string>
-    <string name="deposit_confirm_action">Всё верно, открыть</string>
-    <string name="deposit_back_to_edit">Изменить условия</string>
-    <string name="deposit_success_breakdown">Вернулось %1$d монет: %2$d твоих + %3$d прибыли</string>
-    <string name="deposit_early_loss">При досрочном закрытии ты потеряешь %1$d монет. В кошелёк вернётся %2$d</string>
 
     <!-- Home: sections -->
     <string name="health">Здоровье</string>
