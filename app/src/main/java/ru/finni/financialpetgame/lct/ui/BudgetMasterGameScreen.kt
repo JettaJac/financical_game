@@ -26,6 +26,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -61,14 +65,20 @@ internal fun BudgetMasterGameScreen(
     bestScore: Int,
     onAction: (PetAction) -> Unit,
 ) {
-    LaunchedEffect(game.stage, game.pauseDialogVisible) {
-        if (game.stage != BudgetMasterStage.Playing || game.pauseDialogVisible) {
+    var showHandbook by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(game.stage, game.pauseDialogVisible, showHandbook) {
+        if (game.stage != BudgetMasterStage.Playing || game.pauseDialogVisible || showHandbook) {
             return@LaunchedEffect
         }
         while (true) {
             delay(1_000L)
             onAction(PetAction.TickBudgetMaster)
         }
+    }
+
+    if (showHandbook) {
+        HandbookScreen(onBack = { showHandbook = false })
+        return
     }
 
     Box(
@@ -86,6 +96,7 @@ internal fun BudgetMasterGameScreen(
                 bestScore = bestScore,
                 onStart = { onAction(PetAction.StartBudgetMasterRound) },
                 onClose = { onAction(PetAction.PauseBudgetMaster) },
+                onHandbook = { showHandbook = true },
             )
             BudgetMasterStage.Playing -> BudgetMasterPlaying(
                 game = game,
@@ -93,6 +104,7 @@ internal fun BudgetMasterGameScreen(
                 onCategory = { onAction(PetAction.SelectBudgetCategory(it)) },
                 onFinish = { onAction(PetAction.FinishBudgetMaster) },
                 onPause = { onAction(PetAction.PauseBudgetMaster) },
+                onHandbook = { showHandbook = true },
             )
             BudgetMasterStage.Result -> BudgetMasterResult(
                 score = game.score,
@@ -136,6 +148,7 @@ private fun BudgetMasterRules(
     bestScore: Int,
     onStart: () -> Unit,
     onClose: () -> Unit,
+    onHandbook: () -> Unit,
 ) {
     BudgetMasterPage(
         onClose = onClose,
@@ -190,6 +203,7 @@ private fun BudgetMasterRules(
                 modifier = Modifier
                     .fillMaxWidth()
                     .border(1.5.dp, BudgetMasterDark, RoundedCornerShape(12.dp))
+                    .clickable(onClick = onHandbook)
                     .padding(14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -218,6 +232,7 @@ private fun BudgetMasterPlaying(
     onCategory: (BudgetMasterCategory) -> Unit,
     onFinish: () -> Unit,
     onPause: () -> Unit,
+    onHandbook: () -> Unit,
 ) {
     Column(Modifier.fillMaxSize()) {
         Row(
@@ -237,7 +252,16 @@ private fun BudgetMasterPlaying(
                 fontSize = 17.sp,
                 fontWeight = FontWeight.Bold,
             )
-            Spacer(Modifier.width(18.dp))
+            Spacer(Modifier.width(10.dp))
+            Text(
+                text = "?",
+                modifier = Modifier.size(42.dp).clickable(onClick = onHandbook),
+                color = BudgetMasterDark,
+                fontSize = 25.sp,
+                fontWeight = FontWeight.ExtraBold,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.width(4.dp))
             Text(
                 text = "Ⅱ",
                 modifier = Modifier.size(42.dp).clickable(onClick = onPause),

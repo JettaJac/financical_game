@@ -126,7 +126,16 @@ internal fun goalPurchaseEvent(resources: GameSnapshot): GameEvent {
     )
 }
 
-enum class HomeOverlay { Menu, Budget, Deposit, Goal, GoalSelection, PersonalAccount, Parent }
+enum class HomeOverlay {
+    Menu,
+    Handbook,
+    Budget,
+    Deposit,
+    Goal,
+    GoalSelection,
+    PersonalAccount,
+    Parent,
+}
 
 enum class HomeSection { Food, Happiness, Energy, Shop, Tasks }
 
@@ -193,6 +202,7 @@ data class PetState(
 sealed interface PetAction {
     data class SelectSection(val section: HomeSection) : PetAction
     data object OpenMenu : PetAction
+    data object OpenHandbook : PetAction
     data object OpenBudget : PetAction
     data object OpenDeposit : PetAction
     data object OpenGoal : PetAction
@@ -530,6 +540,7 @@ class PetViewModel @Inject constructor(
         when (action) {
             is PetAction.SelectSection -> _state.update { it.copy(selectedSection = action.section) }
             PetAction.OpenMenu -> _state.update { it.copy(overlay = HomeOverlay.Menu) }
+            PetAction.OpenHandbook -> _state.update { it.copy(overlay = HomeOverlay.Handbook) }
             PetAction.OpenBudget -> _state.update { it.copy(overlay = HomeOverlay.Budget) }
             PetAction.OpenDeposit -> _state.update { it.copy(overlay = HomeOverlay.Deposit) }
             PetAction.OpenGoal -> _state.update {

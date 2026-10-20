@@ -381,6 +381,7 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
 
     when (state.overlay) {
         HomeOverlay.Menu -> MenuOverlay(state, onAction, closeOverlay)
+        HomeOverlay.Handbook -> HandbookScreen(onBack = closeOverlay)
         HomeOverlay.Budget -> BudgetOverviewScreen(
             state = state.resources,
             onBack = closeOverlay,
@@ -2381,6 +2382,12 @@ private fun MenuOverlay(
                             },
                         ),
                     )
+                }
+                TextButton(
+                    onClick = { onAction(PetAction.OpenHandbook) },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.handbook_title))
                 }
                 TextButton(
                     onClick = { onAction(PetAction.Exit) },
