@@ -144,6 +144,7 @@ internal fun HandbookScreen(onBack: () -> Unit) {
             title = stringResource(
                 when (page) {
                     HandbookPage.Home -> R.string.handbook_title
+                    HandbookPage.Home -> R.string.handbook_game
                     HandbookPage.Basics -> R.string.handbook_basics
                     HandbookPage.Deposit -> R.string.handbook_deposit
                     HandbookPage.Budget -> R.string.handbook_budget
