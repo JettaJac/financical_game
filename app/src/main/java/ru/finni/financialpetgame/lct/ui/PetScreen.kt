@@ -347,25 +347,31 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
             petImageRes = petImageResource(
                 state.resources.level, state.resources.hairColour, state.resources.hairStyle,
             ),
+            state = state.resources,
             result = budgetPeriodResult(state.resources),
-            plannedOptionalExpenses = state.resources.plannedOptionalExpenses,
-            actualOptionalExpenses = state.resources.actualOptionalExpenses,
-            actualUnplannedExpenses = state.resources.actualUnplannedExpenses,
-            actualAdditionalIncome = state.resources.actualAdditionalIncome,
             onComplete = { onAction(PetAction.CompleteBudgetReview) },
         )
         return
     }
 
     if (needsBudgetPlanning(state.resources)) {
+        val activatesLevelTwoExpenses =
+            state.resources.level >= 2 && !state.resources.levelTwoBudgetExpensesEnabled
+        val nextRecurringExpense = state.resources.expense + if (activatesLevelTwoExpenses) {
+            GameDefaults.VITAMINS_EXPENSE + GameDefaults.SPORTS_SECTION_EXPENSE
+        } else {
+            0
+        }
         BudgetPlanningScreen(
             petImageRes = petImageResource(
                 state.resources.level, state.resources.hairColour, state.resources.hairStyle,
             ),
             firstPlanning = !state.resources.budgetTutorialCompleted,
-            previousOptionalExpenses = state.resources.plannedOptionalExpenses,
+            secondaryPlanning = state.resources.budgetPlanWeek == 1,
+            previousOptionalExpenses = state.resources.actualOptionalExpenses,
+            previousOptionalExpenseRecords = state.resources.optionalExpenseRecords,
             recurringIncome = state.resources.income,
-            recurringExpense = state.resources.expense,
+            recurringExpense = nextRecurringExpense,
             onComplete = { optional ->
                 onAction(PetAction.CompleteBudgetPlanning(optional))
             },
@@ -385,6 +391,7 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
         HomeOverlay.Budget -> BudgetOverviewScreen(
             state = state.resources,
             onBack = closeOverlay,
+            onCloseDeposit = { onAction(PetAction.CloseDepositAccount) },
         )
         HomeOverlay.Deposit -> DepositScreen(
             state = state.resources,

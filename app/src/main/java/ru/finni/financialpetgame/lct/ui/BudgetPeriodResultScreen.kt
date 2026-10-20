@@ -39,6 +39,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ru.finni.financialpetgame.lct.R
+import ru.finni.financialpetgame.lct.data.GameSnapshot
 import ru.finni.financialpetgame.lct.domain.BudgetPeriodResult
 import ru.finni.financialpetgame.lct.domain.MandatoryBudget
 import ru.finni.financialpetgame.lct.ui.theme.NunitoFontFamily
@@ -50,32 +51,30 @@ private val ResultBackground = Color(0xFFF8EDFF)
 @Composable
 internal fun BudgetPeriodResultScreen(
     @DrawableRes petImageRes: Int,
+    state: GameSnapshot,
     result: BudgetPeriodResult,
-    plannedOptionalExpenses: Int,
-    actualOptionalExpenses: Int,
-    actualUnplannedExpenses: Int,
-    actualAdditionalIncome: Int,
     onComplete: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var showSuccess by rememberSaveable { mutableStateOf(false) }
+    var resultPage by rememberSaveable { androidx.compose.runtime.mutableIntStateOf(0) }
 
     if (showSuccess) {
         BudgetSuccessScreen(
             petImageRes = petImageRes,
             onCollect = onComplete,
+            onReturn = { showSuccess = false; resultPage = 0 },
             modifier = modifier,
         )
     } else {
         BudgetComparisonScreen(
             petImageRes = petImageRes,
+            state = state,
             result = result,
-            plannedOptionalExpenses = plannedOptionalExpenses,
-            actualOptionalExpenses = actualOptionalExpenses,
-            actualUnplannedExpenses = actualUnplannedExpenses,
-            actualAdditionalIncome = actualAdditionalIncome,
+            page = resultPage,
             onContinue = {
-                if (result.isSuccessful) showSuccess = true else onComplete()
+                if (resultPage < 2) resultPage += 1
+                else if (result.isSuccessful) showSuccess = true else onComplete()
             },
             modifier = modifier,
         )
@@ -85,11 +84,9 @@ internal fun BudgetPeriodResultScreen(
 @Composable
 private fun BudgetComparisonScreen(
     @DrawableRes petImageRes: Int,
+    state: GameSnapshot,
     result: BudgetPeriodResult,
-    plannedOptionalExpenses: Int,
-    actualOptionalExpenses: Int,
-    actualUnplannedExpenses: Int,
-    actualAdditionalIncome: Int,
+    page: Int,
     onContinue: () -> Unit,
     modifier: Modifier,
 ) {
@@ -140,44 +137,86 @@ private fun BudgetComparisonScreen(
                     .padding(horizontal = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                ResultSectionTitle(stringResource(R.string.budget_income))
-                ResultComparisonRow(
-                    title = stringResource(R.string.budget_recurring),
-                    planned = result.plannedIncome,
-                    actual = result.plannedIncome,
-                )
-                ResultComparisonRow(
-                    title = stringResource(R.string.budget_additional_income),
-                    planned = 0,
-                    actual = actualAdditionalIncome,
-                )
-                ResultTotalRow(
-                    title = stringResource(R.string.budget_period_income_total),
-                    planned = result.plannedIncome,
-                    actual = result.actualIncome,
-                )
-                Spacer(Modifier.height(10.dp))
-                ResultSectionTitle(stringResource(R.string.budget_expenses))
-                ResultComparisonRow(
-                    title = stringResource(R.string.budget_recurring_expenses),
-                    planned = result.plannedExpenses - plannedOptionalExpenses,
-                    actual = result.plannedExpenses - plannedOptionalExpenses,
-                )
-                ResultComparisonRow(
-                    title = stringResource(R.string.budget_optional_expenses),
-                    planned = plannedOptionalExpenses,
-                    actual = actualOptionalExpenses,
-                )
-                ResultComparisonRow(
-                    title = stringResource(R.string.budget_unplanned),
-                    planned = 0,
-                    actual = actualUnplannedExpenses,
-                )
-                ResultTotalRow(
-                    title = stringResource(R.string.budget_period_expense_total),
-                    planned = result.plannedExpenses,
-                    actual = result.actualExpenses,
-                )
+                when (page) {
+                    0 -> {
+                        ResultSectionTitle(stringResource(R.string.budget_income))
+                        ResultComparisonRow(
+                            title = stringResource(R.string.budget_recurring),
+                            planned = result.plannedIncome,
+                            actual = result.plannedIncome,
+                        )
+                        ResultComparisonRow(
+                            title = stringResource(R.string.budget_additional_income),
+                            planned = 0,
+                            actual = state.actualAdditionalIncome,
+                        )
+                        ResultTotalRow(
+                            title = stringResource(R.string.budget_period_income_total),
+                            planned = result.plannedIncome,
+                            actual = result.actualIncome,
+                        )
+                    }
+                    1 -> {
+                        ResultSectionTitle(stringResource(R.string.budget_expenses))
+                        ResultComparisonRow(
+                            title = stringResource(R.string.budget_recurring_expenses),
+                            planned = state.budgetPlanRecurringExpense,
+                            actual = state.budgetPlanRecurringExpense,
+                        )
+                        ResultComparisonRow(
+                            title = stringResource(R.string.budget_optional_expenses),
+                            planned = state.plannedOptionalExpenses,
+                            actual = state.actualOptionalExpenses,
+                        )
+                        state.optionalExpenseRecords.forEach { record ->
+                            ResultComparisonRow(record.title, 0, record.amount)
+                        }
+                        ResultComparisonRow(
+                            title = stringResource(R.string.budget_unplanned),
+                            planned = 0,
+                            actual = state.actualUnplannedExpenses,
+                        )
+                        ResultComparisonRow(
+                            title = stringResource(R.string.budget_goal_expenses),
+                            planned = state.plannedGoalExpenses,
+                            actual = state.actualGoalExpenses,
+                        )
+                        ResultTotalRow(
+                            title = stringResource(R.string.budget_period_expense_total),
+                            planned = result.plannedExpenses,
+                            actual = result.actualExpenses,
+                        )
+                    }
+                    else -> {
+                        ResultSectionTitle(stringResource(R.string.deposit_title))
+                        val deposit = state.activeDeposit
+                        if (deposit == null) {
+                            Text(
+                                stringResource(R.string.budget_no_active_deposit),
+                                color = ResultPurpleDark,
+                            )
+                        } else {
+                            ResultComparisonRow(
+                                title = stringResource(R.string.deposit_amount),
+                                planned = deposit.amount,
+                                actual = deposit.amount,
+                            )
+                            Text(
+                                stringResource(
+                                    R.string.deposit_game_days,
+                                    deposit.remainingCycles(state.currentPeriod),
+                                ),
+                                color = ResultPurpleDark,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+                        ResultTotalRow(
+                            title = stringResource(R.string.budget_total),
+                            planned = result.plannedIncome - result.plannedExpenses,
+                            actual = result.actualIncome - result.actualExpenses,
+                        )
+                    }
+                }
                 Spacer(Modifier.height(12.dp))
             }
             Surface(
@@ -274,6 +313,7 @@ private fun ResultSectionTitle(text: String) {
 private fun BudgetSuccessScreen(
     @DrawableRes petImageRes: Int,
     onCollect: () -> Unit,
+    onReturn: () -> Unit,
     modifier: Modifier,
 ) {
     Box(modifier.fillMaxSize().background(ResultBackground)) {
@@ -303,11 +343,27 @@ private fun BudgetSuccessScreen(
                     .fillMaxWidth(0.82f),
                 contentScale = ContentScale.Fit,
             )
-            ResultPrimaryButton(
-                text = stringResource(R.string.budget_collect_reward),
-                onClick = onCollect,
+            Column(
                 modifier = Modifier.align(Alignment.BottomCenter).padding(20.dp),
-            )
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                ResultPrimaryButton(
+                    text = stringResource(R.string.budget_collect_reward),
+                    onClick = onCollect,
+                )
+                Button(
+                    onClick = onReturn,
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+                    shape = RoundedCornerShape(10.dp),
+                ) {
+                    Text(
+                        stringResource(R.string.budget_return_to_results),
+                        color = ResultPurpleDark,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            }
         }
     }
 }

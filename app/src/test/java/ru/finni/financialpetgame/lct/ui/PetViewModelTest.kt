@@ -649,7 +649,7 @@ class PetViewModelTest {
         assertEquals(true, needsBudgetReview(successfulSnapshot))
         assertEquals(true, budgetPeriodResult(successfulSnapshot).isSuccessful)
         assertEquals(110, budgetPeriodResult(successfulSnapshot).actualIncome)
-        assertEquals(55, budgetPeriodResult(successfulSnapshot).actualExpenses)
+        assertEquals(65, budgetPeriodResult(successfulSnapshot).actualExpenses)
         assertEquals(
             false,
             budgetPeriodResult(
@@ -695,6 +695,14 @@ class PetViewModelTest {
         assertEquals(85, MandatoryBudget.income)
         assertEquals(40, MandatoryBudget.expense)
         assertEquals(45, MandatoryBudget.maximumOptionalExpense)
+        assertEquals(
+            listOf("pocket_money", "school_lunch", "mobile_service"),
+            MandatoryBudget.entries(false, 40).map { it.id },
+        )
+        assertEquals(
+            listOf("vitamins", "sports_section"),
+            MandatoryBudget.entries(true, 55).takeLast(2).map { it.id },
+        )
         assertEquals(
             true,
             needsBudgetPlanning(

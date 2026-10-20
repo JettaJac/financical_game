@@ -270,7 +270,7 @@ private fun DepositOpenedScreen(
 }
 
 @Composable
-private fun DepositEarlyClosingScreen(
+internal fun DepositEarlyClosingScreen(
     state: GameSnapshot,
     deposit: ActiveDeposit,
     onBack: () -> Unit,

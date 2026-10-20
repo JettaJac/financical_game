@@ -51,6 +51,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ru.finni.financialpetgame.lct.R
+import ru.finni.financialpetgame.lct.data.BudgetExpenseRecord
 import ru.finni.financialpetgame.lct.domain.BudgetCategory
 import ru.finni.financialpetgame.lct.domain.BudgetEntry
 import ru.finni.financialpetgame.lct.domain.BudgetFrequency
@@ -62,6 +63,7 @@ private const val BUDGET_CLASSIFY = 1
 private const val BUDGET_SUMMARY = 2
 private const val BUDGET_OPTIONAL = 3
 private const val BUDGET_REVIEW = 4
+private const val BUDGET_FINAL = 5
 
 private enum class ClassificationStep { Category, Frequency }
 
@@ -74,14 +76,20 @@ private val BudgetBackground = Color(0xFFF8EDFF)
 internal fun BudgetPlanningScreen(
     @DrawableRes petImageRes: Int,
     firstPlanning: Boolean,
+    secondaryPlanning: Boolean,
     previousOptionalExpenses: Int,
+    previousOptionalExpenseRecords: List<BudgetExpenseRecord>,
     recurringIncome: Int = MandatoryBudget.income,
     recurringExpense: Int = MandatoryBudget.expense,
     onComplete: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var showEducation by rememberSaveable { mutableStateOf(false) }
-    var screen by rememberSaveable { mutableIntStateOf(BUDGET_INTRO) }
+    var screen by rememberSaveable(firstPlanning, secondaryPlanning) {
+        mutableIntStateOf(
+            if (firstPlanning || secondaryPlanning) BUDGET_INTRO else BUDGET_OPTIONAL,
+        )
+    }
     var entryIndex by rememberSaveable { mutableIntStateOf(0) }
     var classificationStep by rememberSaveable { mutableStateOf(ClassificationStep.Category) }
     var guideText by rememberSaveable { mutableStateOf<String?>(null) }
@@ -91,14 +99,12 @@ internal fun BudgetPlanningScreen(
         )
     }
     val optionalExpenseAmount = optionalExpenses.toIntOrNull() ?: 0
+    val includeLevelTwo = recurringExpense >= MandatoryBudget.expense + 15
     val budgetEntries = remember(recurringExpense) {
-        MandatoryBudget.entries.map { entry ->
-            if (entry.id == "school_lunch") {
-                entry.copy(amount = entry.amount + (recurringExpense - MandatoryBudget.expense))
-            } else {
-                entry
-            }
-        }
+        MandatoryBudget.entries(includeLevelTwo, recurringExpense)
+    }
+    val classificationEntries = remember {
+        MandatoryBudget.entries.filter { it.id == "pocket_money" || it.id == "mobile_service" }
     }
     val maximumOptionalExpense = (recurringIncome - recurringExpense).coerceAtLeast(0)
     val optionalExpenseTooHigh = optionalExpenseAmount > maximumOptionalExpense
@@ -120,13 +126,14 @@ internal fun BudgetPlanningScreen(
     when (screen) {
         BUDGET_INTRO -> BudgetIntroScreen(
             petImageRes = petImageRes,
+            secondaryPlanning = secondaryPlanning,
             onContinue = {
                 if (firstPlanning) showEducation = true else screen = BUDGET_OPTIONAL
             },
             modifier = modifier,
         )
         BUDGET_CLASSIFY -> {
-            val entry = budgetEntries[entryIndex]
+            val entry = classificationEntries[entryIndex]
             val correctCategoryGuide = stringResource(
                 if (entry.category == BudgetCategory.Income) {
                     R.string.budget_correct_income_explanation
@@ -152,7 +159,7 @@ internal fun BudgetPlanningScreen(
             BudgetClassificationScreen(
                 petImageRes = petImageRes,
                 entry = entry,
-                placedEntries = budgetEntries.take(entryIndex),
+                placedEntries = classificationEntries.take(entryIndex),
                 step = classificationStep,
                 guideText = guideText,
                 onCategorySelected = { selected ->
@@ -165,7 +172,7 @@ internal fun BudgetPlanningScreen(
                 },
                 onFrequencySelected = { selected ->
                     if (selected == entry.frequency) {
-                        if (entryIndex == budgetEntries.lastIndex) {
+                        if (entryIndex == classificationEntries.lastIndex) {
                             screen = BUDGET_SUMMARY
                         } else {
                             entryIndex += 1
@@ -182,7 +189,9 @@ internal fun BudgetPlanningScreen(
         BUDGET_SUMMARY -> BudgetMandatorySummaryScreen(
             petImageRes = petImageRes,
             entries = budgetEntries,
-            onContinue = { screen = BUDGET_OPTIONAL },
+            onContinue = {
+                if (firstPlanning) onComplete(0) else screen = BUDGET_OPTIONAL
+            },
             modifier = modifier,
         )
         BUDGET_OPTIONAL -> BudgetOptionalExpensesScreen(
@@ -191,6 +200,7 @@ internal fun BudgetPlanningScreen(
             onValueChange = { value -> optionalExpenses = value.filter(Char::isDigit).take(6) },
             maximumOptionalExpenses = maximumOptionalExpense,
             entries = budgetEntries,
+            previousExpenseRecords = previousOptionalExpenseRecords,
             showBalanceError = optionalExpenseTooHigh,
             onContinue = {
                 if (!optionalExpenseTooHigh) screen = BUDGET_REVIEW
@@ -203,7 +213,13 @@ internal fun BudgetPlanningScreen(
             entries = budgetEntries,
             recurringIncome = recurringIncome,
             recurringExpense = recurringExpense,
-            onComplete = { onComplete(optionalExpenseAmount) },
+            onComplete = { screen = BUDGET_FINAL },
+            modifier = modifier,
+        )
+        BUDGET_FINAL -> BudgetMandatorySummaryScreen(
+            petImageRes = petImageRes,
+            entries = budgetEntries,
+            onContinue = { onComplete(optionalExpenseAmount) },
             modifier = modifier,
         )
     }
@@ -212,6 +228,7 @@ internal fun BudgetPlanningScreen(
 @Composable
 private fun BudgetIntroScreen(
     @DrawableRes petImageRes: Int,
+    secondaryPlanning: Boolean,
     onContinue: () -> Unit,
     modifier: Modifier,
 ) {
@@ -239,7 +256,10 @@ private fun BudgetIntroScreen(
         )
         Box(Modifier.fillMaxSize().safeDrawingPadding()) {
             BudgetSpeechBubble(
-                text = stringResource(R.string.budget_intro_message),
+                text = stringResource(
+                    if (secondaryPlanning) R.string.budget_second_intro_message
+                    else R.string.budget_intro_message,
+                ),
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .padding(top = 72.dp, start = 24.dp, end = 24.dp),
@@ -392,6 +412,7 @@ private fun BudgetOptionalExpensesScreen(
     onValueChange: (String) -> Unit,
     maximumOptionalExpenses: Int,
     entries: List<BudgetEntry>,
+    previousExpenseRecords: List<BudgetExpenseRecord>,
     showBalanceError: Boolean,
     onContinue: () -> Unit,
     modifier: Modifier,
@@ -446,6 +467,25 @@ private fun BudgetOptionalExpensesScreen(
             )
         },
     ) {
+        if (previousExpenseRecords.isNotEmpty()) {
+            BudgetSectionTitle(stringResource(R.string.budget_previous_optional_title))
+            previousExpenseRecords.forEach { record ->
+                BudgetValueRow(record.title, record.amount)
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(
+                    stringResource(R.string.budget_previous_optional_total),
+                    color = BudgetPurpleDark,
+                    fontWeight = FontWeight.ExtraBold,
+                )
+                Text(
+                    previousExpenseRecords.sumOf { it.amount }.toString(),
+                    color = BudgetPurpleDark,
+                    fontWeight = FontWeight.ExtraBold,
+                )
+            }
+            Spacer(Modifier.height(14.dp))
+        }
         BudgetSections(
             entries = entries,
             showFrequency = true,
@@ -707,7 +747,7 @@ private fun BudgetChoiceButton(
 }
 
 @Composable
-private fun BudgetPrimaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+internal fun BudgetPrimaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Button(
         onClick = onClick,
         modifier = modifier.fillMaxWidth().height(52.dp),

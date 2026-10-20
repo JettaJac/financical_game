@@ -66,6 +66,16 @@
     <string name="budget_mobile_service">Связь</string>
     <string name="budget_vitamins">Витамины</string>
     <string name="budget_sports_section">Спортивная секция</string>
+    <string name="budget_second_intro_message">Теперь ты знаешь свои реальные траты. Давай запланируем необязательные расходы на следующую неделю!</string>
+    <string name="budget_previous_optional_title">Необязательные расходы на прошлой неделе</string>
+    <string name="budget_previous_optional_total">Всего</string>
+    <string name="budget_previous_week_balance">Остаток на конец прошлой недели</string>
+    <string name="budget_balance_explanation">В начале периода в кошельке было %1$d монет. С тех пор баланс %2$s на %3$d из-за покупок, доходов, событий и вкладов. Поэтому сейчас у тебя %4$d монет.</string>
+    <string name="budget_balance_increased">увеличился</string>
+    <string name="budget_balance_decreased">уменьшился</string>
+    <string name="budget_no_active_deposit">Сейчас у тебя нет открытого вклада.</string>
+    <string name="deposit_amount">Сумма вклада</string>
+    <string name="budget_return_to_results">Вернуться к результатам</string>
     <string name="budget_period_results">Итоги</string>
     <string name="budget_period_success_summary">Молодец, ты хорошо справился за эту неделю!</string>
     <string name="budget_period_failed_summary">В этот раз расходы превысили план. В следующую неделю получится лучше!</string>
