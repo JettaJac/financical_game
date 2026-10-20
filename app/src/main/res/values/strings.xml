@@ -233,6 +233,11 @@
     <string name="item_on_cooldown">Можно будет снова использовать через %1$s</string>
     <string name="item_weekdays_only">Это действие доступно по будням.</string>
     <string name="item_weekends_only">Это действие доступно в выходные.</string>
+    <string name="item_limit_reached">Эту работу больше нельзя выполнить: попытки закончились</string>
+    <string name="item_low_energy">Сначала отдохни: для этого действия пока мало энергии</string>
+    <string name="work_low_energy">Я устал, пойдем отдохнем немного</string>
+    <string name="work_get_ready">Сначала приведи себя в порядок, потом можно работать</string>
+    <string name="work_lessons">Сначала сделай уроки, потом можно работать</string>
     <string name="routine_reminder">Сначала сделай уроки и приведи себя в порядок — потом остальные дела!</string>
     <string name="routine_reminder_weekend">Сначала приведи себя в порядок — потом остальные дела!</string>
     <string name="morning_tutorial_intro">Настало второе утро! \nДавай вместе пройдём утренний ритуал. Откроем список дел</string>

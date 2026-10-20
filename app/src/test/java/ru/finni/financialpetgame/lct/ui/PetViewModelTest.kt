@@ -54,14 +54,34 @@ import kotlin.math.roundToInt
 
 class PetViewModelTest {
     @Test
-    fun low_characteristic_prompts_start_below_ten() {
+    fun low_characteristic_prompts_are_created_only_when_crossing_below_ten() {
         assertEquals(
             emptyList<FinnyPrompt>(),
-            lowCharacteristicPrompts(GameSnapshot(health = 10, energy = 10, happiness = 10)),
+            lowCharacteristicCrossings(
+                previous = GameSnapshot(health = 13, energy = 13, happiness = 13),
+                current = GameSnapshot(health = 10, energy = 10, happiness = 10),
+            ),
         )
         assertEquals(
             listOf(FinnyPrompt.LowHealth, FinnyPrompt.LowEnergy, FinnyPrompt.LowHappiness),
-            lowCharacteristicPrompts(GameSnapshot(health = 9, energy = 9, happiness = 9)),
+            lowCharacteristicCrossings(
+                previous = GameSnapshot(health = 10, energy = 13, happiness = 11),
+                current = GameSnapshot(health = 9, energy = 7, happiness = 8),
+            ),
+        )
+        assertEquals(
+            emptyList<FinnyPrompt>(),
+            lowCharacteristicCrossings(
+                previous = GameSnapshot(health = 9, energy = 7, happiness = 8),
+                current = GameSnapshot(health = 5, energy = 3, happiness = 1),
+            ),
+        )
+        assertEquals(
+            listOf(FinnyPrompt.LowEnergy),
+            lowCharacteristicCrossings(
+                previous = GameSnapshot(energy = 12),
+                current = GameSnapshot(energy = 8),
+            ),
         )
     }
 

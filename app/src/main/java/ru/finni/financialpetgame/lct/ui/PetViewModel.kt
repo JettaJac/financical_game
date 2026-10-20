@@ -277,7 +277,8 @@ class PetViewModel @Inject constructor(
     private var changeMoneyStartInProgress = false
     private var changeMoneyCompletionInProgress = false
     private var lastCycleEnergyPromptAtMillis = 0L
-    private val shownLowPrompts = mutableSetOf<String>()
+    private var lastObservedCharacteristics: GameSnapshot? = null
+    private val pendingLowPrompts = ArrayDeque<FinnyPrompt>()
     private val eventScheduler = EventScheduler(eventCatalog.data)
 
     init {
@@ -288,6 +289,7 @@ class PetViewModel @Inject constructor(
 
             launch {
                 repository.snapshot.collect { resources ->
+                    recordLowCharacteristicCrossings(resources)
                     val previous = _state.value.resources.takeIf { _state.value.isInitialized }
                     val scheduledEvents = if (
                         !needsBudgetReview(resources) && !needsBudgetPlanning(resources)
@@ -371,14 +373,9 @@ class PetViewModel @Inject constructor(
                             it.finnyPrompt == null &&
                             it.customMessage == null
                         val lowPrompt = if (canShowLowPrompt) {
-                            lowCharacteristicPrompts(resources).firstOrNull { prompt ->
-                                "${resources.currentPeriod}:$prompt" !in shownLowPrompts
-                            }
+                            takeNextLowCharacteristicPrompt(resources)
                         } else {
                             null
-                        }
-                        lowPrompt?.let { prompt ->
-                            shownLowPrompts.add("${resources.currentPeriod}:$prompt")
                         }
                         val baseState = it.copy(
                             resources = resources,
@@ -417,11 +414,13 @@ class PetViewModel @Inject constructor(
                 currentState.resources.cycleEndsAtMillis,
                 nowMillis,
             )
+            val refreshedResources = currentState.resources.withCharacteristicsAt(secondsRemaining)
+            recordLowCharacteristicCrossings(refreshedResources)
             _state.update {
                 it.copy(
                     nowMillis = nowMillis,
                     secondsRemaining = secondsRemaining,
-                    resources = it.resources.withCharacteristicsAt(secondsRemaining),
+                    resources = refreshedResources,
                 )
             }
 
@@ -470,14 +469,11 @@ class PetViewModel @Inject constructor(
                 promptState.finnyPrompt == null &&
                 promptState.customMessage == null
             ) {
-                lowCharacteristicPrompts(promptState.resources).firstOrNull { prompt ->
-                    "${promptState.resources.currentPeriod}:$prompt" !in shownLowPrompts
-                }
+                takeNextLowCharacteristicPrompt(promptState.resources)
             } else {
                 null
             }
             if (lowPrompt != null) {
-                shownLowPrompts.add("${promptState.resources.currentPeriod}:$lowPrompt")
                 _state.update { it.copy(finnyPrompt = lowPrompt) }
             }
             val scheduledEvents = eventScheduler.due(
@@ -1132,6 +1128,24 @@ class PetViewModel @Inject constructor(
             }
         }
     }
+
+    private fun recordLowCharacteristicCrossings(resources: GameSnapshot) {
+        val previous = lastObservedCharacteristics ?: resources.copy(
+            health = LOW_CHARACTERISTIC_THRESHOLD,
+            happiness = LOW_CHARACTERISTIC_THRESHOLD,
+            energy = LOW_CHARACTERISTIC_THRESHOLD,
+        )
+        pendingLowPrompts.addAll(lowCharacteristicCrossings(previous, resources))
+        lastObservedCharacteristics = resources
+    }
+
+    private fun takeNextLowCharacteristicPrompt(resources: GameSnapshot): FinnyPrompt? {
+        while (pendingLowPrompts.isNotEmpty()) {
+            val prompt = pendingLowPrompts.removeFirst()
+            if (prompt.isStillLow(resources)) return prompt
+        }
+        return null
+    }
 }
 
 private fun GameEvent.queueKey(): String = scheduledEvent?.let { scheduled ->
@@ -1169,10 +1183,28 @@ internal fun promotePendingEvent(state: PetState): PetState {
     return state.copy(activeEvent = next, pendingEvents = state.pendingEvents.drop(1))
 }
 
-internal fun lowCharacteristicPrompts(resources: GameSnapshot): List<FinnyPrompt> = buildList {
-    if (resources.health < 10) add(FinnyPrompt.LowHealth)
-    if (resources.energy < 10) add(FinnyPrompt.LowEnergy)
-    if (resources.happiness < 10) add(FinnyPrompt.LowHappiness)
+private const val LOW_CHARACTERISTIC_THRESHOLD = 10
+
+internal fun lowCharacteristicCrossings(
+    previous: GameSnapshot,
+    current: GameSnapshot,
+): List<FinnyPrompt> = buildList {
+    if (previous.health >= LOW_CHARACTERISTIC_THRESHOLD &&
+        current.health < LOW_CHARACTERISTIC_THRESHOLD
+    ) add(FinnyPrompt.LowHealth)
+    if (previous.energy >= LOW_CHARACTERISTIC_THRESHOLD &&
+        current.energy < LOW_CHARACTERISTIC_THRESHOLD
+    ) add(FinnyPrompt.LowEnergy)
+    if (previous.happiness >= LOW_CHARACTERISTIC_THRESHOLD &&
+        current.happiness < LOW_CHARACTERISTIC_THRESHOLD
+    ) add(FinnyPrompt.LowHappiness)
+}
+
+private fun FinnyPrompt.isStillLow(resources: GameSnapshot): Boolean = when (this) {
+    FinnyPrompt.LowHealth -> resources.health < LOW_CHARACTERISTIC_THRESHOLD
+    FinnyPrompt.LowEnergy -> resources.energy < LOW_CHARACTERISTIC_THRESHOLD
+    FinnyPrompt.LowHappiness -> resources.happiness < LOW_CHARACTERISTIC_THRESHOLD
+    else -> false
 }
 
 internal fun shouldRepeatCycleEnergyPrompt(
