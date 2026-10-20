@@ -134,15 +134,15 @@ enum class HappinessItem(
         Effect(resource = Resource.Energy, increase = 0),
         Effect(resource = Resource.Happiness, increase = 10),
     )),
-    CatchMoney(price = 15, cooldown = Cooldown.Cycles(1.0), level = 2, careEffects = listOf(
+    ChangeMoney(price = 20, cooldown = Cooldown.Cycles(1.0), level = 2, careEffects = listOf(
+            Effect(resource = Resource.Health, increase = -5),
+            Effect(resource = Resource.Happiness, increase = 20),
+            Effect(resource = Resource.Energy, increase = 0),
+        )),
+    CatchMoney(price = 15, cooldown = Cooldown.Cycles(1.0), level = 3, careEffects = listOf(
         Effect(resource = Resource.Health, increase = -5),
         Effect(resource = Resource.Energy, increase = 0),
         Effect(resource = Resource.Happiness, increase = 15),
-    )),
-    ChangeMoney(price = 20, cooldown = Cooldown.Cycles(1.0), level = 3, careEffects = listOf(
-        Effect(resource = Resource.Health, increase = -5),
-        Effect(resource = Resource.Happiness, increase = 20),
-        Effect(resource = Resource.Energy, increase = 0),
     )),
     PlayWithBall(price = 0, cooldown = Cooldown.Cycles(0.3), level = 3, careEffects = listOf(
         Effect(resource = Resource.Health, increase = 0),
