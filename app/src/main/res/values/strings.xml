@@ -578,8 +578,8 @@
     <string name="onboarding_name_question">Как ты хочешь\nменя назвать?</string>
     <string name="onboarding_next">Далее</string>
     <string name="onboarding_select">Выбрать</string>
-    <string name="onboarding_choose_hair_colour">Выбери цвет</string>
-    <string name="onboarding_choose_hair_style">Выбери шерстку питомцу</string>
+    <string name="onboarding_choose_hair_colour">Выбери цвет персонажа</string>
+    <string name="onboarding_choose_hair_style">Выбери шерстку персонажа</string>
     <string name="onboarding_choose_goal">Давай выберем цель</string>
     <string name="hair_colour_beige">Бежевая шерстка</string>
     <string name="hair_colour_violet">Сиреневая шерстка</string>

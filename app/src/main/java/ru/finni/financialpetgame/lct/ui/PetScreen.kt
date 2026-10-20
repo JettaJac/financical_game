@@ -2270,8 +2270,8 @@ private fun ProductCard(
 private fun CardItem.actionLabelRes(): Int = when (this) {
     is FoodItem -> R.string.action_eat
     HappinessItem.BudgetMaster,
-    HappinessItem.CatchMoney,
     HappinessItem.ChangeMoney,
+    HappinessItem.CatchMoney,
     HappinessItem.PlayWithBall,
     HappinessItem.BoardGame,
     -> R.string.action_play
