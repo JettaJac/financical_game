@@ -381,10 +381,25 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
     }
 
     Box(Modifier.fillMaxSize().background(HomeSurface)) {
-                HomePage(state, onAction)
+        HomePage(state, onAction)
     }
 
 //    EventOverlay(GameEvents.SportsSection, acceptButtonText = "Принять")
+
+    if (state.overlay != null) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            event.changes.forEach { change -> change.consume() }
+                        }
+                    }
+                },
+        )
+    }
 
     when (state.overlay) {
         HomeOverlay.Menu -> MenuOverlay(state, onAction, closeOverlay)

@@ -48,6 +48,22 @@ ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }
 
+// Finder can create .DS_Store inside generated resource directories. AAPT then
+// treats it as an Android resource and parseLocalResources fails.
+val removeMacOsBuildMetadata by tasks.registering(Delete::class) {
+    delete(
+        fileTree(layout.buildDirectory) {
+            include("**/.DS_Store")
+        },
+    )
+}
+
+tasks.matching {
+    it.name.startsWith("parse") && it.name.endsWith("LocalResources")
+}.configureEach {
+    dependsOn(removeMacOsBuildMetadata)
+}
+
 dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
