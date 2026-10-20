@@ -26,14 +26,16 @@
     <string name="timer">Таймер</string>
 
     <!-- Weekly budget planning -->
-    <string name="budget_intro_message">Давай спланируем бюджет так, чтобы мне хватило на все!</string>
+    <string name="budget_intro_message">Давай спланируем бюджет: решим, сколько денег потратить сейчас, а сколько сохранить, чтобы мне на всё хватило!</string>
     <string name="budget_make_plan">Составить бюджет</string>
-    <string name="budget_choose_category_guide">Куда отнесем это: к доходам или расходам?</string>
-    <string name="budget_choose_frequency_guide">Отличный выбор! \nТеперь уточни, к какому виду она относится</string>
-    <string name="budget_choose_category">К чему относится?</string>
-    <string name="budget_choose_subcategory">К чему относиться?</string>
+    <string name="budget_choose_category_guide">Теперь давай выберем, к какой категории ты отнесёшь эту позицию</string>
+    <string name="budget_choose_frequency_guide">Верно! Теперь определим, к какой подкатегории относится эта позиция</string>
+    <string name="budget_choose_category">Выбери категорию</string>
+    <string name="budget_choose_subcategory">Выбери подкатегорию</string>
+    <string name="budget_income_singular">Доход</string>
+    <string name="budget_expense_singular">Расход</string>
     <string name="budget_correct_income_explanation">Верно: это доход — деньги, которые мы получаем. Теперь определим как часто они приходят.</string>
-    <string name="budget_correct_expense_explanation">Верно: это расход — деньги, которые мы тратим. Теперь определим как часто они приходят.</string>
+    <string name="budget_correct_expense_explanation">Верно! Это расход — деньги, которые мы тратим. Теперь определим его подкатегорию.</string>
     <string name="budget_wrong_income">Это доход — деньги, которые мы получаем. Попробуй ещё раз!</string>
     <string name="budget_wrong_expense">Это расход — деньги, которые мы тратим. Попробуй ещё раз!</string>
     <string name="budget_correct_recurring_income">Верно! Деньги на базовые потребности приходят каждую неделю — это постоянный доход.</string>
@@ -45,7 +47,7 @@
     <string name="budget_irregular">Нерегулярные</string>
     <string name="budget_savings">Накопления (вклад)</string>
     <string name="budget_mandatory_success">Отлично! Все обязательные доходы и расходы распределены правильно</string>
-    <string name="budget_formula_guide">Из постоянных доходов вычитай обязательные расходы</string>
+    <string name="budget_formula_guide">Из постоянных доходов вычитаем обязательные расходы</string>
     <string name="budget_recurring_income_total">Постоянные доходы</string>
     <string name="budget_mandatory_expense_total">Обязательные расходы</string>
     <string name="budget_formula_remainder">Остаток</string>
@@ -113,7 +115,7 @@
     <string name="financial_help">Как это работает</string>
 
     <!-- Financial education -->
-    <string name="education_budget_title">Как работает бюджет</string>
+    <string name="education_budget_title">Как работает бюджет?</string>
     <string name="education_deposit_title">Как работает вклад</string>
     <string name="education_understood">Понятно</string>
     <plurals name="cycle_duration_minutes">
@@ -131,7 +133,7 @@
     <string name="cycle_duration_minutes_seconds">%1$s %2$s</string>
     <string name="education_budget_week_title">План на игровую неделю</string>
     <string name="education_budget_game_day">В неделе 7 игровых дней. Один игровой день длится %1$s.</string>
-    <string name="education_budget_step_plan">Сначала смотрим, сколько у нас монет на игровую неделюрешаем. Затем решаем, сколько можно потратить.</string>
+    <string name="education_budget_step_plan">Сначала смотрим, сколько у нас монет на игровую неделю. Затем решаем, сколько можно потратить.</string>
     <string name="education_budget_step_play">Играем 7 дней: зарабатываем монеты и делаем покупки</string>
     <string name="education_budget_step_compare">В конце игровой недели сравниваем сколько монет мы собирались потратить и сколько потратили на самом деле</string>
     <string name="education_budget_categories_title">Доходы и расходы бывают разными</string>

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
@@ -112,6 +113,7 @@ internal fun BudgetPlanningScreen(
     if (showEducation) {
         FinancialEducationOverlay(
             topic = FinancialEducationTopic.Budget,
+            budgetPetImageRes = petImageRes,
             recurringIncome = recurringIncome,
             recurringExpense = recurringExpense,
             plannedOptionalExpenses = optionalExpenseAmount.coerceAtMost(maximumOptionalExpense),
@@ -159,7 +161,6 @@ internal fun BudgetPlanningScreen(
             BudgetClassificationScreen(
                 petImageRes = petImageRes,
                 entry = entry,
-                placedEntries = classificationEntries.take(entryIndex),
                 step = classificationStep,
                 guideText = guideText,
                 onCategorySelected = { selected ->
@@ -285,24 +286,46 @@ private fun BudgetIntroScreen(
 private fun BudgetClassificationScreen(
     @DrawableRes petImageRes: Int,
     entry: BudgetEntry,
-    placedEntries: List<BudgetEntry>,
     step: ClassificationStep,
     guideText: String?,
     onCategorySelected: (BudgetCategory) -> Unit,
     onFrequencySelected: (BudgetFrequency) -> Unit,
     modifier: Modifier,
 ) {
-    BudgetPage(
-        petImageRes = petImageRes,
-        guide = guideText ?: stringResource(
-            if (step == ClassificationStep.Category) {
-                R.string.budget_choose_category_guide
-            } else {
-                R.string.budget_choose_frequency_guide
-            },
-        ),
-        modifier = modifier,
-        bottom = {
+    val guide = guideText ?: stringResource(
+        if (step == ClassificationStep.Category) {
+            R.string.budget_choose_category_guide
+        } else {
+            R.string.budget_choose_frequency_guide
+        },
+    )
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    listOf(BudgetLightPurple.copy(alpha = 0.62f), BudgetBackground, Color.White),
+                ),
+            )
+            .safeDrawingPadding(),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 12.dp, top = 18.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            BudgetSpeechBubble(guide, Modifier.weight(1f))
+            Image(
+                painter = painterResource(petImageRes),
+                contentDescription = stringResource(R.string.pet),
+                modifier = Modifier.width(132.dp).height(112.dp),
+                contentScale = ContentScale.Crop,
+                alignment = Alignment.TopCenter,
+            )
+        }
+        Column(
+            modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
             Text(
                 text = stringResource(
                     if (step == ClassificationStep.Category) {
@@ -312,45 +335,71 @@ private fun BudgetClassificationScreen(
                     },
                 ),
                 color = BudgetPurpleDark,
-                fontSize = 18.sp,
+                fontSize = 23.sp,
                 fontWeight = FontWeight.ExtraBold,
+                textAlign = TextAlign.Center,
             )
-            Spacer(Modifier.height(10.dp))
-            BudgetEntryRow(entry)
-            Spacer(Modifier.height(8.dp))
-            if (step == ClassificationStep.Category) {
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    BudgetChoiceButton(
-                        text = stringResource(R.string.budget_income),
-                        onClick = { onCategorySelected(BudgetCategory.Income) },
-                        modifier = Modifier.weight(1f),
-                    )
-                    BudgetChoiceButton(
-                        text = stringResource(R.string.budget_expenses),
-                        onClick = { onCategorySelected(BudgetCategory.Expense) },
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-            } else {
-                Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                    val availableFrequencies = if (entry.category == BudgetCategory.Income) {
-                        BudgetFrequency.entries.filterNot { it == BudgetFrequency.Savings }
-                    } else {
-                        BudgetFrequency.entries
-                    }
-                    availableFrequencies.forEach { frequency ->
-                        BudgetChoiceButton(
-                            text = stringResource(frequency.labelRes(entry.category)),
-                            onClick = { onFrequencySelected(frequency) },
-                            adaptiveText = entry.category == BudgetCategory.Expense,
-                            modifier = Modifier.weight(1f),
-                        )
+            Spacer(Modifier.height(14.dp))
+            Image(
+                painter = painterResource(R.drawable.budget_onboarding_wallet),
+                contentDescription = null,
+                modifier = Modifier.fillMaxWidth(0.62f).weight(1f, fill = false).heightIn(max = 190.dp),
+                contentScale = ContentScale.Fit,
+            )
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = stringResource(entry.titleRes),
+                color = BudgetPurpleDark,
+                fontSize = 19.sp,
+                lineHeight = 23.sp,
+                fontWeight = FontWeight.ExtraBold,
+                textAlign = TextAlign.Center,
+            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = entry.amount.toString(),
+                    color = BudgetPurpleDark,
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                )
+                Image(
+                    painter = painterResource(R.drawable.coin_money),
+                    contentDescription = null,
+                    modifier = Modifier.padding(start = 4.dp).size(24.dp),
+                )
+            }
+            Spacer(Modifier.height(18.dp))
+        }
+        Surface(
+            color = Color.White,
+            shape = RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp),
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Text("?", color = BudgetLightPurple, fontWeight = FontWeight.ExtraBold)
+                if (step == ClassificationStep.Category) {
+                    BudgetReferenceChoiceButton(
+                        stringResource(R.string.budget_income_singular),
+                        true,
+                    ) { onCategorySelected(BudgetCategory.Income) }
+                    BudgetReferenceChoiceButton(
+                        stringResource(R.string.budget_expense_singular),
+                        false,
+                    ) { onCategorySelected(BudgetCategory.Expense) }
+                } else {
+                    val frequencies = listOf(BudgetFrequency.Recurring, BudgetFrequency.Irregular)
+                    frequencies.forEachIndexed { index, frequency ->
+                        BudgetReferenceChoiceButton(
+                            stringResource(frequency.labelRes(entry.category)),
+                            index == 0,
+                        ) { onFrequencySelected(frequency) }
                     }
                 }
             }
-        },
-    ) {
-        BudgetSections(entries = placedEntries)
+        }
     }
 }
 
@@ -364,45 +413,107 @@ private fun BudgetMandatorySummaryScreen(
     val recurringIncome = entries.filter { it.category == BudgetCategory.Income }.sumOf { it.amount }
     val mandatoryExpenses = entries.filter { it.category == BudgetCategory.Expense }.sumOf { it.amount }
     val remainder = recurringIncome - mandatoryExpenses
-    BudgetPage(
-        petImageRes = petImageRes,
-        guide = stringResource(R.string.budget_formula_guide),
-        modifier = modifier,
-        bottom = {
-            BudgetPrimaryButton(
-                text = stringResource(R.string.onboarding_next),
-                onClick = onContinue,
-            )
-        },
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Brush.verticalGradient(listOf(BudgetBackground, Color.White)))
+            .safeDrawingPadding(),
     ) {
-        BudgetValueRow(stringResource(R.string.budget_recurring_income_total), recurringIncome)
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(start = 18.dp, end = 12.dp, top = 26.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            BudgetSpeechBubble(stringResource(R.string.budget_formula_guide), Modifier.weight(1f))
+            Image(
+                painter = painterResource(petImageRes),
+                contentDescription = stringResource(R.string.pet),
+                modifier = Modifier.width(132.dp).height(112.dp),
+                contentScale = ContentScale.Crop,
+                alignment = Alignment.TopCenter,
+            )
+        }
+        Column(
+            modifier = Modifier.weight(1f).verticalScroll(rememberScrollState())
+                .padding(horizontal = 18.dp, vertical = 18.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            BudgetFormulaCard(stringResource(R.string.budget_recurring_income_total), recurringIncome)
+            FormulaSymbol("−")
+            BudgetFormulaCard(stringResource(R.string.budget_mandatory_expense_total), mandatoryExpenses)
+            FormulaSymbol("=")
+            BudgetFormulaCard(stringResource(R.string.budget_formula_remainder), remainder)
+            Text(
+                text = stringResource(R.string.budget_formula_explanation),
+                color = BudgetPurpleDark,
+                fontSize = 14.sp,
+                lineHeight = 18.sp,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+        Surface(color = Color.White, shape = RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp)) {
+            BudgetPrimaryButton(
+                text = stringResource(R.string.education_understood),
+                onClick = onContinue,
+                modifier = Modifier.padding(16.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun BudgetReferenceChoiceButton(
+    text: String,
+    primary: Boolean,
+    onClick: () -> Unit,
+) {
+    Button(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth().height(48.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = if (primary) BudgetPurple else Color(0xFFDFAEFF),
+            contentColor = if (primary) Color.White else BudgetPurpleDark,
+        ),
+        shape = RoundedCornerShape(8.dp),
+    ) {
+        Text(text, fontSize = 16.sp)
+    }
+}
+
+@Composable
+private fun BudgetFormulaCard(title: String, amount: Int) {
+    Row(
+        modifier = Modifier.fillMaxWidth()
+            .background(Color.White, RoundedCornerShape(10.dp))
+            .border(1.4.dp, BudgetPurpleDark, RoundedCornerShape(10.dp))
+            .padding(horizontal = 18.dp, vertical = 17.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         Text(
-            text = "−",
-            modifier = Modifier.fillMaxWidth(),
+            title,
+            modifier = Modifier.weight(1f),
             color = BudgetPurpleDark,
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
+            fontSize = 17.sp,
+            fontWeight = FontWeight.ExtraBold,
         )
-        BudgetValueRow(stringResource(R.string.budget_mandatory_expense_total), mandatoryExpenses)
-        Text(
-            text = "=",
-            modifier = Modifier.fillMaxWidth(),
-            color = BudgetPurpleDark,
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-        )
-        BudgetValueRow(stringResource(R.string.budget_formula_remainder), remainder)
-        Spacer(Modifier.height(12.dp))
-        Text(
-            text = stringResource(R.string.budget_formula_explanation),
-            color = BudgetPurpleDark,
-            fontSize = 14.sp,
-            lineHeight = 18.sp,
-            fontWeight = FontWeight.Bold,
+        Text(amount.toString(), color = BudgetPurpleDark, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
+        Image(
+            painter = painterResource(R.drawable.coin_money),
+            contentDescription = null,
+            modifier = Modifier.padding(start = 4.dp).size(22.dp),
         )
     }
+}
+
+@Composable
+private fun FormulaSymbol(symbol: String) {
+    Text(
+        symbol,
+        modifier = Modifier.fillMaxWidth(),
+        color = BudgetPurpleDark,
+        textAlign = TextAlign.Center,
+        fontSize = 24.sp,
+        fontWeight = FontWeight.ExtraBold,
+    )
 }
 
 @Composable

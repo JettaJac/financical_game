@@ -367,7 +367,8 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
                 state.resources.level, state.resources.hairColour, state.resources.hairStyle,
             ),
             firstPlanning = !state.resources.budgetTutorialCompleted,
-            secondaryPlanning = state.resources.budgetPlanWeek == 1,
+            secondaryPlanning = state.resources.budgetTutorialCompleted &&
+                state.resources.budgetPlanWeek == 1,
             previousOptionalExpenses = state.resources.actualOptionalExpenses,
             previousOptionalExpenseRecords = state.resources.optionalExpenseRecords,
             recurringIncome = state.resources.income,

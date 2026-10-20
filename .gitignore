@@ -1,15 +1,49 @@
-*.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+# Gradle / Kotlin
+.gradle/
+.kotlin/
+**/build/
+
+# Local Android SDK and device output
 local.properties
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Android Studio (project-wide settings remain versioned)
+*.iml
+.idea/caches/
+.idea/libraries/
+.idea/shelf/
+.idea/httpRequests/
+.idea/modules.xml
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+
+# Generated application packages and release exports
+/app/release/
+*.apk
+*.aab
+*.apks
+*.idsig
+*.dm
+mapping.txt
+output-metadata.json
+
+# Signing credentials must stay local
+*.jks
+*.keystore
+keystore.properties
+signing.properties
+
+# Logs, dumps, and operating-system files
+*.log
+*.hprof
+.DS_Store
+Thumbs.db
+
+# Editor temporary files
+*.swp
+*.swo
+*~

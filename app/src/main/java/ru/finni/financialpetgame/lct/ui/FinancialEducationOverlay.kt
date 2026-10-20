@@ -69,6 +69,7 @@ internal fun FinancialEducationOverlay(
     plannedOptionalExpenses: Int = 0,
     depositAmount: Int = 0,
     depositTerm: DepositTerm? = null,
+    @DrawableRes budgetPetImageRes: Int = R.drawable.pet_main,
     @DrawableRes depositPetImageRes: Int = R.drawable.pet_main,
 ) {
     if (topic == FinancialEducationTopic.Deposit) {
@@ -117,7 +118,7 @@ internal fun FinancialEducationOverlay(
                     modifier = Modifier.weight(1f),
                     color = EducationDark,
                     fontFamily = NunitoFontFamily,
-                    fontSize = 25.sp,
+                    fontSize = 20.sp,
                     fontWeight = FontWeight.ExtraBold,
                     textAlign = TextAlign.Center,
                 )
@@ -150,6 +151,7 @@ internal fun FinancialEducationOverlay(
                     recurringExpense = recurringExpense,
                     plannedOptionalExpenses = plannedOptionalExpenses,
                     categoryRevealStep = categoryRevealStep,
+                    petImageRes = budgetPetImageRes,
                 )
             }
 
@@ -160,19 +162,6 @@ internal fun FinancialEducationOverlay(
                     .padding(18.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                    repeat(pageCount) { index ->
-                        Box(
-                            Modifier
-                                .size(if (index == page) 10.dp else 8.dp)
-                                .background(
-                                    if (index == page) EducationPurple else EducationLavender,
-                                    CircleShape,
-                                ),
-                        )
-                    }
-                }
-                Spacer(Modifier.height(14.dp))
                 Button(
                     onClick = {
                         if (
@@ -433,26 +422,27 @@ private fun BudgetEducationPage(
     recurringExpense: Int,
     plannedOptionalExpenses: Int,
     categoryRevealStep: Int,
+    @DrawableRes petImageRes: Int,
 ) {
     when (page) {
         0 -> {
-            EducationLead(
-                title = stringResource(R.string.education_budget_week_title),
-                body = stringResource(
+            BudgetEducationGuide(
+                text = stringResource(
                     R.string.education_budget_game_day,
                     gameCycleDurationText(GameDefaults.CYCLE_DURATION_SECONDS),
                 ),
+                petImageRes = petImageRes,
             )
-            FlowStep(R.drawable.ic_tasks, stringResource(R.string.education_budget_step_plan), EducationBlue)
-            FlowArrow()
-            FlowStep(R.drawable.ic_timer_cycle, stringResource(R.string.education_budget_step_play), EducationLavender)
-            FlowArrow()
-            FlowStep(R.drawable.carbon_piggy_bank, stringResource(R.string.education_budget_step_compare), EducationGreen)
+            Spacer(Modifier.height(18.dp))
+            NumberedBudgetStep("1", stringResource(R.string.education_budget_step_plan))
+            Spacer(Modifier.height(10.dp))
+            NumberedBudgetStep("2", stringResource(R.string.education_budget_step_play))
+            Spacer(Modifier.height(10.dp))
+            NumberedBudgetStep("3", stringResource(R.string.education_budget_step_compare))
         }
         1 -> {
-            EducationLead(
-                title = stringResource(R.string.education_budget_categories_title),
-                body = stringResource(
+            BudgetEducationGuide(
+                text = stringResource(
                     when (categoryRevealStep) {
                         0 -> R.string.education_budget_income_explanation
                         1 -> R.string.education_budget_income_groups
@@ -460,73 +450,170 @@ private fun BudgetEducationPage(
                         else -> R.string.education_budget_expense_groups
                     },
                 ),
+                petImageRes = petImageRes,
+            )
+            Text(
+                text = stringResource(R.string.education_budget_categories_title),
+                color = EducationDark,
+                fontSize = 21.sp,
+                lineHeight = 24.sp,
+                fontWeight = FontWeight.ExtraBold,
+            )
+            Text(
+                text = stringResource(R.string.education_budget_categories_body),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(EducationLavender, RoundedCornerShape(9.dp))
+                    .padding(14.dp),
+                color = EducationDark,
+                fontSize = 14.sp,
+                lineHeight = 18.sp,
             )
             Text(
                 text = stringResource(R.string.budget_income),
                 color = EducationDark,
-                fontSize = 22.sp,
+                fontSize = 20.sp,
                 fontWeight = FontWeight.ExtraBold,
             )
             if (categoryRevealStep >= 1) {
-                CategoryCard(
-                    title = "",
-                    lines = listOf(
-                        stringResource(R.string.education_income_recurring),
-                        stringResource(R.string.education_income_additional),
+                OutlinedCategoryList(
+                    listOf(
+                        stringResource(R.string.budget_recurring),
+                        stringResource(R.string.budget_irregular),
                     ),
-                    color = EducationGreen,
-                    modifier = Modifier.fillMaxWidth(),
                 )
             }
             if (categoryRevealStep >= 2) {
                 Text(
                     text = stringResource(R.string.budget_expenses),
                     color = EducationDark,
-                    fontSize = 22.sp,
+                    fontSize = 20.sp,
                     fontWeight = FontWeight.ExtraBold,
                 )
             }
             if (categoryRevealStep >= 3) {
-                CategoryCard(
-                    title = "",
-                    lines = listOf(
-                        stringResource(R.string.education_expense_mandatory),
-                        stringResource(R.string.education_expense_optional),
-                        stringResource(R.string.education_expense_unplanned),
-                        stringResource(R.string.education_expense_goal),
+                OutlinedCategoryList(
+                    listOf(
+                        stringResource(R.string.budget_mandatory),
+                        stringResource(R.string.budget_optional_short),
                     ),
-                    color = EducationOrange,
-                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         }
         else -> {
-            EducationLead(
-                title = stringResource(R.string.education_budget_needs_title),
-                body = stringResource(R.string.education_budget_needs_speech),
+            BudgetEducationGuide(
+                text = stringResource(R.string.education_budget_needs_speech),
+                petImageRes = petImageRes,
+            )
+            Text(
+                text = stringResource(R.string.education_budget_needs_title),
+                color = EducationDark,
+                fontSize = 21.sp,
+                lineHeight = 24.sp,
+                fontWeight = FontWeight.ExtraBold,
             )
             Text(
                 text = stringResource(R.string.education_budget_needs_body),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(EducationLavender, RoundedCornerShape(16.dp))
-                    .padding(16.dp),
+                    .background(EducationLavender, RoundedCornerShape(9.dp))
+                    .padding(14.dp),
                 color = EducationDark,
-                fontSize = 16.sp,
-                lineHeight = 21.sp,
-                textAlign = TextAlign.Center,
+                fontSize = 14.sp,
+                lineHeight = 18.sp,
             )
-            Text(
-                text = stringResource(R.string.education_budget_needs_tip),
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color.White, RoundedCornerShape(16.dp))
-                    .padding(18.dp),
-                color = EducationDark,
-                fontSize = 16.sp,
-                lineHeight = 21.sp,
-                textAlign = TextAlign.Center,
-            )
+                    .background(Color.White, RoundedCornerShape(10.dp))
+                    .border(1.4.dp, EducationDark, RoundedCornerShape(10.dp))
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.lamp),
+                    contentDescription = null,
+                    modifier = Modifier.size(48.dp),
+                    contentScale = ContentScale.Fit,
+                )
+                Text(
+                    text = stringResource(R.string.education_budget_needs_tip),
+                    modifier = Modifier.weight(1f).padding(start = 12.dp),
+                    color = EducationDark,
+                    fontSize = 14.sp,
+                    lineHeight = 18.sp,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun BudgetEducationGuide(text: String, @DrawableRes petImageRes: Int) {
+    Row(
+        modifier = Modifier.fillMaxWidth().heightIn(min = 102.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier
+                .weight(1f)
+                .background(Color.White, RoundedCornerShape(8.dp))
+                .padding(horizontal = 12.dp, vertical = 14.dp),
+            color = EducationDark,
+            fontSize = 13.sp,
+            lineHeight = 16.sp,
+            fontWeight = FontWeight.ExtraBold,
+            textAlign = TextAlign.Center,
+        )
+        Image(
+            painter = painterResource(petImageRes),
+            contentDescription = stringResource(R.string.pet),
+            modifier = Modifier.width(130.dp).height(102.dp),
+            contentScale = ContentScale.Crop,
+            alignment = Alignment.TopCenter,
+        )
+    }
+}
+
+@Composable
+private fun NumberedBudgetStep(number: String, text: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 84.dp)
+            .background(Color.White, RoundedCornerShape(10.dp))
+            .border(1.4.dp, EducationDark, RoundedCornerShape(10.dp))
+            .padding(horizontal = 15.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = number,
+            color = Color(0xFFD9A2F5),
+            fontSize = 46.sp,
+            fontWeight = FontWeight.ExtraBold,
+        )
+        Text(
+            text = text,
+            modifier = Modifier.weight(1f).padding(start = 14.dp),
+            color = EducationDark,
+            fontSize = 14.sp,
+            lineHeight = 18.sp,
+        )
+    }
+}
+
+@Composable
+private fun OutlinedCategoryList(lines: List<String>) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color.White, RoundedCornerShape(10.dp))
+            .border(1.4.dp, EducationDark, RoundedCornerShape(10.dp))
+            .padding(horizontal = 20.dp, vertical = 12.dp),
+    ) {
+        lines.forEach { line ->
+            Text("•  $line", color = EducationDark, fontSize = 14.sp, lineHeight = 18.sp)
         }
     }
 }

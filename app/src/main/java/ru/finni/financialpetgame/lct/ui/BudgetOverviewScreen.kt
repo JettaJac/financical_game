@@ -77,6 +77,11 @@ internal fun BudgetOverviewScreen(
     if (showEducation) {
         FinancialEducationOverlay(
             topic = FinancialEducationTopic.Budget,
+            budgetPetImageRes = petImageResource(
+                state.level,
+                state.hairColour,
+                state.hairStyle,
+            ),
             recurringIncome = state.income,
             recurringExpense = state.budgetPlanRecurringExpense,
             plannedOptionalExpenses = state.plannedOptionalExpenses,

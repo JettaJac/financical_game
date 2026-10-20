@@ -720,6 +720,18 @@ class PetViewModelTest {
                     onboardingCompleted = true,
                     currentPeriod = 1,
                     budgetPlanWeek = 1,
+                    budgetTutorialCompleted = true,
+                ),
+            ),
+        )
+        assertEquals(
+            true,
+            needsBudgetPlanning(
+                GameSnapshot(
+                    onboardingCompleted = true,
+                    currentPeriod = 1,
+                    budgetPlanWeek = 1,
+                    budgetTutorialCompleted = false,
                 ),
             ),
         )

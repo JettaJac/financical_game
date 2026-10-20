@@ -98,6 +98,7 @@ private const val NEXT_PURCHASE_DISCOUNT_FLAG = "nextPurchaseHalfPrice"
 private const val BRAIDED_BRACELETS_FLAG = "braidedBracelets"
 private const val LEGACY_CYCLE_DURATION_SECONDS = 20 * 60
 private const val MAX_ACTION_HISTORY_SIZE = 500
+private const val CURRENT_BUDGET_ONBOARDING_VERSION = 3
 
 private fun permanentBonus(
     resource: Resource,
@@ -246,6 +247,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
     private val actualAdditionalIncome = intPreferencesKey("actual_additional_income")
     private val lastReviewedBudgetWeek = intPreferencesKey("last_reviewed_budget_week")
     private val budgetTutorialCompleted = booleanPreferencesKey("budget_tutorial_completed")
+    private val budgetOnboardingVersion = intPreferencesKey("budget_onboarding_version")
     private val budgetOpeningBalance = intPreferencesKey("budget_opening_balance")
     private val levelTwoBudgetExpensesEnabled =
         booleanPreferencesKey("level_two_budget_expenses_enabled")
@@ -497,6 +499,11 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             if (preferences[budgetTutorialCompleted] == null) {
                 preferences[budgetTutorialCompleted] = false
             }
+            if ((preferences[budgetOnboardingVersion] ?: 0) < CURRENT_BUDGET_ONBOARDING_VERSION) {
+                // Show the redesigned flow once to existing players without deleting their save.
+                preferences[budgetTutorialCompleted] = false
+                preferences[budgetOnboardingVersion] = CURRENT_BUDGET_ONBOARDING_VERSION
+            }
             if (preferences[budgetOpeningBalance] == null) {
                 preferences[budgetOpeningBalance] = preferences[money] ?: GameDefaults.MONEY
             }
@@ -661,6 +668,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             preferences[actualAdditionalIncome] = 0
             preferences[lastReviewedBudgetWeek] = 0
             preferences[budgetTutorialCompleted] = false
+            preferences[budgetOnboardingVersion] = CURRENT_BUDGET_ONBOARDING_VERSION
             preferences[budgetOpeningBalance] = GameDefaults.MONEY
             preferences[levelTwoBudgetExpensesEnabled] = false
             preferences[depositTutorialCompleted] = false
@@ -1307,6 +1315,15 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
     override suspend fun saveBudgetPlan(optionalExpenses: Int) {
         context.gameDataStore.edit { preferences ->
             val period = checkNotNull(preferences[currentPeriod])
+            val planningWeek = budgetWeekForPeriod(period)
+            val isRedesignedOnboardingReplay =
+                preferences[budgetPlanWeek] == planningWeek &&
+                    !checkNotNull(preferences[budgetTutorialCompleted])
+            if (isRedesignedOnboardingReplay) {
+                preferences[budgetTutorialCompleted] = true
+                appendAction(preferences, "Пройден обновлённый онбординг бюджета")
+                return@edit
+            }
             val levelTwoEnabled = checkNotNull(preferences[levelTwoBudgetExpensesEnabled])
             val activateLevelTwo = !levelTwoEnabled && checkNotNull(preferences[level]) >= 2
             if (activateLevelTwo) {
@@ -1317,7 +1334,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             val availableAfterMandatory = (
                 checkNotNull(preferences[income]) - checkNotNull(preferences[expense])
             ).coerceAtLeast(0)
-            preferences[budgetPlanWeek] = budgetWeekForPeriod(period)
+            preferences[budgetPlanWeek] = planningWeek
             preferences[budgetPlanRecurringExpense] = checkNotNull(preferences[expense])
             preferences[plannedGoalExpenses] = 0
             preferences[plannedOptionalExpenses] = optionalExpenses.coerceIn(

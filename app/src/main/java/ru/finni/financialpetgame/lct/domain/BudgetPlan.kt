@@ -104,4 +104,5 @@ internal fun needsBudgetReview(snapshot: GameSnapshot): Boolean {
 
 internal fun needsBudgetPlanning(snapshot: GameSnapshot): Boolean =
     snapshot.onboardingCompleted &&
-        snapshot.budgetPlanWeek < budgetWeekForPeriod(snapshot.currentPeriod)
+        (!snapshot.budgetTutorialCompleted ||
+            snapshot.budgetPlanWeek < budgetWeekForPeriod(snapshot.currentPeriod))
