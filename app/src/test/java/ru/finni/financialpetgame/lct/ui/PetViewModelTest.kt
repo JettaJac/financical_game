@@ -216,7 +216,7 @@ class PetViewModelTest {
     }
 
     @Test
-    fun unaffordable_regular_event_is_not_automatically_declinable() {
+    fun event_is_declinable_when_resources_are_insufficient() {
         val forcedExpense = GameEvent(
             descriptionRes = R.string.app_name,
             illustrationRes = R.drawable.goal_pillow,
@@ -224,8 +224,11 @@ class PetViewModelTest {
             canDecline = false,
         )
 
-        assertEquals(false, canApplyEffects(money = 40, forcedExpense.acceptEffects))
-        assertEquals(false, canDeclineEvent(GameSnapshot(money = 40), forcedExpense))
+        assertEquals(
+            false,
+            canApplyEffects(money = 40, effects = forcedExpense.acceptEffects),
+        )
+        assertEquals(true, canDeclineEvent(GameSnapshot(money = 40), forcedExpense))
         assertEquals(false, canDeclineEvent(GameSnapshot(money = 50), forcedExpense))
         assertEquals(
             true,
@@ -256,13 +259,22 @@ class PetViewModelTest {
             appliedDeltas = EventDeltas(money = -50),
         )
 
-        assertEquals(true, canResolveScheduledEvent(charity, accepted = false, currentMoney = 0))
-        assertEquals(false, canResolveScheduledEvent(charity, accepted = true, currentMoney = 0))
-        assertEquals(true, canResolveScheduledEvent(charity, accepted = true, currentMoney = 50))
+        assertEquals(
+            true,
+            canResolveScheduledEvent(charity, false, 100, 100, 100, currentMoney = 0),
+        )
+        assertEquals(
+            false,
+            canResolveScheduledEvent(charity, true, 100, 100, 100, currentMoney = 0),
+        )
+        assertEquals(
+            true,
+            canResolveScheduledEvent(charity, true, 100, 100, 100, currentMoney = 50),
+        )
     }
 
     @Test
-    fun negative_event_can_be_accepted_when_money_is_insufficient() {
+    fun forced_negative_event_can_be_declined_when_money_is_insufficient() {
         val negative = ScheduledEvent(
             definition = EventDef(
                 id = "forced_expense",
@@ -284,16 +296,54 @@ class PetViewModelTest {
             appliedDeltas = EventDeltas(money = -50),
         )
 
-        assertEquals(true, canResolveScheduledEvent(negative, true, currentMoney = 10))
-        assertEquals(false, canResolveScheduledEvent(negative, false, currentMoney = 10))
+        assertEquals(
+            false,
+            canResolveScheduledEvent(negative, true, 100, 100, 100, currentMoney = 10),
+        )
         assertEquals(
             true,
-            canResolveScheduledEvent(
-                negative,
-                accepted = false,
-                currentMoney = 0,
-                canDeclineAtZero = true,
+            canResolveScheduledEvent(negative, false, 100, 100, 100, currentMoney = 10),
+        )
+    }
+
+    @Test
+    fun forced_event_can_be_declined_when_a_characteristic_would_reach_zero() {
+        val event = ScheduledEvent(
+            definition = EventDef(
+                id = "forced_energy_cost",
+                title = "Energy cost",
+                kind = EventKind.Negative,
+                deltas = EventDeltas(energy = -10),
+                canDecline = false,
+                frequency = EventFrequency.Once,
+                minLevel = 1,
+                requiresFlags = emptySet(),
+                setsFlags = emptySet(),
+                unlocksJobId = null,
+                hideRewardUntilAccept = false,
+                moneyFromCard = 0,
+                moneyFromScript = null,
             ),
+            scenarioStepId = null,
+            isScripted = true,
+            appliedDeltas = EventDeltas(energy = -10),
+        )
+
+        assertEquals(
+            false,
+            canResolveScheduledEvent(event, true, 100, 100, 10, currentMoney = 100),
+        )
+        assertEquals(
+            true,
+            canResolveScheduledEvent(event, false, 100, 100, 10, currentMoney = 100),
+        )
+        assertEquals(
+            true,
+            canResolveScheduledEvent(event, true, 100, 100, 11, currentMoney = 100),
+        )
+        assertEquals(
+            false,
+            canResolveScheduledEvent(event, false, 100, 100, 11, currentMoney = 100),
         )
     }
 
@@ -945,6 +995,46 @@ class PetViewModelTest {
 
         assertEquals(false, canApplyEffects(money = 29, effects = effects))
         assertEquals(true, canApplyEffects(money = 30, effects = effects))
+    }
+
+    @Test
+    fun action_requires_every_spent_characteristic_to_remain_positive() {
+        val effects = listOf(
+            Effect(Resource.Health, -2),
+            Effect(Resource.Happiness, -3),
+            Effect(Resource.Energy, -5),
+        )
+
+        assertEquals(
+            false,
+            canApplyEffects(health = 2, happiness = 10, energy = 10, money = 0, effects = effects),
+        )
+        assertEquals(
+            false,
+            canApplyEffects(health = 10, happiness = 3, energy = 10, money = 0, effects = effects),
+        )
+        assertEquals(
+            false,
+            canApplyEffects(health = 10, happiness = 10, energy = 5, money = 0, effects = effects),
+        )
+        assertEquals(
+            true,
+            canApplyEffects(health = 3, happiness = 4, energy = 6, money = 0, effects = effects),
+        )
+    }
+
+    @Test
+    fun restoring_effect_is_available_when_characteristic_is_zero() {
+        assertEquals(
+            true,
+            canApplyEffects(
+                health = 0,
+                happiness = 0,
+                energy = 0,
+                money = 0,
+                effects = listOf(Effect(Resource.Energy, 7)),
+            ),
+        )
     }
 
     @Test

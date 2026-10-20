@@ -1023,15 +1023,13 @@ class PetViewModel @Inject constructor(
         val currentState = _state.value
         val event = currentState.activeEvent ?: return
         event.scheduledEvent?.let { scheduled ->
-            val canDeclineAtZero = currentState.resources.activeDeposit == null &&
-                currentState.resources.health == 0 &&
-                currentState.resources.happiness == 0 &&
-                currentState.resources.energy == 0
             if (!canResolveScheduledEvent(
                     scheduled,
                     accept,
-                    currentState.resources.money,
-                    canDeclineAtZero,
+                    currentHealth = currentState.resources.health,
+                    currentHappiness = currentState.resources.happiness,
+                    currentEnergy = currentState.resources.energy,
+                    currentMoney = currentState.resources.money,
                 )
             ) return
             eventResolutionInProgress = true
@@ -1042,6 +1040,7 @@ class PetViewModel @Inject constructor(
                         unlockedJob = eventScheduler.jobFor(scheduled),
                         accepted = accept,
                     )
+                    if (!result.resolved) return@launch
                     _state.update { state ->
                         if (state.activeEvent?.scheduledEvent == scheduled) {
                             state.copy(activeEvent = null)
@@ -1072,7 +1071,14 @@ class PetViewModel @Inject constructor(
             return
         }
         val effects = if (accept) event.acceptEffects else event.declineEffects
-        if (!canApplyEffects(currentState.resources.money, effects)) return
+        if (!canApplyEffects(
+                health = currentState.resources.health,
+                happiness = currentState.resources.happiness,
+                energy = currentState.resources.energy,
+                money = currentState.resources.money,
+                effects = effects,
+            )
+        ) return
 
         _state.update { promotePendingEvent(it.copy(activeEvent = null)) }
         viewModelScope.launch { repository.applyEffects(effects) }

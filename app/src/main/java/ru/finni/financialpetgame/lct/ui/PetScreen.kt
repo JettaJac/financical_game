@@ -99,6 +99,7 @@ import androidx.compose.ui.window.Dialog
 import ru.finni.financialpetgame.lct.R
 import ru.finni.financialpetgame.lct.domain.CardItem
 import ru.finni.financialpetgame.lct.domain.CooldownRemaining
+import ru.finni.financialpetgame.lct.domain.Effect
 import ru.finni.financialpetgame.lct.domain.FoodItem
 import ru.finni.financialpetgame.lct.domain.Resource
 import ru.finni.financialpetgame.lct.domain.ShopItem
@@ -119,7 +120,6 @@ import ru.finni.financialpetgame.lct.domain.weekForPeriod
 import ru.finni.financialpetgame.lct.domain.WorkPreparationBlock
 import ru.finni.financialpetgame.lct.domain.workPreparationBlock
 import ru.finni.financialpetgame.lct.domain.currentCyclePosition
-import ru.finni.financialpetgame.lct.domain.events.EventKind
 import ru.finni.financialpetgame.lct.domain.needsBudgetPlanning
 import ru.finni.financialpetgame.lct.domain.needsBudgetReview
 import ru.finni.financialpetgame.lct.domain.budgetPeriodResult
@@ -449,8 +449,13 @@ fun PetScreen(state: PetState, onAction: (PetAction) -> Unit) {
     }
 
     state.activeEvent?.let { event ->
-        val canAcceptEvent = event.scheduledEvent?.definition?.kind == EventKind.Negative ||
-            canApplyEffects(state.resources.money, event.acceptEffects)
+        val canAcceptEvent = canApplyEffects(
+            health = state.resources.health,
+            happiness = state.resources.happiness,
+            energy = state.resources.energy,
+            money = state.resources.money,
+            effects = event.acceptEffects,
+        )
         EventOverlay(
             event = event,
             acceptButtonText = stringResource(event.acceptButtonTextRes),
@@ -1485,6 +1490,9 @@ private fun HomeBottomPanel(
                 HomeSection.Food -> CardRow(
                     items = FoodItems,
                     money = state.resources.money,
+                    currentHealth = state.resources.health,
+                    currentHappiness = state.resources.happiness,
+                    currentEnergy = state.resources.energy,
                     level = state.resources.level,
                     cooldownUnlockCycles = state.resources.cooldownUnlockCycles,
                     currentPeriod = state.resources.currentPeriod,
@@ -1497,6 +1505,9 @@ private fun HomeBottomPanel(
                 HomeSection.Happiness -> CardRow(
                     items = HappinessItems,
                     money = state.resources.money,
+                    currentHealth = state.resources.health,
+                    currentHappiness = state.resources.happiness,
+                    currentEnergy = state.resources.energy,
                     level = state.resources.level,
                     cooldownUnlockCycles = state.resources.cooldownUnlockCycles,
                     currentPeriod = state.resources.currentPeriod,
@@ -1509,6 +1520,9 @@ private fun HomeBottomPanel(
                 HomeSection.Energy -> CardRow(
                     items = EnergyItems,
                     money = state.resources.money,
+                    currentHealth = state.resources.health,
+                    currentHappiness = state.resources.happiness,
+                    currentEnergy = state.resources.energy,
                     level = state.resources.level,
                     cooldownUnlockCycles = state.resources.cooldownUnlockCycles,
                     currentPeriod = state.resources.currentPeriod,
@@ -1521,6 +1535,9 @@ private fun HomeBottomPanel(
                 HomeSection.Shop -> CardRow(
                     items = ShopItems,
                     money = state.resources.money,
+                    currentHealth = state.resources.health,
+                    currentHappiness = state.resources.happiness,
+                    currentEnergy = state.resources.energy,
                     level = state.resources.level,
                     cooldownUnlockCycles = state.resources.cooldownUnlockCycles,
                     currentPeriod = state.resources.currentPeriod,
@@ -1536,6 +1553,9 @@ private fun HomeBottomPanel(
                 HomeSection.Tasks -> CardRow(
                     items = TaskItems,
                     money = state.resources.money,
+                    currentHealth = state.resources.health,
+                    currentHappiness = state.resources.happiness,
+                    currentEnergy = state.resources.energy,
                     level = state.resources.level,
                     cooldownUnlockCycles = state.resources.cooldownUnlockCycles,
                     currentPeriod = state.resources.currentPeriod,
@@ -1549,7 +1569,7 @@ private fun HomeBottomPanel(
                     eventUnlockedTaskIds = state.resources.eventUnlockedTaskIds,
                     jobRemainingActions = state.resources.jobRemainingActions,
                     jobForTaskIds = state.resources.jobForTaskIds,
-                    currentEnergy = state.resources.energy,
+                    jobEffectsForTaskIds = state.resources.jobEffectsForTaskIds,
                     purchasedItemIds = state.resources.purchasedShopItemIds,
                     tutorialTargetItemId = when (state.morningRoutineTutorialStep) {
                         1 -> TaskItem.GetReady.storageId
@@ -1794,6 +1814,9 @@ private fun SectionPlaceholder(
 private fun CardRow(
     items: List<CardItemUI>,
     money: Int,
+    currentHealth: Int,
+    currentHappiness: Int,
+    currentEnergy: Int,
     level: Int,
     cooldownUnlockCycles: Map<String, Double>,
     currentPeriod: Int,
@@ -1808,8 +1831,8 @@ private fun CardRow(
     eventUnlockedTaskIds: Set<String> = emptySet(),
     jobRemainingActions: Map<String, Int> = emptyMap(),
     jobForTaskIds: Map<String, String> = emptyMap(),
+    jobEffectsForTaskIds: Map<String, List<Effect>> = emptyMap(),
     nextPurchaseHalfPrice: Boolean = false,
-    currentEnergy: Int = 100,
     tutorialTargetItemId: String? = null,
     onUnavailableClick: (String, Boolean) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
@@ -1874,6 +1897,16 @@ private fun CardRow(
                         product.item.price
                     }
                     val task = product.item as? TaskItem
+                    val appliedEffects = task
+                        ?.let { jobEffectsForTaskIds[it.storageId] }
+                        ?: product.item.careEffects
+                    val hasEnoughResources = canApplyEffects(
+                        health = currentHealth,
+                        happiness = currentHappiness,
+                        energy = currentEnergy,
+                        money = money,
+                        effects = appliedEffects + Effect(Resource.Money, -effectivePrice),
+                    )
                     val shopPeriodUnlocked = (product.item as? ShopItem)
                         ?.isUnlockedAtPeriod(currentPeriod) ?: true
                     val cyclePosition = currentCyclePosition(currentPeriod, cycleSecondsRemaining)
@@ -1890,8 +1923,6 @@ private fun CardRow(
                     } else {
                         null
                     }
-                    val workLacksEnergy = task?.earnings?.let { it > 0 } == true &&
-                        currentEnergy <= 10
                     val unavailableReason = when {
                         alreadyPurchased -> stringResource(R.string.item_already_purchased)
                         !shopPeriodUnlocked ->
@@ -1899,12 +1930,12 @@ private fun CardRow(
                         product.item is TaskItem && product.item.requiresEvent &&
                             product.item.storageId !in eventUnlockedTaskIds ->
                             stringResource(R.string.item_needs_event)
-                        workLacksEnergy -> stringResource(R.string.work_low_energy)
                         preparationBlock == WorkPreparationBlock.GetReady ->
                             stringResource(R.string.work_get_ready)
                         preparationBlock == WorkPreparationBlock.Lessons ->
                             stringResource(R.string.work_lessons)
                         money < effectivePrice -> stringResource(R.string.item_not_enough_money)
+                        !hasEnoughResources -> stringResource(R.string.item_not_enough_resources)
                         level < product.item.level ->
                             stringResource(R.string.item_level_locked, product.item.level)
                         remainingCooldown is CooldownRemaining.Time -> stringResource(
@@ -1924,8 +1955,6 @@ private fun CardRow(
                         product.item is TaskItem &&
                             product.item.usageLimit is TaskUsageLimit.Total ->
                             stringResource(R.string.item_limit_reached)
-                        product.item is TaskItem && currentEnergy <= 10 ->
-                            stringResource(R.string.item_low_energy)
                         else -> stringResource(R.string.task_unavailable)
                     }
                     val canBuy = money >= effectivePrice &&
@@ -1935,7 +1964,7 @@ private fun CardRow(
                                 product.item.storageId in eventUnlockedTaskIds)) &&
                         taskAvailable &&
                         preparationBlock == null &&
-                        (product.item !is TaskItem || currentEnergy > 10) &&
+                        hasEnoughResources &&
                         shopPeriodUnlocked &&
                         !alreadyPurchased
                     ProductCard(

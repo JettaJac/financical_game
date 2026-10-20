@@ -37,6 +37,7 @@ import ru.finni.financialpetgame.lct.domain.characteristicCycleAdjustmentForValu
 import ru.finni.financialpetgame.lct.domain.cycleSecondsRemaining
 import ru.finni.financialpetgame.lct.domain.hasCycleExpired
 import ru.finni.financialpetgame.lct.domain.canCompleteCycle
+import ru.finni.financialpetgame.lct.domain.canApplyEffects
 import ru.finni.financialpetgame.lct.domain.canRewardPetTap
 import ru.finni.financialpetgame.lct.domain.nextCycleEnd
 import ru.finni.financialpetgame.lct.domain.levelAfterGoalPurchase
@@ -289,6 +290,14 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             val taskUseWeeks = preferences.intMap(TASK_USE_WEEK_PREFIX)
             val jobRemainingActions = preferences.intMap(JOB_REMAINING_ACTIONS_PREFIX)
             val jobForTaskIds = preferences.stringMap(JOB_FOR_TASK_PREFIX)
+            val jobEffectsForTaskIds = jobForTaskIds.mapValues { (_, jobId) ->
+                listOf(
+                    Effect(Resource.Health, preferences[jobHealthKey(jobId)] ?: 0),
+                    Effect(Resource.Happiness, preferences[jobHappinessKey(jobId)] ?: 0),
+                    Effect(Resource.Energy, preferences[jobEnergyKey(jobId)] ?: 0),
+                    Effect(Resource.Money, preferences[jobPayoutKey(jobId)] ?: 0),
+                )
+            }
             val eventRetryPeriods = preferences.intMap(EVENT_RETRY_PERIOD_PREFIX)
             val changeMoneyBestTimes = preferences.intMap(CHANGE_MONEY_BEST_TIME_PREFIX)
 
@@ -367,6 +376,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 activeJobIds = checkNotNull(preferences[activeJobIds]),
                 jobRemainingActions = jobRemainingActions,
                 jobForTaskIds = jobForTaskIds,
+                jobEffectsForTaskIds = jobEffectsForTaskIds,
                 actionHistory = decodeActionHistory(preferences[actionHistory]),
                 customGoal = preferences[customGoalTitle]?.let { title ->
                     ru.finni.financialpetgame.lct.data.CustomGoal(
@@ -774,13 +784,16 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             } else {
                 null
             }
-            if (item is TaskItem && characteristicValue(
-                    baseValue = GameDefaults.ENERGY,
-                    permanentModifier = checkNotNull(preferences[energyModifier]),
-                    cycleAdjustment = checkNotNull(preferences[energyCycleAdjustment]),
-                    secondsRemaining = secondsRemaining,
-                ) <= 10
-            ) return@edit
+            val appliedEffects = if (instanceJobId == null) {
+                item.careEffects
+            } else {
+                listOf(
+                    Effect(Resource.Health, preferences[jobHealthKey(instanceJobId)] ?: 0),
+                    Effect(Resource.Happiness, preferences[jobHappinessKey(instanceJobId)] ?: 0),
+                    Effect(Resource.Energy, preferences[jobEnergyKey(instanceJobId)] ?: 0),
+                    Effect(Resource.Money, preferences[jobPayoutKey(instanceJobId)] ?: 0),
+                )
+            }
             if (item is TaskItem && !item.isAvailable(
                     currentPeriod = currentCycle,
                     totalUses = preferences[taskUseCountKey(item)] ?: 0,
@@ -842,21 +855,23 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 NEXT_PURCHASE_DISCOUNT_FLAG in checkNotNull(preferences[eventFlags])
             val effectivePrice = if (discounted) item.price / 2 else item.price
             if (currentMoney < effectivePrice) return@edit
+            if (!canApplyEffects(
+                    health = currentCharacteristic(preferences, Resource.Health, secondsRemaining),
+                    happiness = currentCharacteristic(
+                        preferences,
+                        Resource.Happiness,
+                        secondsRemaining,
+                    ),
+                    energy = currentCharacteristic(preferences, Resource.Energy, secondsRemaining),
+                    money = currentMoney,
+                    effects = appliedEffects + Effect(Resource.Money, -effectivePrice),
+                )
+            ) return@edit
 
             preferences[money] = moneyAfterPurchase(currentMoney, effectivePrice)
             recordOptionalExpense(preferences, effectivePrice)
             if (discounted) consumeFlag(preferences, NEXT_PURCHASE_DISCOUNT_FLAG)
 
-            val appliedEffects = if (instanceJobId == null) {
-                item.careEffects
-            } else {
-                listOf(
-                    Effect(Resource.Health, preferences[jobHealthKey(instanceJobId)] ?: 0),
-                    Effect(Resource.Happiness, preferences[jobHappinessKey(instanceJobId)] ?: 0),
-                    Effect(Resource.Energy, preferences[jobEnergyKey(instanceJobId)] ?: 0),
-                    Effect(Resource.Money, preferences[jobPayoutKey(instanceJobId)] ?: 0),
-                )
-            }
             for (effect in appliedEffects) {
                 when (effect.resource) {
                     Resource.Health,
@@ -966,6 +981,18 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
 
             val currentMoney = checkNotNull(preferences[money])
             if (currentMoney < item.price) return@edit
+            if (!canApplyEffects(
+                    health = currentCharacteristic(preferences, Resource.Health, secondsRemaining),
+                    happiness = currentCharacteristic(
+                        preferences,
+                        Resource.Happiness,
+                        secondsRemaining,
+                    ),
+                    energy = currentCharacteristic(preferences, Resource.Energy, secondsRemaining),
+                    money = currentMoney,
+                    effects = item.careEffects + Effect(Resource.Money, -item.price),
+                )
+            ) return@edit
 
             preferences[money] = currentMoney - item.price
             recordOptionalExpense(preferences, item.price)
@@ -1034,6 +1061,18 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
 
             val currentMoney = checkNotNull(preferences[money])
             if (currentMoney < item.price) return@edit
+            if (!canApplyEffects(
+                    health = currentCharacteristic(preferences, Resource.Health, secondsRemaining),
+                    happiness = currentCharacteristic(
+                        preferences,
+                        Resource.Happiness,
+                        secondsRemaining,
+                    ),
+                    energy = currentCharacteristic(preferences, Resource.Energy, secondsRemaining),
+                    money = currentMoney,
+                    effects = item.careEffects + Effect(Resource.Money, -item.price),
+                )
+            ) return@edit
 
             preferences[money] = currentMoney - item.price
             recordOptionalExpense(preferences, item.price)
@@ -1145,11 +1184,26 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
 
     override suspend fun applyEffects(effects: List<Effect>) {
         context.gameDataStore.edit { preferences ->
+            val secondsRemaining = cycleSecondsRemaining(
+                checkNotNull(preferences[cycleEndsAtMillis]),
+                System.currentTimeMillis(),
+            )
             val moneyChange = effects
                 .filter { it.resource == Resource.Money }
                 .sumOf(Effect::increase)
             val currentMoney = checkNotNull(preferences[money])
-            if (currentMoney + moneyChange < 0) return@edit
+            if (!canApplyEffects(
+                    health = currentCharacteristic(preferences, Resource.Health, secondsRemaining),
+                    happiness = currentCharacteristic(
+                        preferences,
+                        Resource.Happiness,
+                        secondsRemaining,
+                    ),
+                    energy = currentCharacteristic(preferences, Resource.Energy, secondsRemaining),
+                    money = currentMoney,
+                    effects = effects,
+                )
+            ) return@edit
 
             effects.groupBy(Effect::resource).forEach { (resource, resourceEffects) ->
                 val change = resourceEffects.sumOf(Effect::increase)
@@ -1309,6 +1363,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
         accepted: Boolean,
     ): EventResolutionResult {
         var depositClosedWithPenalty = false
+        var resolved = false
         context.gameDataStore.edit { preferences ->
             val definition = event.definition
             val currentPeriodValue = checkNotNull(preferences[currentPeriod])
@@ -1321,22 +1376,36 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 EventFrequency.PerPeriod -> occurrence in
                     checkNotNull(preferences[eventPeriodOccurrences])
             }
-            if (alreadyHandled) return@edit
+            if (alreadyHandled) {
+                resolved = true
+                return@edit
+            }
             val secondsRemaining = cycleSecondsRemaining(
                 checkNotNull(preferences[cycleEndsAtMillis]),
                 System.currentTimeMillis(),
             )
-            val allCharacteristicsZero = listOf(
-                currentCharacteristic(preferences, Resource.Health, secondsRemaining),
-                currentCharacteristic(preferences, Resource.Happiness, secondsRemaining),
-                currentCharacteristic(preferences, Resource.Energy, secondsRemaining),
-            ).all { it == 0 }
-            val canDeclineAtZero = allCharacteristicsZero && (preferences[depositAmount] ?: 0) <= 0
+            val currentHealth = currentCharacteristic(
+                preferences,
+                Resource.Health,
+                secondsRemaining,
+            )
+            val currentHappiness = currentCharacteristic(
+                preferences,
+                Resource.Happiness,
+                secondsRemaining,
+            )
+            val currentEnergy = currentCharacteristic(
+                preferences,
+                Resource.Energy,
+                secondsRemaining,
+            )
             if (!canResolveScheduledEvent(
                     event,
                     accepted,
-                    checkNotNull(preferences[money]),
-                    canDeclineAtZero,
+                    currentHealth = currentHealth,
+                    currentHappiness = currentHappiness,
+                    currentEnergy = currentEnergy,
+                    currentMoney = checkNotNull(preferences[money]),
                 )
             ) {
                 return@edit
@@ -1383,8 +1452,12 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 "Событие «${definition.title}»: ${if (accepted) "согласился" else "отказался"}",
                 if (accepted) event.appliedDeltas.money else 0,
             )
+            resolved = true
         }
-        return EventResolutionResult(depositClosedWithPenalty)
+        return EventResolutionResult(
+            resolved = resolved,
+            depositClosedWithPenalty = depositClosedWithPenalty,
+        )
     }
 
     private fun advanceExpiredCycles(preferences: MutablePreferences, nowMillis: Long) {
