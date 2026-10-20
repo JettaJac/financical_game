@@ -19,6 +19,7 @@ import ru.finni.financialpetgame.lct.domain.Cooldown
 import ru.finni.financialpetgame.lct.domain.EyeColour
 import ru.finni.financialpetgame.lct.domain.Effect
 import ru.finni.financialpetgame.lct.domain.EnergyItem
+import ru.finni.financialpetgame.lct.domain.FoodItem
 import ru.finni.financialpetgame.lct.domain.Goals
 import ru.finni.financialpetgame.lct.domain.HairColour
 import ru.finni.financialpetgame.lct.domain.HairStyle
@@ -37,6 +38,7 @@ import ru.finni.financialpetgame.lct.domain.characteristicCycleAdjustmentForValu
 import ru.finni.financialpetgame.lct.domain.cycleSecondsRemaining
 import ru.finni.financialpetgame.lct.domain.hasCycleExpired
 import ru.finni.financialpetgame.lct.domain.canCompleteCycle
+import ru.finni.financialpetgame.lct.domain.canApplyEffects
 import ru.finni.financialpetgame.lct.domain.canRewardPetTap
 import ru.finni.financialpetgame.lct.domain.nextCycleEnd
 import ru.finni.financialpetgame.lct.domain.levelAfterGoalPurchase
@@ -96,6 +98,7 @@ private const val NEXT_PURCHASE_DISCOUNT_FLAG = "nextPurchaseHalfPrice"
 private const val BRAIDED_BRACELETS_FLAG = "braidedBracelets"
 private const val LEGACY_CYCLE_DURATION_SECONDS = 20 * 60
 private const val MAX_ACTION_HISTORY_SIZE = 500
+private const val CURRENT_BUDGET_ONBOARDING_VERSION = 3
 
 private fun permanentBonus(
     resource: Resource,
@@ -237,12 +240,17 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
     private val plannedOptionalExpenses = intPreferencesKey("planned_optional_expenses")
     private val plannedGoalExpenses = intPreferencesKey("planned_goal_expenses")
     private val actualOptionalExpenses = intPreferencesKey("actual_optional_expenses")
+    private val optionalExpenseRecords = stringPreferencesKey("optional_expense_records")
     private val actualUnplannedExpenses = intPreferencesKey("actual_unplanned_expenses")
     private val actualGoalExpenses = intPreferencesKey("actual_goal_expenses")
     private val unplannedExpenseRecords = stringPreferencesKey("unplanned_expense_records")
     private val actualAdditionalIncome = intPreferencesKey("actual_additional_income")
     private val lastReviewedBudgetWeek = intPreferencesKey("last_reviewed_budget_week")
     private val budgetTutorialCompleted = booleanPreferencesKey("budget_tutorial_completed")
+    private val budgetOnboardingVersion = intPreferencesKey("budget_onboarding_version")
+    private val budgetOpeningBalance = intPreferencesKey("budget_opening_balance")
+    private val levelTwoBudgetExpensesEnabled =
+        booleanPreferencesKey("level_two_budget_expenses_enabled")
     private val depositTutorialCompleted = booleanPreferencesKey("deposit_tutorial_completed")
     private val homeTutorialCompleted = booleanPreferencesKey("home_tutorial_completed")
     private val morningRoutineTutorialCompleted =
@@ -289,6 +297,14 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             val taskUseWeeks = preferences.intMap(TASK_USE_WEEK_PREFIX)
             val jobRemainingActions = preferences.intMap(JOB_REMAINING_ACTIONS_PREFIX)
             val jobForTaskIds = preferences.stringMap(JOB_FOR_TASK_PREFIX)
+            val jobEffectsForTaskIds = jobForTaskIds.mapValues { (_, jobId) ->
+                listOf(
+                    Effect(Resource.Health, preferences[jobHealthKey(jobId)] ?: 0),
+                    Effect(Resource.Happiness, preferences[jobHappinessKey(jobId)] ?: 0),
+                    Effect(Resource.Energy, preferences[jobEnergyKey(jobId)] ?: 0),
+                    Effect(Resource.Money, preferences[jobPayoutKey(jobId)] ?: 0),
+                )
+            }
             val eventRetryPeriods = preferences.intMap(EVENT_RETRY_PERIOD_PREFIX)
             val changeMoneyBestTimes = preferences.intMap(CHANGE_MONEY_BEST_TIME_PREFIX)
 
@@ -325,6 +341,9 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 plannedOptionalExpenses = checkNotNull(preferences[plannedOptionalExpenses]),
                 plannedGoalExpenses = checkNotNull(preferences[plannedGoalExpenses]),
                 actualOptionalExpenses = checkNotNull(preferences[actualOptionalExpenses]),
+                optionalExpenseRecords = decodeBudgetExpenseRecords(
+                    preferences[optionalExpenseRecords],
+                ),
                 actualUnplannedExpenses = checkNotNull(preferences[actualUnplannedExpenses]),
                 actualGoalExpenses = checkNotNull(preferences[actualGoalExpenses]),
                 unplannedExpenseRecords = decodeBudgetExpenseRecords(
@@ -333,6 +352,10 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 actualAdditionalIncome = checkNotNull(preferences[actualAdditionalIncome]),
                 lastReviewedBudgetWeek = checkNotNull(preferences[lastReviewedBudgetWeek]),
                 budgetTutorialCompleted = checkNotNull(preferences[budgetTutorialCompleted]),
+                budgetOpeningBalance = checkNotNull(preferences[budgetOpeningBalance]),
+                levelTwoBudgetExpensesEnabled = checkNotNull(
+                    preferences[levelTwoBudgetExpensesEnabled],
+                ),
                 depositTutorialCompleted = checkNotNull(preferences[depositTutorialCompleted]),
                 homeTutorialCompleted = checkNotNull(preferences[homeTutorialCompleted]),
                 morningRoutineTutorialCompleted = checkNotNull(
@@ -367,6 +390,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 activeJobIds = checkNotNull(preferences[activeJobIds]),
                 jobRemainingActions = jobRemainingActions,
                 jobForTaskIds = jobForTaskIds,
+                jobEffectsForTaskIds = jobEffectsForTaskIds,
                 actionHistory = decodeActionHistory(preferences[actionHistory]),
                 customGoal = preferences[customGoalTitle]?.let { title ->
                     ru.finni.financialpetgame.lct.data.CustomGoal(
@@ -459,6 +483,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             if (preferences[plannedOptionalExpenses] == null) preferences[plannedOptionalExpenses] = 0
             if (preferences[plannedGoalExpenses] == null) preferences[plannedGoalExpenses] = 0
             if (preferences[actualOptionalExpenses] == null) preferences[actualOptionalExpenses] = 0
+            if (preferences[optionalExpenseRecords] == null) preferences[optionalExpenseRecords] = "[]"
             if (preferences[actualUnplannedExpenses] == null) {
                 preferences[actualUnplannedExpenses] = 0
             }
@@ -473,6 +498,17 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             }
             if (preferences[budgetTutorialCompleted] == null) {
                 preferences[budgetTutorialCompleted] = false
+            }
+            if ((preferences[budgetOnboardingVersion] ?: 0) < CURRENT_BUDGET_ONBOARDING_VERSION) {
+                // Show the redesigned flow once to existing players without deleting their save.
+                preferences[budgetTutorialCompleted] = false
+                preferences[budgetOnboardingVersion] = CURRENT_BUDGET_ONBOARDING_VERSION
+            }
+            if (preferences[budgetOpeningBalance] == null) {
+                preferences[budgetOpeningBalance] = preferences[money] ?: GameDefaults.MONEY
+            }
+            if (preferences[levelTwoBudgetExpensesEnabled] == null) {
+                preferences[levelTwoBudgetExpensesEnabled] = false
             }
             if (preferences[depositTutorialCompleted] == null) {
                 preferences[depositTutorialCompleted] = false
@@ -624,6 +660,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             preferences[plannedOptionalExpenses] = 0
             preferences[plannedGoalExpenses] = 0
             preferences[actualOptionalExpenses] = 0
+            preferences[optionalExpenseRecords] = "[]"
             preferences[actualUnplannedExpenses] = 0
             preferences[actualGoalExpenses] = 0
             preferences[unplannedExpenseRecords] = "[]"
@@ -631,6 +668,9 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             preferences[actualAdditionalIncome] = 0
             preferences[lastReviewedBudgetWeek] = 0
             preferences[budgetTutorialCompleted] = false
+            preferences[budgetOnboardingVersion] = CURRENT_BUDGET_ONBOARDING_VERSION
+            preferences[budgetOpeningBalance] = GameDefaults.MONEY
+            preferences[levelTwoBudgetExpensesEnabled] = false
             preferences[depositTutorialCompleted] = false
             preferences[homeTutorialCompleted] = false
             preferences[morningRoutineTutorialCompleted] = false
@@ -774,13 +814,16 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             } else {
                 null
             }
-            if (item is TaskItem && characteristicValue(
-                    baseValue = GameDefaults.ENERGY,
-                    permanentModifier = checkNotNull(preferences[energyModifier]),
-                    cycleAdjustment = checkNotNull(preferences[energyCycleAdjustment]),
-                    secondsRemaining = secondsRemaining,
-                ) <= 10
-            ) return@edit
+            val appliedEffects = if (instanceJobId == null) {
+                item.careEffects
+            } else {
+                listOf(
+                    Effect(Resource.Health, preferences[jobHealthKey(instanceJobId)] ?: 0),
+                    Effect(Resource.Happiness, preferences[jobHappinessKey(instanceJobId)] ?: 0),
+                    Effect(Resource.Energy, preferences[jobEnergyKey(instanceJobId)] ?: 0),
+                    Effect(Resource.Money, preferences[jobPayoutKey(instanceJobId)] ?: 0),
+                )
+            }
             if (item is TaskItem && !item.isAvailable(
                     currentPeriod = currentCycle,
                     totalUses = preferences[taskUseCountKey(item)] ?: 0,
@@ -842,21 +885,23 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 NEXT_PURCHASE_DISCOUNT_FLAG in checkNotNull(preferences[eventFlags])
             val effectivePrice = if (discounted) item.price / 2 else item.price
             if (currentMoney < effectivePrice) return@edit
+            if (!canApplyEffects(
+                    health = currentCharacteristic(preferences, Resource.Health, secondsRemaining),
+                    happiness = currentCharacteristic(
+                        preferences,
+                        Resource.Happiness,
+                        secondsRemaining,
+                    ),
+                    energy = currentCharacteristic(preferences, Resource.Energy, secondsRemaining),
+                    money = currentMoney,
+                    effects = appliedEffects + Effect(Resource.Money, -effectivePrice),
+                )
+            ) return@edit
 
             preferences[money] = moneyAfterPurchase(currentMoney, effectivePrice)
-            recordOptionalExpense(preferences, effectivePrice)
+            recordOptionalExpense(preferences, effectivePrice, budgetExpenseTitle(item))
             if (discounted) consumeFlag(preferences, NEXT_PURCHASE_DISCOUNT_FLAG)
 
-            val appliedEffects = if (instanceJobId == null) {
-                item.careEffects
-            } else {
-                listOf(
-                    Effect(Resource.Health, preferences[jobHealthKey(instanceJobId)] ?: 0),
-                    Effect(Resource.Happiness, preferences[jobHappinessKey(instanceJobId)] ?: 0),
-                    Effect(Resource.Energy, preferences[jobEnergyKey(instanceJobId)] ?: 0),
-                    Effect(Resource.Money, preferences[jobPayoutKey(instanceJobId)] ?: 0),
-                )
-            }
             for (effect in appliedEffects) {
                 when (effect.resource) {
                     Resource.Health,
@@ -966,9 +1011,21 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
 
             val currentMoney = checkNotNull(preferences[money])
             if (currentMoney < item.price) return@edit
+            if (!canApplyEffects(
+                    health = currentCharacteristic(preferences, Resource.Health, secondsRemaining),
+                    happiness = currentCharacteristic(
+                        preferences,
+                        Resource.Happiness,
+                        secondsRemaining,
+                    ),
+                    energy = currentCharacteristic(preferences, Resource.Energy, secondsRemaining),
+                    money = currentMoney,
+                    effects = item.careEffects + Effect(Resource.Money, -item.price),
+                )
+            ) return@edit
 
             preferences[money] = currentMoney - item.price
-            recordOptionalExpense(preferences, item.price)
+            recordOptionalExpense(preferences, item.price, "Мастер бюджета")
             preferences[cooldownUnlockCycleKey(item)] = when (val cooldown = item.cooldown) {
                 Cooldown.None -> cyclePosition
                 is Cooldown.Cycles -> cooldownUnlockCycle(cyclePosition, cooldown.value)
@@ -1034,9 +1091,21 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
 
             val currentMoney = checkNotNull(preferences[money])
             if (currentMoney < item.price) return@edit
+            if (!canApplyEffects(
+                    health = currentCharacteristic(preferences, Resource.Health, secondsRemaining),
+                    happiness = currentCharacteristic(
+                        preferences,
+                        Resource.Happiness,
+                        secondsRemaining,
+                    ),
+                    energy = currentCharacteristic(preferences, Resource.Energy, secondsRemaining),
+                    money = currentMoney,
+                    effects = item.careEffects + Effect(Resource.Money, -item.price),
+                )
+            ) return@edit
 
             preferences[money] = currentMoney - item.price
-            recordOptionalExpense(preferences, item.price)
+            recordOptionalExpense(preferences, item.price, "Разменяй!")
             preferences[cooldownUnlockCycleKey(item)] = when (val cooldown = item.cooldown) {
                 Cooldown.None -> cyclePosition
                 is Cooldown.Cycles -> cooldownUnlockCycle(cyclePosition, cooldown.value)
@@ -1145,11 +1214,26 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
 
     override suspend fun applyEffects(effects: List<Effect>) {
         context.gameDataStore.edit { preferences ->
+            val secondsRemaining = cycleSecondsRemaining(
+                checkNotNull(preferences[cycleEndsAtMillis]),
+                System.currentTimeMillis(),
+            )
             val moneyChange = effects
                 .filter { it.resource == Resource.Money }
                 .sumOf(Effect::increase)
             val currentMoney = checkNotNull(preferences[money])
-            if (currentMoney + moneyChange < 0) return@edit
+            if (!canApplyEffects(
+                    health = currentCharacteristic(preferences, Resource.Health, secondsRemaining),
+                    happiness = currentCharacteristic(
+                        preferences,
+                        Resource.Happiness,
+                        secondsRemaining,
+                    ),
+                    energy = currentCharacteristic(preferences, Resource.Energy, secondsRemaining),
+                    money = currentMoney,
+                    effects = effects,
+                )
+            ) return@edit
 
             effects.groupBy(Effect::resource).forEach { (resource, resourceEffects) ->
                 val change = resourceEffects.sumOf(Effect::increase)
@@ -1161,7 +1245,11 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                     Resource.Money -> preferences[money] = currentMoney + change
                 }
             }
-            recordOptionalExpense(preferences, (-moneyChange).coerceAtLeast(0))
+            recordOptionalExpense(
+                preferences,
+                (-moneyChange).coerceAtLeast(0),
+                "Другое событие",
+            )
             recordAdditionalIncome(preferences, moneyChange.coerceAtLeast(0))
             appendAction(preferences, "Применён результат события", moneyChange)
         }
@@ -1209,7 +1297,11 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
             if (currentMoney < PET_APPEARANCE_CHANGE_PRICE) return@edit
 
             preferences[money] = currentMoney - PET_APPEARANCE_CHANGE_PRICE
-            recordOptionalExpense(preferences, PET_APPEARANCE_CHANGE_PRICE)
+            recordOptionalExpense(
+                preferences,
+                PET_APPEARANCE_CHANGE_PRICE,
+                "Изменение внешности",
+            )
             preferences[petName] = appearance.name.trim()
             preferences[hairColour] = appearance.hairColour.name
             preferences[eyeColour] = appearance.eyeColour.name
@@ -1223,10 +1315,26 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
     override suspend fun saveBudgetPlan(optionalExpenses: Int) {
         context.gameDataStore.edit { preferences ->
             val period = checkNotNull(preferences[currentPeriod])
+            val planningWeek = budgetWeekForPeriod(period)
+            val isRedesignedOnboardingReplay =
+                preferences[budgetPlanWeek] == planningWeek &&
+                    !checkNotNull(preferences[budgetTutorialCompleted])
+            if (isRedesignedOnboardingReplay) {
+                preferences[budgetTutorialCompleted] = true
+                appendAction(preferences, "Пройден обновлённый онбординг бюджета")
+                return@edit
+            }
+            val levelTwoEnabled = checkNotNull(preferences[levelTwoBudgetExpensesEnabled])
+            val activateLevelTwo = !levelTwoEnabled && checkNotNull(preferences[level]) >= 2
+            if (activateLevelTwo) {
+                preferences[expense] = checkNotNull(preferences[expense]) +
+                    GameDefaults.VITAMINS_EXPENSE + GameDefaults.SPORTS_SECTION_EXPENSE
+                preferences[levelTwoBudgetExpensesEnabled] = true
+            }
             val availableAfterMandatory = (
                 checkNotNull(preferences[income]) - checkNotNull(preferences[expense])
             ).coerceAtLeast(0)
-            preferences[budgetPlanWeek] = budgetWeekForPeriod(period)
+            preferences[budgetPlanWeek] = planningWeek
             preferences[budgetPlanRecurringExpense] = checkNotNull(preferences[expense])
             preferences[plannedGoalExpenses] = 0
             preferences[plannedOptionalExpenses] = optionalExpenses.coerceIn(
@@ -1234,11 +1342,13 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 maximumValue = availableAfterMandatory,
             )
             preferences[actualOptionalExpenses] = 0
+            preferences[optionalExpenseRecords] = "[]"
             preferences[actualUnplannedExpenses] = 0
             preferences[actualGoalExpenses] = 0
             preferences[unplannedExpenseRecords] = "[]"
             preferences[actualAdditionalIncome] = 0
             preferences[budgetTutorialCompleted] = true
+            preferences[budgetOpeningBalance] = checkNotNull(preferences[money])
             preferences[cycleEndsAtMillis] =
                 System.currentTimeMillis() + GameDefaults.CYCLE_DURATION_MILLIS
             resetCycleAdjustments(preferences)
@@ -1258,10 +1368,12 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 actualIncome = checkNotNull(preferences[income]) +
                     (preferences[actualAdditionalIncome] ?: 0),
                 plannedExpenses = checkNotNull(preferences[budgetPlanRecurringExpense]) +
-                    checkNotNull(preferences[plannedOptionalExpenses]),
+                    checkNotNull(preferences[plannedOptionalExpenses]) +
+                    checkNotNull(preferences[plannedGoalExpenses]),
                 actualExpenses = checkNotNull(preferences[budgetPlanRecurringExpense]) +
                     checkNotNull(preferences[actualOptionalExpenses]) +
-                    checkNotNull(preferences[actualUnplannedExpenses]),
+                    checkNotNull(preferences[actualUnplannedExpenses]) +
+                    checkNotNull(preferences[actualGoalExpenses]),
             )
             if (result.isSuccessful) {
                 preferences[money] = checkNotNull(preferences[money]) + BUDGET_SUCCESS_REWARD
@@ -1309,6 +1421,7 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
         accepted: Boolean,
     ): EventResolutionResult {
         var depositClosedWithPenalty = false
+        var resolved = false
         context.gameDataStore.edit { preferences ->
             val definition = event.definition
             val currentPeriodValue = checkNotNull(preferences[currentPeriod])
@@ -1321,22 +1434,36 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 EventFrequency.PerPeriod -> occurrence in
                     checkNotNull(preferences[eventPeriodOccurrences])
             }
-            if (alreadyHandled) return@edit
+            if (alreadyHandled) {
+                resolved = true
+                return@edit
+            }
             val secondsRemaining = cycleSecondsRemaining(
                 checkNotNull(preferences[cycleEndsAtMillis]),
                 System.currentTimeMillis(),
             )
-            val allCharacteristicsZero = listOf(
-                currentCharacteristic(preferences, Resource.Health, secondsRemaining),
-                currentCharacteristic(preferences, Resource.Happiness, secondsRemaining),
-                currentCharacteristic(preferences, Resource.Energy, secondsRemaining),
-            ).all { it == 0 }
-            val canDeclineAtZero = allCharacteristicsZero && (preferences[depositAmount] ?: 0) <= 0
+            val currentHealth = currentCharacteristic(
+                preferences,
+                Resource.Health,
+                secondsRemaining,
+            )
+            val currentHappiness = currentCharacteristic(
+                preferences,
+                Resource.Happiness,
+                secondsRemaining,
+            )
+            val currentEnergy = currentCharacteristic(
+                preferences,
+                Resource.Energy,
+                secondsRemaining,
+            )
             if (!canResolveScheduledEvent(
                     event,
                     accepted,
-                    checkNotNull(preferences[money]),
-                    canDeclineAtZero,
+                    currentHealth = currentHealth,
+                    currentHappiness = currentHappiness,
+                    currentEnergy = currentEnergy,
+                    currentMoney = checkNotNull(preferences[money]),
                 )
             ) {
                 return@edit
@@ -1383,8 +1510,12 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
                 "Событие «${definition.title}»: ${if (accepted) "согласился" else "отказался"}",
                 if (accepted) event.appliedDeltas.money else 0,
             )
+            resolved = true
         }
-        return EventResolutionResult(depositClosedWithPenalty)
+        return EventResolutionResult(
+            resolved = resolved,
+            depositClosedWithPenalty = depositClosedWithPenalty,
+        )
     }
 
     private fun advanceExpiredCycles(preferences: MutablePreferences, nowMillis: Long) {
@@ -1534,13 +1665,58 @@ class GameStore @Inject constructor(@ApplicationContext private val context: Con
         resetCycleAdjustments(preferences)
     }
 
-    private fun recordOptionalExpense(preferences: MutablePreferences, amount: Int) {
+    private fun recordOptionalExpense(
+        preferences: MutablePreferences,
+        amount: Int,
+        title: String = "Покупка",
+    ) {
         if (amount <= 0) return
         val period = checkNotNull(preferences[currentPeriod])
         if (preferences[budgetPlanWeek] != budgetWeekForPeriod(period)) return
         preferences[actualOptionalExpenses] =
             (preferences[actualOptionalExpenses] ?: 0) + amount
+        val records = decodeBudgetExpenseRecords(preferences[optionalExpenseRecords]) +
+            BudgetExpenseRecord(title = title, amount = amount)
+        preferences[optionalExpenseRecords] = encodeBudgetExpenseRecords(records)
     }
+
+    private fun budgetExpenseTitle(item: CardItem): String = context.getString(
+        when (item) {
+            FoodItem.SchoolLunch -> R.string.school_lunch
+            FoodItem.Soda -> R.string.soda
+            FoodItem.MashedPotatoes -> R.string.mashed_potatoes
+            FoodItem.IceCream -> R.string.ice_cream
+            FoodItem.HamburgerWithCola -> R.string.hamburger_cola
+            FoodItem.Pasta -> R.string.pasta
+            FoodItem.SetRolls -> R.string.set_rolls
+            FoodItem.Pizza -> R.string.pizza
+            HappinessItem.BudgetMaster -> R.string.master_budget
+            HappinessItem.CatchMoney -> R.string.catch_money
+            HappinessItem.ChangeMoney -> R.string.change_money
+            HappinessItem.PlayWithBall -> R.string.ball_game
+            HappinessItem.BoardGame -> R.string.board_game
+            HappinessItem.MeetingWithFriends -> R.string.meeting_with_friends
+            HappinessItem.Trip -> R.string.trip
+            HappinessItem.Zoo -> R.string.zoo
+            EnergyItem.TakeASeat -> R.string.seat
+            EnergyItem.TakeANap -> R.string.take_a_nap
+            EnergyItem.ListenMusic -> R.string.listen_music
+            EnergyItem.TakeAMassage -> R.string.take_a_massage
+            EnergyItem.HotBath -> R.string.bath
+            EnergyItem.SPA -> R.string.spa
+            EnergyItem.BodyMassage -> R.string.body_massage
+            EnergyItem.Yoga -> R.string.yoga
+            ShopItem.FlowerPot -> R.string.shop_flower_pot
+            ShopItem.FavouriteMug -> R.string.shop_favourite_mug
+            ShopItem.FloorLamp -> R.string.shop_floor_lamp
+            ShopItem.SoftRug -> R.string.shop_soft_rug
+            ShopItem.SoftArmchair -> R.string.shop_soft_armchair
+            ShopItem.StylishScarf -> R.string.shop_stylish_scarf
+            ShopItem.GlowingOrb -> R.string.shop_glowing_orb
+            ShopItem.MorningAutomation -> R.string.shop_morning_automation
+            else -> R.string.budget_optional_expenses
+        },
+    )
 
     private fun recordAdditionalIncome(preferences: MutablePreferences, amount: Int) {
         if (amount <= 0) return

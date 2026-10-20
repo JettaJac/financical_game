@@ -6,6 +6,7 @@ import ru.finni.financialpetgame.lct.data.GameSnapshot
 import ru.finni.financialpetgame.lct.domain.Effect
 import ru.finni.financialpetgame.lct.domain.GameDefaults
 import ru.finni.financialpetgame.lct.domain.Resource
+import ru.finni.financialpetgame.lct.domain.canApplyEffects
 import ru.finni.financialpetgame.lct.domain.dayForPeriod
 import ru.finni.financialpetgame.lct.domain.weekForPeriod
 import kotlin.math.roundToInt
@@ -94,18 +95,29 @@ data class ScheduledEvent(
 internal fun canResolveScheduledEvent(
     event: ScheduledEvent,
     accepted: Boolean,
+    currentHealth: Int,
+    currentHappiness: Int,
+    currentEnergy: Int,
     currentMoney: Int,
-    canDeclineAtZero: Boolean = false,
 ): Boolean {
-    val canAfford = currentMoney + event.appliedDeltas.money >= 0
+    val hasEnoughResources = canApplyEffects(
+        health = currentHealth,
+        happiness = currentHappiness,
+        energy = currentEnergy,
+        money = currentMoney,
+        effects = event.acceptEffects,
+    )
     return if (accepted) {
-        canAfford || event.definition.kind == EventKind.Negative
+        hasEnoughResources
     } else {
-        event.definition.canDecline || canDeclineAtZero
+        event.definition.canDecline || !hasEnoughResources
     }
 }
 
-data class EventResolutionResult(val depositClosedWithPenalty: Boolean = false)
+data class EventResolutionResult(
+    val resolved: Boolean,
+    val depositClosedWithPenalty: Boolean = false,
+)
 
 data class EventCatalogData(
     val events: List<EventDef>,

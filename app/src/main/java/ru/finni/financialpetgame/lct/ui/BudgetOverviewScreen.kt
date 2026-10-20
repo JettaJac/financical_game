@@ -34,6 +34,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ru.finni.financialpetgame.lct.R
@@ -48,20 +49,39 @@ private val OverviewPurpleDark = Color(0xFF54206F)
 private val OverviewLight = Color(0xFFF1D9FC)
 
 private enum class BudgetView { Current, Planned }
+private enum class BudgetSection { Income, Expense, Deposit }
 
 @Composable
 internal fun BudgetOverviewScreen(
     state: GameSnapshot,
     onBack: () -> Unit,
+    onCloseDeposit: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var view by rememberSaveable { mutableStateOf(BudgetView.Current) }
-    var category by rememberSaveable { mutableStateOf(BudgetCategory.Income) }
+    var category by rememberSaveable { mutableStateOf(BudgetSection.Income) }
     var showEducation by rememberSaveable { mutableStateOf(false) }
+    var showBalanceExplanation by rememberSaveable { mutableStateOf(false) }
+    var confirmDepositClosing by rememberSaveable { mutableStateOf(false) }
+
+    if (confirmDepositClosing && state.activeDeposit != null) {
+        DepositEarlyClosingScreen(
+            state = state,
+            deposit = state.activeDeposit,
+            onBack = { confirmDepositClosing = false },
+            onClose = onCloseDeposit,
+        )
+        return
+    }
 
     if (showEducation) {
         FinancialEducationOverlay(
             topic = FinancialEducationTopic.Budget,
+            budgetPetImageRes = petImageResource(
+                state.level,
+                state.hairColour,
+                state.hairStyle,
+            ),
             recurringIncome = state.income,
             recurringExpense = state.budgetPlanRecurringExpense,
             plannedOptionalExpenses = state.plannedOptionalExpenses,
@@ -112,14 +132,21 @@ internal fun BudgetOverviewScreen(
         }
 
         Spacer(Modifier.height(8.dp))
-        Text(
-            text = state.money.toString(),
-            modifier = Modifier.align(Alignment.CenterHorizontally),
-            color = OverviewPurpleDark,
-            fontFamily = NunitoFontFamily,
-            fontSize = 48.sp,
-            fontWeight = FontWeight.ExtraBold,
-        )
+        Row(
+            modifier = Modifier.align(Alignment.CenterHorizontally).clickable {
+                showBalanceExplanation = !showBalanceExplanation
+            },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = state.money.toString(),
+                color = OverviewPurpleDark,
+                fontFamily = NunitoFontFamily,
+                fontSize = 48.sp,
+                fontWeight = FontWeight.ExtraBold,
+            )
+            Text("  ?", color = OverviewPurpleDark, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        }
         Text(
             text = stringResource(R.string.budget_available_now),
             modifier = Modifier.align(Alignment.CenterHorizontally),
@@ -129,18 +156,52 @@ internal fun BudgetOverviewScreen(
             fontWeight = FontWeight.Bold,
         )
         Spacer(Modifier.height(18.dp))
+        if (showBalanceExplanation) {
+            val difference = state.money - state.budgetOpeningBalance
+            Surface(color = Color.White, shape = RoundedCornerShape(12.dp), shadowElevation = 2.dp) {
+                Text(
+                    text = stringResource(
+                        R.string.budget_balance_explanation,
+                        state.budgetOpeningBalance,
+                        if (difference >= 0) stringResource(R.string.budget_balance_increased)
+                        else stringResource(R.string.budget_balance_decreased),
+                        kotlin.math.abs(difference),
+                        state.money,
+                    ),
+                    modifier = Modifier.fillMaxWidth().padding(14.dp),
+                    color = OverviewPurpleDark,
+                    textAlign = TextAlign.Center,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+            Spacer(Modifier.height(12.dp))
+        }
         BudgetViewTabs(view = view, onSelected = { view = it })
+        Spacer(Modifier.height(10.dp))
+        BudgetAmountRow(
+            title = stringResource(R.string.budget_previous_week_balance),
+            amount = state.budgetOpeningBalance,
+        )
         Spacer(Modifier.height(14.dp))
         BudgetSummaryCard(view = view, state = state)
         Spacer(Modifier.height(18.dp))
         BudgetCategoryTabs(category = category, onSelected = { category = it })
         Spacer(Modifier.height(16.dp))
-        BudgetDetails(
-            view = view,
-            category = category,
-            state = state,
-            modifier = Modifier.weight(1f),
-        )
+        if (category == BudgetSection.Deposit) {
+            BudgetDepositDetails(
+                state = state,
+                onClose = { confirmDepositClosing = true },
+                modifier = Modifier.weight(1f),
+            )
+        } else {
+            BudgetDetails(
+                view = view,
+                category = if (category == BudgetSection.Income) BudgetCategory.Income
+                else BudgetCategory.Expense,
+                state = state,
+                modifier = Modifier.weight(1f),
+            )
+        }
     }
 }
 
@@ -232,13 +293,13 @@ private fun SummaryAmount(label: String, amount: Int, modifier: Modifier, color:
 
 @Composable
 private fun BudgetCategoryTabs(
-    category: BudgetCategory,
-    onSelected: (BudgetCategory) -> Unit,
+    category: BudgetSection,
+    onSelected: (BudgetSection) -> Unit,
 ) {
     Row(
         Modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(9.dp)).background(OverviewLight),
     ) {
-        BudgetCategory.entries.forEach { item ->
+        BudgetSection.entries.forEach { item ->
             val selected = item == category
             Box(
                 modifier = Modifier
@@ -251,8 +312,11 @@ private fun BudgetCategoryTabs(
             ) {
                 Text(
                     text = stringResource(
-                        if (item == BudgetCategory.Income) R.string.budget_income
-                        else R.string.budget_expenses,
+                        when (item) {
+                            BudgetSection.Income -> R.string.budget_income
+                            BudgetSection.Expense -> R.string.budget_expenses
+                            BudgetSection.Deposit -> R.string.deposit_title
+                        },
                     ),
                     color = if (selected) Color.White else OverviewPurpleDark,
                     fontFamily = NunitoFontFamily,
@@ -270,7 +334,10 @@ private fun BudgetDetails(
     state: GameSnapshot,
     modifier: Modifier,
 ) {
-    val recurring = MandatoryBudget.entries.filter { it.category == category }
+    val recurring = MandatoryBudget.entries(
+        state.levelTwoBudgetExpensesEnabled,
+        state.budgetPlanRecurringExpense,
+    ).filter { it.category == category }
     val irregularAmount = when {
         category == BudgetCategory.Income && view == BudgetView.Current -> state.actualAdditionalIncome
         category == BudgetCategory.Expense && view == BudgetView.Current -> state.actualOptionalExpenses
@@ -304,13 +371,21 @@ private fun BudgetDetails(
             initiallyExpanded = irregularAmount > 0,
         ) {
             if (irregularAmount > 0) {
-                BudgetAmountRow(
-                    title = stringResource(
-                        if (category == BudgetCategory.Income) R.string.budget_additional_income
-                        else R.string.budget_optional_expenses,
-                    ),
-                    amount = irregularAmount,
-                )
+                if (category == BudgetCategory.Expense && view == BudgetView.Current &&
+                    state.optionalExpenseRecords.isNotEmpty()
+                ) {
+                    state.optionalExpenseRecords.forEach { record ->
+                        BudgetAmountRow(record.title, record.amount)
+                    }
+                } else {
+                    BudgetAmountRow(
+                        title = stringResource(
+                            if (category == BudgetCategory.Income) R.string.budget_additional_income
+                            else R.string.budget_optional_expenses,
+                        ),
+                        amount = irregularAmount,
+                    )
+                }
                 if (category == BudgetCategory.Expense && view == BudgetView.Current) {
                     val plan = state.plannedOptionalExpenses
                     Text(
@@ -388,6 +463,38 @@ private fun BudgetDetails(
             }
         }
         Spacer(Modifier.height(20.dp))
+    }
+}
+
+@Composable
+private fun BudgetDepositDetails(
+    state: GameSnapshot,
+    onClose: () -> Unit,
+    modifier: Modifier,
+) {
+    Column(modifier.verticalScroll(rememberScrollState())) {
+        val deposit = state.activeDeposit
+        if (deposit == null) {
+            Text(
+                stringResource(R.string.budget_no_active_deposit),
+                color = OverviewPurpleDark.copy(alpha = 0.65f),
+                modifier = Modifier.padding(vertical = 18.dp),
+            )
+            return@Column
+        }
+        BudgetGroup(stringResource(R.string.deposit_open_deposits), true) {
+            BudgetAmountRow(stringResource(R.string.deposit_amount), deposit.amount)
+            BudgetAmountRow(stringResource(R.string.deposit_maturity_caption_short), deposit.maturityPayout)
+            Text(
+                stringResource(R.string.deposit_game_days, deposit.remainingCycles(state.currentPeriod)),
+                color = OverviewPurpleDark,
+                modifier = Modifier.padding(vertical = 8.dp),
+            )
+            BudgetPrimaryButton(
+                text = stringResource(R.string.deposit_close_account),
+                onClick = onClose,
+            )
+        }
     }
 }
 

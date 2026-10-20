@@ -6,6 +6,7 @@ import ru.finni.financialpetgame.lct.domain.Goals
 import ru.finni.financialpetgame.lct.domain.HairColour
 import ru.finni.financialpetgame.lct.domain.HairStyle
 import ru.finni.financialpetgame.lct.domain.ActiveDeposit
+import ru.finni.financialpetgame.lct.domain.Effect
 
 data class GameSnapshot(
     val name: String = GameDefaults.NAME,
@@ -42,12 +43,15 @@ data class GameSnapshot(
     val plannedOptionalExpenses: Int = 0,
     val plannedGoalExpenses: Int = 0,
     val actualOptionalExpenses: Int = 0,
+    val optionalExpenseRecords: List<BudgetExpenseRecord> = emptyList(),
     val actualUnplannedExpenses: Int = 0,
     val actualGoalExpenses: Int = 0,
     val unplannedExpenseRecords: List<BudgetExpenseRecord> = emptyList(),
     val actualAdditionalIncome: Int = 0,
     val lastReviewedBudgetWeek: Int = 0,
     val budgetTutorialCompleted: Boolean = false,
+    val budgetOpeningBalance: Int = 0,
+    val levelTwoBudgetExpensesEnabled: Boolean = false,
     val depositTutorialCompleted: Boolean = false,
     val homeTutorialCompleted: Boolean = false,
     val morningRoutineTutorialCompleted: Boolean = false,
@@ -72,6 +76,7 @@ data class GameSnapshot(
     val activeJobIds: Set<String> = emptySet(),
     val jobRemainingActions: Map<String, Int> = emptyMap(),
     val jobForTaskIds: Map<String, String> = emptyMap(),
+    val jobEffectsForTaskIds: Map<String, List<Effect>> = emptyMap(),
     val actionHistory: List<GameActionRecord> = emptyList(),
     val customGoal: CustomGoal? = null,
     val activeDeposit: ActiveDeposit? = null,

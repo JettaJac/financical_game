@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,9 +14,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -66,7 +69,19 @@ internal fun FinancialEducationOverlay(
     plannedOptionalExpenses: Int = 0,
     depositAmount: Int = 0,
     depositTerm: DepositTerm? = null,
+    @DrawableRes budgetPetImageRes: Int = R.drawable.pet_main,
+    @DrawableRes depositPetImageRes: Int = R.drawable.pet_main,
 ) {
+    if (topic == FinancialEducationTopic.Deposit) {
+        DepositReferenceEducationOverlay(
+            amount = depositAmount,
+            term = depositTerm,
+            petImageRes = depositPetImageRes,
+            onDismiss = onDismiss,
+        )
+        return
+    }
+
     val pageCount = 3
     var page by rememberSaveable(topic) { mutableIntStateOf(0) }
     var categoryRevealStep by rememberSaveable(topic) { mutableIntStateOf(0) }
@@ -99,17 +114,11 @@ internal fun FinancialEducationOverlay(
                     Spacer(Modifier.size(48.dp))
                 }
                 Text(
-                    text = stringResource(
-                        if (topic == FinancialEducationTopic.Budget) {
-                            R.string.education_budget_title
-                        } else {
-                            R.string.education_deposit_title
-                        },
-                    ),
+                    text = stringResource(R.string.education_budget_title),
                     modifier = Modifier.weight(1f),
                     color = EducationDark,
                     fontFamily = NunitoFontFamily,
-                    fontSize = 25.sp,
+                    fontSize = 20.sp,
                     fontWeight = FontWeight.ExtraBold,
                     textAlign = TextAlign.Center,
                 )
@@ -124,7 +133,6 @@ internal fun FinancialEducationOverlay(
                     .fillMaxWidth()
                     .then(
                         if (
-                            topic == FinancialEducationTopic.Budget &&
                             page == 1 &&
                             categoryRevealStep < 3
                         ) {
@@ -137,21 +145,14 @@ internal fun FinancialEducationOverlay(
                     .padding(horizontal = 20.dp, vertical = 10.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                if (topic == FinancialEducationTopic.Budget) {
-                    BudgetEducationPage(
-                        page = page,
-                        recurringIncome = recurringIncome,
-                        recurringExpense = recurringExpense,
-                        plannedOptionalExpenses = plannedOptionalExpenses,
-                        categoryRevealStep = categoryRevealStep,
-                    )
-                } else {
-                    DepositEducationPage(
-                        page = page,
-                        amount = depositAmount,
-                        term = depositTerm,
-                    )
-                }
+                BudgetEducationPage(
+                    page = page,
+                    recurringIncome = recurringIncome,
+                    recurringExpense = recurringExpense,
+                    plannedOptionalExpenses = plannedOptionalExpenses,
+                    categoryRevealStep = categoryRevealStep,
+                    petImageRes = budgetPetImageRes,
+                )
             }
 
             Column(
@@ -161,23 +162,9 @@ internal fun FinancialEducationOverlay(
                     .padding(18.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                    repeat(pageCount) { index ->
-                        Box(
-                            Modifier
-                                .size(if (index == page) 10.dp else 8.dp)
-                                .background(
-                                    if (index == page) EducationPurple else EducationLavender,
-                                    CircleShape,
-                                ),
-                        )
-                    }
-                }
-                Spacer(Modifier.height(14.dp))
                 Button(
                     onClick = {
                         if (
-                            topic == FinancialEducationTopic.Budget &&
                             page == 1 &&
                             categoryRevealStep < 3
                         ) {
@@ -188,7 +175,7 @@ internal fun FinancialEducationOverlay(
                             page += 1
                         }
                     },
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = EducationPurple),
                     shape = RoundedCornerShape(12.dp),
                 ) {
@@ -207,32 +194,255 @@ internal fun FinancialEducationOverlay(
 }
 
 @Composable
+private fun DepositReferenceEducationOverlay(
+    amount: Int,
+    term: DepositTerm?,
+    @DrawableRes petImageRes: Int,
+    onDismiss: () -> Unit,
+) {
+    var page by rememberSaveable { mutableIntStateOf(0) }
+    val scrollState = rememberScrollState()
+    val safeAmount = amount.takeIf { it > 0 } ?: 100
+    val safeTerm = term ?: DepositTerm(6, 40, 20)
+    val loss = safeAmount * safeTerm.earlyClosePenaltyPercent / 100
+    val earlyPayout = safeAmount - loss
+
+    LaunchedEffect(page) { scrollState.scrollTo(0) }
+    BackHandler {
+        if (page > 0) page -= 1 else onDismiss()
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFFBF1FF))
+            .safeDrawingPadding(),
+    ) {
+        Column(Modifier.fillMaxSize()) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(start = 48.dp, end = 10.dp, top = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(R.string.education_deposit_title),
+                    modifier = Modifier.weight(1f),
+                    color = EducationDark,
+                    fontFamily = NunitoFontFamily,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                )
+                IconButton(onClick = onDismiss) {
+                    Text("×", color = EducationDark, fontSize = 29.sp)
+                }
+            }
+
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .verticalScroll(scrollState)
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(24.dp),
+            ) {
+                DepositEducationGuide(
+                    text = stringResource(
+                        if (page == 0) {
+                            R.string.education_deposit_week
+                        } else {
+                            R.string.education_deposit_early_body
+                        },
+                        *if (page == 0) {
+                            arrayOf(gameCycleDurationText(GameDefaults.CYCLE_DURATION_SECONDS))
+                        } else {
+                            emptyArray()
+                        },
+                    ),
+                    petImageRes = petImageRes,
+                )
+
+                if (page == 0) {
+                    DepositEducationStep(
+                        number = "1",
+                        text = stringResource(R.string.education_deposit_reference_put),
+                    )
+                    DepositEducationStep(
+                        number = "2",
+                        text = stringResource(R.string.education_deposit_reference_wait),
+                    )
+                    DepositEducationStep(
+                        number = "3",
+                        text = stringResource(R.string.education_deposit_reference_receive),
+                    )
+                } else {
+                    DepositEducationExample(
+                        icon = R.drawable.change_money,
+                        text = stringResource(
+                            R.string.education_deposit_reference_example,
+                            safeAmount,
+                        ),
+                    )
+                    DepositEducationExample(
+                        icon = R.drawable.money_fell,
+                        text = stringResource(
+                            R.string.education_deposit_reference_result,
+                            loss,
+                            earlyPayout,
+                        ),
+                    )
+                    Text(
+                        text = stringResource(R.string.education_deposit_game_rule),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(EducationLavender, RoundedCornerShape(10.dp))
+                            .padding(16.dp),
+                        color = EducationDark,
+                        fontSize = 15.sp,
+                        lineHeight = 18.sp,
+                    )
+                }
+            }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.White, RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp))
+                    .padding(horizontal = 16.dp, vertical = 22.dp),
+            ) {
+                Button(
+                    onClick = {
+                        if (page == 0) page = 1 else onDismiss()
+                    },
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 53.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = EducationPurple),
+                    shape = RoundedCornerShape(11.dp),
+                ) {
+                    Text(
+                        text = stringResource(R.string.onboarding_next),
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DepositEducationGuide(text: String, @DrawableRes petImageRes: Int) {
+    Row(
+        modifier = Modifier.fillMaxWidth().heightIn(min = 112.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier
+                .weight(1f)
+                .background(Color.White, RoundedCornerShape(8.dp))
+                .padding(horizontal = 12.dp, vertical = 12.dp),
+            color = EducationDark,
+            fontSize = 13.sp,
+            lineHeight = 17.sp,
+            fontWeight = FontWeight.ExtraBold,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.width(5.dp))
+        Box(Modifier.width(132.dp).height(108.dp)) {
+            Image(
+                painter = painterResource(petImageRes),
+                contentDescription = stringResource(R.string.pet),
+                contentScale = ContentScale.Crop,
+                alignment = Alignment.TopCenter,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+    }
+}
+
+@Composable
+private fun DepositEducationStep(number: String, text: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 90.dp)
+            .background(Color.White, RoundedCornerShape(10.dp))
+            .border(1.5.dp, EducationDark, RoundedCornerShape(10.dp))
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = number,
+            color = Color(0xFFD9A2F5),
+            fontSize = 49.sp,
+            fontWeight = FontWeight.ExtraBold,
+        )
+        Text(
+            text = text,
+            modifier = Modifier.weight(1f).padding(start = 14.dp),
+            color = EducationDark,
+            fontSize = 15.sp,
+            lineHeight = 19.sp,
+            fontWeight = FontWeight.SemiBold,
+        )
+    }
+}
+
+@Composable
+private fun DepositEducationExample(@DrawableRes icon: Int, text: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 90.dp)
+            .background(Color.White, RoundedCornerShape(10.dp))
+            .border(1.5.dp, EducationDark, RoundedCornerShape(10.dp))
+            .padding(horizontal = 18.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Image(
+            painter = painterResource(icon),
+            contentDescription = null,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.size(52.dp),
+        )
+        Text(
+            text = text,
+            modifier = Modifier.weight(1f).padding(start = 14.dp),
+            color = EducationDark,
+            fontSize = 15.sp,
+            lineHeight = 19.sp,
+            fontWeight = FontWeight.SemiBold,
+        )
+    }
+}
+
+@Composable
 private fun BudgetEducationPage(
     page: Int,
     recurringIncome: Int,
     recurringExpense: Int,
     plannedOptionalExpenses: Int,
     categoryRevealStep: Int,
+    @DrawableRes petImageRes: Int,
 ) {
     when (page) {
         0 -> {
-            EducationLead(
-                title = stringResource(R.string.education_budget_week_title),
-                body = stringResource(
+            BudgetEducationGuide(
+                text = stringResource(
                     R.string.education_budget_game_day,
                     gameCycleDurationText(GameDefaults.CYCLE_DURATION_SECONDS),
                 ),
+                petImageRes = petImageRes,
             )
-            FlowStep(R.drawable.ic_tasks, stringResource(R.string.education_budget_step_plan), EducationBlue)
-            FlowArrow()
-            FlowStep(R.drawable.ic_timer_cycle, stringResource(R.string.education_budget_step_play), EducationLavender)
-            FlowArrow()
-            FlowStep(R.drawable.carbon_piggy_bank, stringResource(R.string.education_budget_step_compare), EducationGreen)
+            Spacer(Modifier.height(18.dp))
+            NumberedBudgetStep("1", stringResource(R.string.education_budget_step_plan))
+            Spacer(Modifier.height(10.dp))
+            NumberedBudgetStep("2", stringResource(R.string.education_budget_step_play))
+            Spacer(Modifier.height(10.dp))
+            NumberedBudgetStep("3", stringResource(R.string.education_budget_step_compare))
         }
         1 -> {
-            EducationLead(
-                title = stringResource(R.string.education_budget_categories_title),
-                body = stringResource(
+            BudgetEducationGuide(
+                text = stringResource(
                     when (categoryRevealStep) {
                         0 -> R.string.education_budget_income_explanation
                         1 -> R.string.education_budget_income_groups
@@ -240,139 +450,171 @@ private fun BudgetEducationPage(
                         else -> R.string.education_budget_expense_groups
                     },
                 ),
+                petImageRes = petImageRes,
+            )
+            Text(
+                text = stringResource(R.string.education_budget_categories_title),
+                color = EducationDark,
+                fontSize = 21.sp,
+                lineHeight = 24.sp,
+                fontWeight = FontWeight.ExtraBold,
+            )
+            Text(
+                text = stringResource(R.string.education_budget_categories_body),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(EducationLavender, RoundedCornerShape(9.dp))
+                    .padding(14.dp),
+                color = EducationDark,
+                fontSize = 14.sp,
+                lineHeight = 18.sp,
             )
             Text(
                 text = stringResource(R.string.budget_income),
                 color = EducationDark,
-                fontSize = 22.sp,
+                fontSize = 20.sp,
                 fontWeight = FontWeight.ExtraBold,
             )
             if (categoryRevealStep >= 1) {
-                CategoryCard(
-                    title = "",
-                    lines = listOf(
-                        stringResource(R.string.education_income_recurring),
-                        stringResource(R.string.education_income_additional),
+                OutlinedCategoryList(
+                    listOf(
+                        stringResource(R.string.budget_recurring),
+                        stringResource(R.string.budget_irregular),
                     ),
-                    color = EducationGreen,
-                    modifier = Modifier.fillMaxWidth(),
                 )
             }
             if (categoryRevealStep >= 2) {
                 Text(
                     text = stringResource(R.string.budget_expenses),
                     color = EducationDark,
-                    fontSize = 22.sp,
+                    fontSize = 20.sp,
                     fontWeight = FontWeight.ExtraBold,
                 )
             }
             if (categoryRevealStep >= 3) {
-                CategoryCard(
-                    title = "",
-                    lines = listOf(
-                        stringResource(R.string.education_expense_mandatory),
-                        stringResource(R.string.education_expense_optional),
-                        stringResource(R.string.education_expense_unplanned),
-                        stringResource(R.string.education_expense_goal),
+                OutlinedCategoryList(
+                    listOf(
+                        stringResource(R.string.budget_mandatory),
+                        stringResource(R.string.budget_optional_short),
                     ),
-                    color = EducationOrange,
-                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         }
         else -> {
-            EducationLead(
-                title = stringResource(R.string.education_budget_needs_title),
-                body = stringResource(R.string.education_budget_needs_speech),
+            BudgetEducationGuide(
+                text = stringResource(R.string.education_budget_needs_speech),
+                petImageRes = petImageRes,
+            )
+            Text(
+                text = stringResource(R.string.education_budget_needs_title),
+                color = EducationDark,
+                fontSize = 21.sp,
+                lineHeight = 24.sp,
+                fontWeight = FontWeight.ExtraBold,
             )
             Text(
                 text = stringResource(R.string.education_budget_needs_body),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(EducationLavender, RoundedCornerShape(16.dp))
-                    .padding(16.dp),
+                    .background(EducationLavender, RoundedCornerShape(9.dp))
+                    .padding(14.dp),
                 color = EducationDark,
-                fontSize = 16.sp,
-                lineHeight = 21.sp,
-                textAlign = TextAlign.Center,
+                fontSize = 14.sp,
+                lineHeight = 18.sp,
             )
-            Text(
-                text = stringResource(R.string.education_budget_needs_tip),
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color.White, RoundedCornerShape(16.dp))
-                    .padding(18.dp),
-                color = EducationDark,
-                fontSize = 16.sp,
-                lineHeight = 21.sp,
-                textAlign = TextAlign.Center,
-            )
+                    .background(Color.White, RoundedCornerShape(10.dp))
+                    .border(1.4.dp, EducationDark, RoundedCornerShape(10.dp))
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.lamp),
+                    contentDescription = null,
+                    modifier = Modifier.size(48.dp),
+                    contentScale = ContentScale.Fit,
+                )
+                Text(
+                    text = stringResource(R.string.education_budget_needs_tip),
+                    modifier = Modifier.weight(1f).padding(start = 12.dp),
+                    color = EducationDark,
+                    fontSize = 14.sp,
+                    lineHeight = 18.sp,
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun DepositEducationPage(page: Int, amount: Int, term: DepositTerm?) {
-    val safeAmount = amount.coerceAtLeast(0)
-    val safeTerm = term ?: DepositTerm(3, 7, 4)
-    val profit = safeAmount * safeTerm.interestPercent / 100
-    val payout = safeAmount + profit
-    val loss = safeAmount * safeTerm.earlyClosePenaltyPercent / 100
-    val earlyPayout = safeAmount - loss
-
-    if (page == 0) {
-        EducationLead(
-            title = stringResource(R.string.education_deposit_flow_title),
-            body = stringResource(
-                R.string.education_deposit_game_day,
-                gameCycleDurationText(GameDefaults.CYCLE_DURATION_SECONDS),
-            ),
-        )
-        FlowStep(
-            R.drawable.coin_money,
-            stringResource(R.string.education_deposit_put, safeAmount),
-            EducationOrange,
-        )
-        FlowArrow()
-        FlowStep(
-            R.drawable.ic_deposit_wallet,
-            stringResource(R.string.education_deposit_wait, safeTerm.durationCycles),
-            EducationBlue,
-        )
-        FlowArrow()
-        FlowStep(
-            R.drawable.carbon_piggy_bank,
-            stringResource(R.string.education_deposit_receive, safeAmount, profit, payout),
-            EducationGreen,
-        )
-    } else if (page == 1) {
-        EducationLead(
-            title = stringResource(R.string.education_deposit_early_title),
-            body = stringResource(R.string.education_deposit_early_body),
-        )
-        FlowStep(
-            R.drawable.ic_deposit_wallet,
-            stringResource(R.string.education_deposit_early_amount, safeAmount),
-            EducationOrange,
-        )
-        FlowArrow()
-        FlowStep(
-            R.drawable.coin_money,
-            stringResource(R.string.education_deposit_early_result, loss, earlyPayout),
-            Color(0xFFFFDFDF),
-        )
+private fun BudgetEducationGuide(text: String, @DrawableRes petImageRes: Int) {
+    Row(
+        modifier = Modifier.fillMaxWidth().heightIn(min = 102.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         Text(
-            text = stringResource(R.string.education_deposit_budget_link),
+            text = text,
+            modifier = Modifier
+                .weight(1f)
+                .background(Color.White, RoundedCornerShape(8.dp))
+                .padding(horizontal = 12.dp, vertical = 14.dp),
             color = EducationDark,
-            fontSize = 15.sp,
-            lineHeight = 20.sp,
+            fontSize = 13.sp,
+            lineHeight = 16.sp,
+            fontWeight = FontWeight.ExtraBold,
             textAlign = TextAlign.Center,
         )
-    } else {
-        EducationLead(
-            title = stringResource(R.string.education_deposit_early_title),
-            body = stringResource(R.string.education_deposit_game_rule),
+        Image(
+            painter = painterResource(petImageRes),
+            contentDescription = stringResource(R.string.pet),
+            modifier = Modifier.width(130.dp).height(102.dp),
+            contentScale = ContentScale.Crop,
+            alignment = Alignment.TopCenter,
         )
+    }
+}
+
+@Composable
+private fun NumberedBudgetStep(number: String, text: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 84.dp)
+            .background(Color.White, RoundedCornerShape(10.dp))
+            .border(1.4.dp, EducationDark, RoundedCornerShape(10.dp))
+            .padding(horizontal = 15.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = number,
+            color = Color(0xFFD9A2F5),
+            fontSize = 46.sp,
+            fontWeight = FontWeight.ExtraBold,
+        )
+        Text(
+            text = text,
+            modifier = Modifier.weight(1f).padding(start = 14.dp),
+            color = EducationDark,
+            fontSize = 14.sp,
+            lineHeight = 18.sp,
+        )
+    }
+}
+
+@Composable
+private fun OutlinedCategoryList(lines: List<String>) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color.White, RoundedCornerShape(10.dp))
+            .border(1.4.dp, EducationDark, RoundedCornerShape(10.dp))
+            .padding(horizontal = 20.dp, vertical = 12.dp),
+    ) {
+        lines.forEach { line ->
+            Text("•  $line", color = EducationDark, fontSize = 14.sp, lineHeight = 18.sp)
+        }
     }
 }
 

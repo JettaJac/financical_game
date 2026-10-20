@@ -26,14 +26,16 @@
     <string name="timer">Таймер</string>
 
     <!-- Weekly budget planning -->
-    <string name="budget_intro_message">Давай спланируем бюджет так, чтобы мне хватило на все!</string>
+    <string name="budget_intro_message">Давай спланируем бюджет: решим, сколько денег потратить сейчас, а сколько сохранить, чтобы мне на всё хватило!</string>
     <string name="budget_make_plan">Составить бюджет</string>
-    <string name="budget_choose_category_guide">Куда отнесем это: к доходам или расходам?</string>
-    <string name="budget_choose_frequency_guide">Отличный выбор! \nТеперь уточни, к какому виду она относится</string>
-    <string name="budget_choose_category">К чему относится?</string>
-    <string name="budget_choose_subcategory">К чему относиться?</string>
+    <string name="budget_choose_category_guide">Теперь давай выберем, к какой категории ты отнесёшь эту позицию</string>
+    <string name="budget_choose_frequency_guide">Верно! Теперь определим, к какой подкатегории относится эта позиция</string>
+    <string name="budget_choose_category">Выбери категорию</string>
+    <string name="budget_choose_subcategory">Выбери подкатегорию</string>
+    <string name="budget_income_singular">Доход</string>
+    <string name="budget_expense_singular">Расход</string>
     <string name="budget_correct_income_explanation">Верно: это доход — деньги, которые мы получаем. Теперь определим как часто они приходят.</string>
-    <string name="budget_correct_expense_explanation">Верно: это расход — деньги, которые мы тратим. Теперь определим как часто они приходят.</string>
+    <string name="budget_correct_expense_explanation">Верно! Это расход — деньги, которые мы тратим. Теперь определим его подкатегорию.</string>
     <string name="budget_wrong_income">Это доход — деньги, которые мы получаем. Попробуй ещё раз!</string>
     <string name="budget_wrong_expense">Это расход — деньги, которые мы тратим. Попробуй ещё раз!</string>
     <string name="budget_correct_recurring_income">Верно! Деньги на базовые потребности приходят каждую неделю — это постоянный доход.</string>
@@ -45,7 +47,7 @@
     <string name="budget_irregular">Нерегулярные</string>
     <string name="budget_savings">Накопления (вклад)</string>
     <string name="budget_mandatory_success">Отлично! Все обязательные доходы и расходы распределены правильно</string>
-    <string name="budget_formula_guide">Из постоянных доходов вычитай обязательные расходы</string>
+    <string name="budget_formula_guide">Из постоянных доходов вычитаем обязательные расходы</string>
     <string name="budget_recurring_income_total">Постоянные доходы</string>
     <string name="budget_mandatory_expense_total">Обязательные расходы</string>
     <string name="budget_formula_remainder">Остаток</string>
@@ -66,16 +68,34 @@
     <string name="budget_mobile_service">Связь</string>
     <string name="budget_vitamins">Витамины</string>
     <string name="budget_sports_section">Спортивная секция</string>
+    <string name="budget_second_intro_message">Теперь ты знаешь свои реальные траты. Давай запланируем необязательные расходы на следующую неделю!</string>
+    <string name="budget_previous_optional_title">Необязательные расходы на прошлой неделе</string>
+    <string name="budget_previous_optional_total">Всего</string>
+    <string name="budget_previous_week_balance">Остаток на конец прошлой недели</string>
+    <string name="budget_balance_explanation">В начале периода в кошельке было %1$d монет. С тех пор баланс %2$s на %3$d из-за покупок, доходов, событий и вкладов. Поэтому сейчас у тебя %4$d монет.</string>
+    <string name="budget_balance_increased">увеличился</string>
+    <string name="budget_balance_decreased">уменьшился</string>
+    <string name="budget_no_active_deposit">Сейчас у тебя нет открытого вклада.</string>
+    <string name="deposit_amount">Сумма вклада</string>
+    <string name="budget_return_to_results">Вернуться к результатам</string>
     <string name="budget_period_results">Итоги</string>
     <string name="budget_period_success_summary">Молодец, ты хорошо справился за эту неделю!</string>
     <string name="budget_period_failed_summary">В этот раз расходы превысили план. В следующую неделю получится лучше!</string>
-    <string name="budget_planned">запланировано</string>
-    <string name="budget_actual">фактически</string>
+    <string name="budget_planned">запланированные</string>
+    <string name="budget_actual">текущие</string>
     <string name="budget_additional_income">Дополнительные</string>
     <string name="budget_recurring_expenses">Обязательные</string>
     <string name="budget_period_income_total">Всего доходов</string>
     <string name="budget_period_expense_total">Всего расходов</string>
     <string name="budget_period_next">Далее</string>
+    <string name="budget_period_income_bonus_summary">Ух ты, сюрприз! Ты заработал больше, чем ожидал. Хорошая стратегия.</string>
+    <string name="budget_period_income_summary">Доходы совпали с планом. Отличное начало!</string>
+    <string name="budget_period_expense_overrun_summary">Вкусняшки съели бюджет! В следующий раз заложи на развлечения чуть больше или держи себя в руках.</string>
+    <string name="budget_period_expense_success_summary">Отлично! Твои расходы не вышли за пределы плана.</string>
+    <string name="budget_deposit_amount">Сумма на вкладе:</string>
+    <string name="budget_deposit_remaining">До окончания срока: %1$d игровых дня</string>
+    <string name="budget_balance">Баланс</string>
+    <string name="budget_goal_purchase">Покупка цели</string>
     <string name="budget_success_message">Ты молодец! \nТвой бюджет точен, лови 10 монет!</string>
     <string name="budget_collect_reward">Забрать монеты</string>
     <string name="budget_current">Текущий бюджет</string>
@@ -103,7 +123,7 @@
     <string name="financial_help">Как это работает</string>
 
     <!-- Financial education -->
-    <string name="education_budget_title">Как работает бюджет</string>
+    <string name="education_budget_title">Как работает бюджет?</string>
     <string name="education_deposit_title">Как работает вклад</string>
     <string name="education_understood">Понятно</string>
     <plurals name="cycle_duration_minutes">
@@ -121,7 +141,7 @@
     <string name="cycle_duration_minutes_seconds">%1$s %2$s</string>
     <string name="education_budget_week_title">План на игровую неделю</string>
     <string name="education_budget_game_day">В неделе 7 игровых дней. Один игровой день длится %1$s.</string>
-    <string name="education_budget_step_plan">Сначала смотрим, сколько у нас монет на игровую неделюрешаем. Затем решаем, сколько можно потратить.</string>
+    <string name="education_budget_step_plan">Сначала смотрим, сколько у нас монет на игровую неделю. Затем решаем, сколько можно потратить.</string>
     <string name="education_budget_step_play">Играем 7 дней: зарабатываем монеты и делаем покупки</string>
     <string name="education_budget_step_compare">В конце игровой недели сравниваем сколько монет мы собирались потратить и сколько потратили на самом деле</string>
     <string name="education_budget_categories_title">Доходы и расходы бывают разными</string>
@@ -147,28 +167,23 @@
     <string name="education_formula_optional">Необязательные расходы</string>
     <string name="education_formula_free">Свободный остаток</string>
     <string name="education_budget_free_money">Свободные монеты можно оставить в кошельке, запланировать на цель или положить во вклад. Покупка цели записывается в расходы на цели.</string>
-    <string name="education_deposit_flow_title">Деньги приносят прибыль</string>
-    <string name="education_deposit_game_day">Срок указан в игровых днях. Один игровой день длится %1$s</string>
-    <string name="education_deposit_put">Кладёшь во вклад %1$d монет</string>
-    <string name="education_deposit_wait">Ждёшь %1$d игровых дней</string>
-    <string name="education_deposit_receive">Получаешь %1$d своих + %2$d прибыли = %3$d</string>
-    <string name="education_deposit_early_title">Досрочное закрытие</string>
     <string name="education_deposit_early_body">Если забрать деньги раньше срока, прибыли не будет, а банк удержит штраф</string>
-    <string name="education_deposit_early_amount">Во вкладе: %1$d монет</string>
-    <string name="education_deposit_early_result">Штраф: %1$d · вернётся: %2$d</string>
-    <string name="education_deposit_budget_link">Основная сумма вклада не считается доходом или расходом. Прибыль попадёт в дополнительные доходы, а штраф — в непредвиденные расходы</string>
     <string name="education_deposit_game_rule">В нашей игре банк даёт очень-очень большой процент — как волшебный супер-бонус, чтобы ты понял, как работает вклад. Но чтобы игра была честной, банк добавляет штраф, если ты забираешь деньги раньше обещанного. Это только игровое правило, в настоящей жизни такого нет</string>
+    <string name="education_deposit_week">В неделе 7 игровых дней. Один день длится %1$s</string>
+    <string name="education_deposit_reference_put">Положи на вклад определенную сумму</string>
+    <string name="education_deposit_reference_wait">Жди определенное количество дней</string>
+    <string name="education_deposit_reference_receive">Получи сумму и прибыль с вклада</string>
+    <string name="education_deposit_reference_example">Например, ты положил %1$d монет, но решил закрыть вклад раньше</string>
+    <string name="education_deposit_reference_result">Тебе придёт штраф %1$d монет, и в итоге к тебе вернется %2$d</string>
 
     <!-- Deposits -->
     <string name="deposit_title">Вклад</string>
     <string name="deposit_intro">Ты можешь открыть вклад, и в конце срока получишь приятную надбавку! Но если закроешь его раньше срока, тогда будет штраф</string>
     <string name="deposit_terms">Условия</string>
     <string name="deposit_term_format">на %1$d дней (ставка %2$d%%, штраф %3$d%%)</string>
-    <string name="deposit_term_result">Прибыль +%1$d · досрочная потеря −%2$d</string>
     <string name="deposit_enter_amount">Введи сумму</string>
+    <string name="deposit_current_balance">Текущий баланс</string>
     <string name="deposit_not_enough_money">На балансе доступно %1$d монет</string>
-    <string name="deposit_income">Доход</string>
-    <string name="deposit_remaining_amount">Сумма, которая останется</string>
     <string name="deposit_maturity_caption">Сумма, которую ты получишь после %1$d дней игры</string>
     <string name="deposit_early_caption">Сумма, которую ты получишь, если закроешь вклад раньше %1$d дней</string>
     <string name="deposit_open">Открыть</string>
@@ -177,23 +192,10 @@
     <string name="deposit_until_end">До окончания срока:</string>
     <string name="deposit_game_days">%1$d игровых дней</string>
     <string name="deposit_maturity_caption_short">По истечению времени ты получишь:</string>
-    <string name="deposit_close">Закрыть</string>
+    <string name="deposit_close_account">Закрыть вклад</string>
     <string name="deposit_close_confirmation">Ты уверен, что хочешь закрыть вклад?</string>
     <string name="deposit_success">Молодец! \nТы заработал %1$d монет!</string>
     <string name="deposit_collect">Забрать</string>
-    <string name="deposit_quick_amount">Быстрый выбор</string>
-    <string name="deposit_all_money">Все</string>
-    <string name="deposit_own_money">Твои деньги</string>
-    <string name="deposit_profit">Прибыль</string>
-    <string name="deposit_total_return">Вернётся всего</string>
-    <string name="deposit_penalty">Штраф</string>
-    <string name="deposit_wallet_after">Останется в кошельке</string>
-    <string name="deposit_progress">Прошло %1$d из %2$d игровых дней</string>
-    <string name="deposit_confirm_title">Проверим вклад</string>
-    <string name="deposit_confirm_action">Всё верно, открыть</string>
-    <string name="deposit_back_to_edit">Изменить условия</string>
-    <string name="deposit_success_breakdown">Вернулось %1$d монет: %2$d твоих + %3$d прибыли</string>
-    <string name="deposit_early_loss">При досрочном закрытии ты потеряешь %1$d монет. В кошелёк вернётся %2$d</string>
 
     <!-- Home: sections -->
     <string name="health">Здоровье</string>
@@ -228,6 +230,7 @@
     <string name="deposit_closed_by_event">У нас закончились силы и деньги, поэтому вклад закрылся досрочно. Из него удержан штраф</string>
     <string name="item_needs_event">Это действие откроется после специального события</string>
     <string name="item_not_enough_money">Не хватает монет для покупки.</string>
+    <string name="item_not_enough_resources">Недостаточно здоровья, счастья или энергии для этого действия.</string>
     <string name="item_level_locked">Это станет доступно на уровне %1$d</string>
     <string name="item_on_cooldown">Можно будет снова использовать через %1$s</string>
     <string name="item_weekdays_only">Это действие доступно по будням.</string>

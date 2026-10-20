@@ -1,5 +1,6 @@
 package ru.finni.financialpetgame.lct.ui
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -13,6 +14,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
@@ -24,27 +27,30 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ru.finni.financialpetgame.lct.R
@@ -54,10 +60,10 @@ import ru.finni.financialpetgame.lct.domain.DepositTerm
 import ru.finni.financialpetgame.lct.domain.DepositTerms
 import ru.finni.financialpetgame.lct.ui.theme.NunitoFontFamily
 
-private val DepositBackground = Color(0xFFFCF7FF)
-private val DepositPurple = Color(0xFF8743D3)
+private val DepositBackground = Color(0xFFFBF1FF)
+private val DepositPurple = Color(0xFF843AD1)
 private val DepositDark = Color(0xFF4B2163)
-private val DepositLight = Color(0xFFF0DCFA)
+private val DepositLight = Color(0xFFE3B1FA)
 
 @Composable
 internal fun DepositScreen(
@@ -78,6 +84,7 @@ internal fun DepositScreen(
             topic = FinancialEducationTopic.Deposit,
             depositAmount = deposit?.amount ?: state.money.coerceAtMost(100).coerceAtLeast(0),
             depositTerm = educationTerm,
+            depositPetImageRes = petImageResource(state.level, state.hairColour, state.hairStyle),
             onDismiss = {
                 showEducation = false
                 if (showEducationInitially) onEducationSeen()
@@ -85,13 +92,13 @@ internal fun DepositScreen(
         )
         return
     }
-    val onHelp = { showEducation = true }
+
     when {
-        deposit == null -> DepositOpeningScreen(state, onBack, onHelp, onOpen)
+        deposit == null -> DepositOpeningScreen(state, onBack, onOpen)
         deposit.isMature(state.currentPeriod) -> {
-            DepositSuccessfulScreen(state, deposit, onBack, onHelp, onClose)
+            DepositSuccessfulScreen(state, deposit, onBack, onClose)
         }
-        else -> DepositOpenedScreen(state, deposit, onBack, onHelp, onClose)
+        else -> DepositOpenedScreen(state, deposit, onBack, onClose)
     }
 }
 
@@ -99,7 +106,6 @@ internal fun DepositScreen(
 private fun DepositOpeningScreen(
     state: GameSnapshot,
     onBack: () -> Unit,
-    onHelp: () -> Unit,
     onOpen: (DepositTerm, Int) -> Unit,
 ) {
     var selectedTermIndex by rememberSaveable { mutableStateOf(1) }
@@ -107,51 +113,58 @@ private fun DepositOpeningScreen(
     var amountText by rememberSaveable {
         mutableStateOf(state.money.coerceAtMost(100).takeIf { it > 0 }?.toString().orEmpty())
     }
-    var confirming by rememberSaveable { mutableStateOf(false) }
     val amount = amountText.toIntOrNull() ?: 0
     val canOpen = amount > 0 && amount <= state.money
-    val payout = amount + amount * selectedTerm.interestPercent / 100
-    val earlyPayout = amount - amount * selectedTerm.earlyClosePenaltyPercent / 100
+    val profit = amount * selectedTerm.interestPercent / 100
+    val earlyLoss = amount * selectedTerm.earlyClosePenaltyPercent / 100
 
-    if (confirming) {
-        DepositConfirmationScreen(
-            state = state,
-            term = selectedTerm,
-            amount = amount,
-            onBack = { confirming = false },
-            onHelp = onHelp,
-            onConfirm = { onOpen(selectedTerm, amount) },
-        )
-        return
-    }
-
-    DepositPage(onBack, onHelp) {
-        GuideRow(
+    DepositPage(
+        onBack = onBack,
+        bottomContent = {
+            DepositOutcomePanel(
+                duration = selectedTerm.durationCycles,
+                maturityAmount = amount + profit,
+                earlyAmount = amount - earlyLoss,
+                buttonText = stringResource(R.string.deposit_open),
+                buttonEnabled = canOpen,
+                onButtonClick = { onOpen(selectedTerm, amount) },
+            )
+        },
+    ) {
+        DepositGuideRow(
             text = stringResource(R.string.deposit_intro),
             petImageRes = petImageResource(state.level, state.hairColour, state.hairStyle),
         )
         DepositHeading(stringResource(R.string.deposit_terms))
-        DepositTerms.forEach { term ->
-            DepositTermRow(
-                term = term,
-                amount = amount,
-                selected = selectedTerm == term,
-                onClick = { selectedTermIndex = DepositTerms.indexOf(term) },
-            )
+        Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+            DepositTerms.forEachIndexed { index, term ->
+                DepositTermRow(
+                    term = term,
+                    selected = selectedTermIndex == index,
+                    onClick = { selectedTermIndex = index },
+                )
+            }
         }
+        Spacer(Modifier.height(14.dp))
         DepositHeading(stringResource(R.string.deposit_enter_amount))
         OutlinedTextField(
             value = amountText,
             onValueChange = { value -> amountText = value.filter(Char::isDigit).take(7) },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
             singleLine = true,
             isError = amountText.isNotEmpty() && !canOpen,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            textStyle = androidx.compose.ui.text.TextStyle(
+                color = DepositDark,
+                fontSize = 17.sp,
+                fontWeight = FontWeight.SemiBold,
+            ),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = DepositPurple,
                 unfocusedBorderColor = DepositDark,
                 focusedTextColor = DepositDark,
                 unfocusedTextColor = DepositDark,
+                errorBorderColor = Color(0xFFC62828),
             ),
             shape = RoundedCornerShape(10.dp),
         )
@@ -162,89 +175,15 @@ private fun DepositOpeningScreen(
                 fontSize = 12.sp,
             )
         }
-        Text(
-            text = stringResource(R.string.deposit_quick_amount),
-            color = DepositPurple,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Bold,
-        )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            listOf(10, 25, 50).forEach { quickAmount ->
-                QuickAmountButton(
-                    text = quickAmount.toString(),
-                    enabled = quickAmount <= state.money,
-                    onClick = { amountText = quickAmount.toString() },
-                    modifier = Modifier.weight(1f),
-                )
-            }
-            QuickAmountButton(
-                text = stringResource(R.string.deposit_all_money),
-                enabled = state.money > 0,
-                onClick = { amountText = state.money.toString() },
-                modifier = Modifier.weight(1f),
-            )
-        }
-        Spacer(Modifier.height(12.dp))
-        DepositSummary(
-            amount = amount,
-            profit = payout - amount,
-            earlyLoss = amount - earlyPayout,
-            duration = selectedTerm.durationCycles,
-            buttonText = stringResource(R.string.deposit_open),
-            buttonEnabled = canOpen,
-            onButtonClick = { confirming = true },
-        )
-    }
-}
-
-@Composable
-private fun DepositConfirmationScreen(
-    state: GameSnapshot,
-    term: DepositTerm,
-    amount: Int,
-    onBack: () -> Unit,
-    onHelp: () -> Unit,
-    onConfirm: () -> Unit,
-) {
-    val profit = amount * term.interestPercent / 100
-    DepositPage(onBack, onHelp) {
-        DepositHeading(stringResource(R.string.deposit_confirm_title))
-        GuideRow(
-            text = stringResource(
-                R.string.education_deposit_receive,
-                amount,
-                profit,
-                amount + profit,
-            ),
-            petImageRes = petImageResource(state.level, state.hairColour, state.hairStyle),
-        )
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color.White, RoundedCornerShape(18.dp))
-                .padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(13.dp),
-        ) {
-            DepositBreakdownRow(stringResource(R.string.deposit_own_money), amount)
-            DepositBreakdownRow(stringResource(R.string.deposit_wallet_after), state.money - amount)
-            DepositBreakdownRow(stringResource(R.string.deposit_profit), profit, Color(0xFF21864B))
-            DepositBreakdownRow(
-                stringResource(R.string.deposit_total_return),
-                amount + profit,
-                DepositPurple,
-                emphasized = true,
-            )
-        }
-        DepositButton(stringResource(R.string.deposit_confirm_action), true, onConfirm)
-        TextButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = stringResource(R.string.deposit_back_to_edit),
-                color = DepositPurple,
+                text = stringResource(R.string.deposit_current_balance),
+                color = DepositDark,
+                fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
             )
+            Spacer(Modifier.width(6.dp))
+            MoneyAmount(state.money, fontSize = 17, coinSize = 22)
         }
     }
 }
@@ -254,120 +193,111 @@ private fun DepositOpenedScreen(
     state: GameSnapshot,
     deposit: ActiveDeposit,
     onBack: () -> Unit,
-    onHelp: () -> Unit,
     onClose: () -> Unit,
 ) {
     var confirming by rememberSaveable { mutableStateOf(false) }
     if (confirming) {
         DepositEarlyClosingScreen(
-            state,
-            deposit,
+            state = state,
+            deposit = deposit,
             onBack = { confirming = false },
-            onHelp = onHelp,
             onClose = onClose,
         )
         return
     }
 
-    DepositPage(onBack, onHelp) {
-        DepositHeading(stringResource(R.string.deposit_open_deposits))
+    DepositPage(onBack = onBack) {
+        DepositHeading(stringResource(R.string.deposit_open_deposits), fontSize = 24)
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .border(1.5.dp, DepositDark, RoundedCornerShape(14.dp))
-                .padding(18.dp),
+                .border(1.5.dp, DepositDark, RoundedCornerShape(12.dp))
+                .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            MoneyValue(deposit.amount, fontSize = 32)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                MoneyAmount(deposit.amount, fontSize = 30, coinSize = 29)
+                Text(
+                    text = stringResource(
+                        R.string.deposit_rate_for_days,
+                        deposit.interestPercent,
+                        deposit.durationCycles,
+                    ),
+                    color = DepositDark,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                )
+            }
+            Spacer(Modifier.height(2.dp))
             Text(
-                text = stringResource(
-                    R.string.deposit_rate_for_days,
-                    deposit.interestPercent,
-                    deposit.durationCycles,
-                ),
-                color = DepositDark,
-                fontSize = 17.sp,
+                text = stringResource(R.string.deposit_until_end),
+                color = DepositPurple,
+                fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
             )
-            Spacer(Modifier.height(6.dp))
-            Text(stringResource(R.string.deposit_until_end), color = DepositPurple, fontSize = 14.sp)
             Text(
                 text = stringResource(
                     R.string.deposit_game_days,
                     deposit.remainingCycles(state.currentPeriod),
                 ),
-                color = DepositDark,
-                fontSize = 25.sp,
+                color = DepositPurple,
+                fontSize = 21.sp,
                 fontWeight = FontWeight.ExtraBold,
             )
-            val completedCycles = (state.currentPeriod - deposit.openedAtPeriod)
-                .coerceIn(0, deposit.durationCycles)
-            Text(
-                text = stringResource(
-                    R.string.deposit_progress,
-                    completedCycles,
-                    deposit.durationCycles,
-                ),
-                color = DepositPurple,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
+            Spacer(Modifier.height(2.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = stringResource(R.string.deposit_maturity_caption_short),
+                    modifier = Modifier.weight(1f),
+                    color = DepositDark,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                MoneyAmount(deposit.maturityPayout, fontSize = 14, coinSize = 15)
+            }
+            DepositButton(
+                text = stringResource(R.string.deposit_close_account),
+                enabled = true,
+                light = true,
+                onClick = { confirming = true },
             )
-            LinearProgressIndicator(
-                progress = {
-                    completedCycles.toFloat() / deposit.durationCycles.coerceAtLeast(1)
-                },
-                modifier = Modifier.fillMaxWidth().height(8.dp),
-                color = DepositPurple,
-                trackColor = DepositLight,
-            )
-            Text(
-                text = stringResource(R.string.deposit_maturity_caption_short),
-                color = DepositPurple,
-                fontSize = 14.sp,
-            )
-            MoneyValue(deposit.maturityPayout, fontSize = 24)
-            DepositButton(stringResource(R.string.deposit_close), true) { confirming = true }
         }
     }
 }
 
 @Composable
-private fun DepositEarlyClosingScreen(
+internal fun DepositEarlyClosingScreen(
     state: GameSnapshot,
     deposit: ActiveDeposit,
     onBack: () -> Unit,
-    onHelp: () -> Unit,
     onClose: () -> Unit,
 ) {
-    DepositPage(onBack, onHelp) {
-        GuideRow(
-            text = stringResource(R.string.deposit_close_confirmation),
-            petImageRes = petImageResource(state.level, state.hairColour, state.hairStyle),
-        )
-        Spacer(Modifier.height(30.dp))
-        Text(
-            text = stringResource(
-                R.string.deposit_early_loss,
-                deposit.earlyCloseLoss,
-                deposit.earlyClosePayout,
+    DepositPage(
+        onBack = onBack,
+        scrollable = false,
+        bottomContent = {
+            DepositOutcomePanel(
+                duration = deposit.durationCycles,
+                maturityAmount = deposit.maturityPayout,
+                earlyAmount = deposit.earlyClosePayout,
+                buttonText = stringResource(R.string.deposit_close_account),
+                buttonEnabled = true,
+                onButtonClick = onClose,
+            )
+        },
+    ) {
+        OutlinedSpeechBubble(stringResource(R.string.deposit_close_confirmation))
+        Image(
+            painter = painterResource(
+                petImageResource(state.level, state.hairColour, state.hairStyle),
             ),
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color(0xFFFFE4E4), RoundedCornerShape(14.dp))
-                .padding(16.dp),
-            color = Color(0xFF9C2F2F),
-            fontSize = 16.sp,
-            lineHeight = 21.sp,
-            fontWeight = FontWeight.Bold,
-        )
-        DepositSummary(
-            amount = deposit.amount,
-            profit = deposit.profit,
-            earlyLoss = deposit.earlyCloseLoss,
-            duration = deposit.durationCycles,
-            buttonText = stringResource(R.string.deposit_close),
-            buttonEnabled = true,
-            onButtonClick = onClose,
+            contentDescription = stringResource(R.string.pet),
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.fillMaxWidth().weight(1f),
         )
     }
 }
@@ -377,57 +307,62 @@ private fun DepositSuccessfulScreen(
     state: GameSnapshot,
     deposit: ActiveDeposit,
     onBack: () -> Unit,
-    onHelp: () -> Unit,
     onCollect: () -> Unit,
 ) {
-    DepositPage(onBack, onHelp) {
-        Text(
-            text = stringResource(
-                R.string.deposit_success_breakdown,
-                deposit.maturityPayout,
-                deposit.amount,
-                deposit.profit,
-            ),
-            modifier = Modifier
-                .fillMaxWidth(0.72f)
-                .background(Color.White, RoundedCornerShape(14.dp))
-                .border(1.dp, DepositLight, RoundedCornerShape(14.dp))
-                .padding(18.dp),
-            color = DepositDark,
-            fontSize = 20.sp,
-            lineHeight = 25.sp,
-            fontWeight = FontWeight.Bold,
-        )
+    DepositPage(
+        onBack = onBack,
+        scrollable = false,
+        bottomContent = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.White, RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp))
+                    .padding(horizontal = 16.dp, vertical = 22.dp),
+            ) {
+                DepositButton(stringResource(R.string.deposit_collect), true, onClick = onCollect)
+            }
+        },
+    ) {
+        OutlinedSpeechBubble(stringResource(R.string.deposit_success, deposit.maturityPayout))
         Image(
             painter = painterResource(
                 petImageResource(state.level, state.hairColour, state.hairStyle),
             ),
             contentDescription = stringResource(R.string.pet),
             contentScale = ContentScale.Fit,
-            modifier = Modifier.fillMaxWidth().height(330.dp),
+            modifier = Modifier.fillMaxWidth().weight(1f),
         )
-        DepositButton(stringResource(R.string.deposit_collect), true, onCollect)
     }
 }
 
 @Composable
 private fun DepositPage(
     onBack: () -> Unit,
-    onHelp: () -> Unit,
+    scrollable: Boolean = true,
+    contentBottomPadding: Dp = 22.dp,
+    bottomContent: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    var bottomHeightPx by remember { mutableIntStateOf(0) }
+    val bottomHeight = with(LocalDensity.current) { bottomHeightPx.toDp() }
+    val effectiveBottomPadding = maxOf(contentBottomPadding, bottomHeight)
+
     Box(
         Modifier
             .fillMaxSize()
             .background(DepositBackground)
             .safeDrawingPadding(),
     ) {
+        val contentModifier = Modifier
+            .fillMaxSize()
+            .padding(start = 16.dp, end = 16.dp, top = 78.dp, bottom = effectiveBottomPadding)
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(start = 22.dp, end = 22.dp, top = 58.dp, bottom = 22.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = if (scrollable) {
+                contentModifier.verticalScroll(rememberScrollState())
+            } else {
+                contentModifier
+            },
+            verticalArrangement = Arrangement.spacedBy(10.dp),
             content = content,
         )
         Text(
@@ -435,123 +370,109 @@ private fun DepositPage(
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .clickable(onClick = onBack)
-                .padding(horizontal = 20.dp, vertical = 8.dp),
+                .padding(start = 18.dp, end = 20.dp, top = 7.dp, bottom = 8.dp),
             color = DepositDark,
-            fontSize = 42.sp,
-            lineHeight = 42.sp,
+            fontSize = 38.sp,
+            lineHeight = 38.sp,
         )
         Text(
             text = stringResource(R.string.deposit_title),
-            modifier = Modifier.align(Alignment.TopCenter).padding(top = 16.dp),
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 17.dp),
             color = DepositDark,
             fontFamily = NunitoFontFamily,
-            fontWeight = FontWeight.ExtraBold,
-            fontSize = 22.sp,
+            fontWeight = FontWeight.Bold,
+            fontSize = 21.sp,
         )
-        IconButton(
-            onClick = onHelp,
-            modifier = Modifier.align(Alignment.TopEnd).padding(end = 8.dp, top = 5.dp),
-        ) {
-            Text("?", color = DepositDark, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
+        bottomContent?.let {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .onSizeChanged { size -> bottomHeightPx = size.height },
+            ) {
+                it()
+            }
         }
     }
 }
 
 @Composable
-private fun GuideRow(text: String, petImageRes: Int) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+private fun DepositGuideRow(text: String, petImageRes: Int) {
+    Row(
+        modifier = Modifier.fillMaxWidth().heightIn(min = 132.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         Text(
             text = text,
             modifier = Modifier
                 .weight(1f)
-                .background(Color.White, RoundedCornerShape(14.dp))
-                .border(1.dp, DepositLight, RoundedCornerShape(14.dp))
-                .padding(14.dp),
+                .background(Color.White, RoundedCornerShape(8.dp))
+                .padding(horizontal = 12.dp, vertical = 10.dp),
             color = DepositDark,
-            fontSize = 14.sp,
-            lineHeight = 19.sp,
-            fontWeight = FontWeight.SemiBold,
+            fontSize = 13.sp,
+            lineHeight = 17.sp,
+            fontWeight = FontWeight.ExtraBold,
+            textAlign = TextAlign.Center,
         )
-        Spacer(Modifier.width(8.dp))
-        Image(
-            painter = painterResource(petImageRes),
-            contentDescription = stringResource(R.string.pet),
-            contentScale = ContentScale.Fit,
-            modifier = Modifier.size(108.dp),
-        )
+        Spacer(Modifier.width(3.dp))
+        Box(Modifier.width(137.dp).height(118.dp)) {
+            Image(
+                painter = painterResource(petImageRes),
+                contentDescription = stringResource(R.string.pet),
+                contentScale = ContentScale.Crop,
+                alignment = Alignment.TopCenter,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
     }
 }
 
 @Composable
-private fun DepositHeading(text: String) {
+private fun DepositHeading(text: String, fontSize: Int = 21) {
     Text(
         text = text,
         color = DepositDark,
-        fontSize = 20.sp,
+        fontSize = fontSize.sp,
+        lineHeight = (fontSize + 3).sp,
         fontWeight = FontWeight.ExtraBold,
         fontFamily = NunitoFontFamily,
     )
 }
 
 @Composable
-private fun DepositTermRow(
-    term: DepositTerm,
-    amount: Int,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    val profit = amount * term.interestPercent / 100
-    val loss = amount * term.earlyClosePenaltyPercent / 100
+private fun DepositTermRow(term: DepositTerm, selected: Boolean, onClick: () -> Unit) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(if (selected) DepositLight else Color.White, RoundedCornerShape(12.dp))
-            .border(
-                width = if (selected) 2.dp else 1.dp,
-                color = if (selected) DepositPurple else DepositLight,
-                shape = RoundedCornerShape(12.dp),
-            )
-            .clickable(onClick = onClick)
-            .padding(12.dp),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
             Modifier
-                .size(21.dp)
-                .border(2.dp, DepositPurple, CircleShape)
-                .padding(4.dp),
+                .size(17.dp)
+                .border(1.5.dp, if (selected) DepositPurple else DepositDark, CircleShape)
+                .padding(3.dp),
         ) {
             if (selected) Box(Modifier.fillMaxSize().background(DepositPurple, CircleShape))
         }
-        Spacer(Modifier.width(10.dp))
-        Column(Modifier.weight(1f)) {
-            Text(
-                text = stringResource(
-                    R.string.deposit_term_format,
-                    term.durationCycles,
-                    term.interestPercent,
-                    term.earlyClosePenaltyPercent,
-                ),
-                color = DepositDark,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(
-                text = stringResource(R.string.deposit_term_result, profit, loss),
-                color = DepositPurple,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
+        Spacer(Modifier.width(7.dp))
+        Text(
+            text = stringResource(
+                R.string.deposit_term_format,
+                term.durationCycles,
+                term.interestPercent,
+                term.earlyClosePenaltyPercent,
+            ),
+            color = DepositDark,
+            fontSize = 14.sp,
+            lineHeight = 18.sp,
+            fontWeight = FontWeight.ExtraBold,
+        )
     }
 }
 
 @Composable
-private fun DepositSummary(
-    amount: Int,
-    profit: Int,
-    earlyLoss: Int,
+private fun DepositOutcomePanel(
     duration: Int,
+    maturityAmount: Int,
+    earlyAmount: Int,
     buttonText: String,
     buttonEnabled: Boolean,
     onButtonClick: () -> Unit,
@@ -559,126 +480,123 @@ private fun DepositSummary(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.White, RoundedCornerShape(22.dp))
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+            .background(Color.White, RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp))
+            .padding(horizontal = 16.dp, vertical = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text(
-            stringResource(R.string.deposit_maturity_caption, duration),
-            color = DepositPurple,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.Bold,
+        DepositOutcomeRow(
+            label = stringResource(R.string.deposit_maturity_caption, duration),
+            amount = maturityAmount,
         )
-        DepositBreakdownRow(stringResource(R.string.deposit_own_money), amount)
-        DepositBreakdownRow(stringResource(R.string.deposit_profit), profit, Color(0xFF21864B))
-        DepositBreakdownRow(
-            stringResource(R.string.deposit_total_return),
-            amount + profit,
-            DepositPurple,
-            emphasized = true,
+        DepositOutcomeRow(
+            label = stringResource(R.string.deposit_early_caption, duration),
+            amount = earlyAmount,
         )
-        Spacer(Modifier.height(8.dp))
-        Text(
-            stringResource(R.string.deposit_early_caption, duration),
-            color = DepositPurple,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.Bold,
-        )
-        DepositBreakdownRow(
-            stringResource(R.string.deposit_penalty),
-            earlyLoss,
-            Color(0xFFC34141),
-        )
-        DepositBreakdownRow(
-            stringResource(R.string.deposit_total_return),
-            amount - earlyLoss,
-            DepositDark,
-        )
-        Spacer(Modifier.height(10.dp))
-        DepositButton(buttonText, buttonEnabled, onButtonClick)
+        DepositButton(buttonText, buttonEnabled, onClick = onButtonClick)
     }
 }
 
 @Composable
-private fun DepositBreakdownRow(
-    label: String,
-    amount: Int,
-    valueColor: Color = DepositDark,
-    emphasized: Boolean = false,
-) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+private fun DepositOutcomeRow(label: String, amount: Int) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         Text(
             text = label,
             modifier = Modifier.weight(1f),
-            color = DepositDark,
-            fontSize = if (emphasized) 16.sp else 14.sp,
-            fontWeight = if (emphasized) FontWeight.ExtraBold else FontWeight.SemiBold,
-        )
-        Text(
-            text = amount.toString(),
-            color = valueColor,
-            fontSize = if (emphasized) 23.sp else 18.sp,
+            color = DepositPurple,
+            fontSize = 15.sp,
+            lineHeight = 19.sp,
             fontWeight = FontWeight.ExtraBold,
         )
+        MoneyAmount(amount, fontSize = 26, coinSize = 24)
+    }
+}
+
+@Composable
+private fun OutlinedSpeechBubble(text: String) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(0.76f)
+                .border(1.5.dp, DepositDark, RoundedCornerShape(7.dp))
+                .background(Color.White, RoundedCornerShape(7.dp))
+                .padding(horizontal = 14.dp, vertical = 27.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = text,
+                color = DepositDark,
+                fontSize = 19.sp,
+                lineHeight = 23.sp,
+                fontWeight = FontWeight.ExtraBold,
+                textAlign = TextAlign.Center,
+            )
+        }
+        Canvas(Modifier.size(46.dp, 18.dp).offset(y = (-1).dp)) {
+            val triangle = Path().apply {
+                moveTo(0f, 0f)
+                lineTo(size.width / 2f, size.height)
+                lineTo(size.width, 0f)
+                close()
+            }
+            drawPath(triangle, color = Color.White)
+            drawLine(
+                color = DepositDark,
+                start = Offset(0f, 0f),
+                end = Offset(size.width / 2f, size.height),
+                strokeWidth = 1.5.dp.toPx(),
+            )
+            drawLine(
+                color = DepositDark,
+                start = Offset(size.width / 2f, size.height),
+                end = Offset(size.width, 0f),
+                strokeWidth = 1.5.dp.toPx(),
+            )
+        }
+    }
+}
+
+@Composable
+private fun MoneyAmount(value: Int, fontSize: Int, coinSize: Int) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = value.toString(),
+            color = DepositDark,
+            fontSize = fontSize.sp,
+            lineHeight = (fontSize + 2).sp,
+            fontWeight = FontWeight.ExtraBold,
+        )
+        Spacer(Modifier.width(4.dp))
         Image(
             painter = painterResource(R.drawable.coin_money),
             contentDescription = null,
-            modifier = Modifier.padding(start = 5.dp).size(if (emphasized) 22.dp else 18.dp),
+            modifier = Modifier.size(coinSize.dp),
         )
     }
 }
 
 @Composable
-private fun QuickAmountButton(
+private fun DepositButton(
     text: String,
     enabled: Boolean,
+    light: Boolean = false,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier,
 ) {
     Button(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.height(42.dp),
-        shape = RoundedCornerShape(10.dp),
+        modifier = Modifier.fillMaxWidth().heightIn(min = 53.dp),
+        shape = RoundedCornerShape(11.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = DepositLight,
-            contentColor = DepositDark,
-            disabledContainerColor = DepositLight.copy(alpha = 0.45f),
-        ),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 4.dp),
-    ) {
-        Text(text, fontSize = 12.sp, maxLines = 1, fontWeight = FontWeight.Bold)
-    }
-}
-
-@Composable
-private fun MoneyValue(value: Int, fontSize: Int) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            value.toString(),
-            color = DepositDark,
-            fontSize = fontSize.sp,
-            fontWeight = FontWeight.ExtraBold,
-        )
-        Spacer(Modifier.width(7.dp))
-        Image(
-            painter = painterResource(R.drawable.coin_money),
-            contentDescription = null,
-            modifier = Modifier.size((fontSize * 0.75f).dp),
-        )
-    }
-}
-
-@Composable
-private fun DepositButton(text: String, enabled: Boolean, onClick: () -> Unit) {
-    Button(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = Modifier.fillMaxWidth().height(52.dp),
-        shape = RoundedCornerShape(12.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = DepositPurple,
-            disabledContainerColor = DepositLight,
+            containerColor = if (light) DepositLight else DepositPurple,
+            contentColor = if (light) DepositDark else Color.White,
+            disabledContainerColor = DepositLight.copy(alpha = 0.55f),
+            disabledContentColor = DepositDark.copy(alpha = 0.55f),
         ),
     ) {
         Text(text, fontSize = 17.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
